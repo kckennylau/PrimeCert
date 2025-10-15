@@ -58,22 +58,23 @@ theorem prime_193 : Nat.Prime 193 := pock% [2, (193, 5, 2 ^ 6)]
 theorem prime_197 : Nat.Prime 197 := pock% [7, (197, 2, 7 ^ 2)]
 theorem prime_199 : Nat.Prime 199 := pock% [2, 3, (199, 3, 2 * 3 ^ 2)]
 
--- theorem prime_211 : Nat.Prime 211 :=
--- theorem prime_223 : Nat.Prime 223 :=
--- theorem prime_227 : Nat.Prime 227 :=
--- theorem prime_229 : Nat.Prime 229 :=
--- theorem prime_233 : Nat.Prime 233 :=
--- theorem prime_239 : Nat.Prime 239 :=
--- theorem prime_241 : Nat.Prime 241 :=
--- theorem prime_251 : Nat.Prime 251 :=
--- theorem prime_257 : Nat.Prime 257 :=
--- theorem prime_263 : Nat.Prime 263 :=
--- theorem prime_269 : Nat.Prime 269 :=
--- theorem prime_271 : Nat.Prime 271 :=
--- theorem prime_277 : Nat.Prime 277 :=
--- theorem prime_281 : Nat.Prime 281 :=
--- theorem prime_283 : Nat.Prime 283 :=
--- theorem prime_293 : Nat.Prime 293 :=
+theorem prime_211 : Nat.Prime 211 := pock% [3, 5, (211, 2, 3 * 5)]
+theorem prime_223 : Nat.Prime 223 := pock% [37, (223, 2, 37)]
+theorem prime_227 : Nat.Prime 227 := pock% [113, (227, 2, 113)]
+theorem prime_229 : Nat.Prime 229 := pock% [19, (229, 2, 19)]
+theorem prime_233 : Nat.Prime 233 := pock% [29, (233, 2, 29)]
+theorem prime_239 : Nat.Prime 239 := pock% [17, (239, 2, 17)]
+theorem prime_241 : Nat.Prime 241 := pock% [2, (241, 7, 2 ^ 4)]
+theorem prime_251 : Nat.Prime 251 := pock% [5, (251, 3, 5 ^ 3)]
+theorem prime_257 : Nat.Prime 257 := pock% [2, (257, 3, 2 ^ 8)]
+theorem prime_263 : Nat.Prime 263 := pock% [131, (263, 2, 131)]
+theorem prime_269 : Nat.Prime 269 := pock% [67, (269, 2, 67)]
+theorem prime_271 : Nat.Prime 271 := pock% [3, (271, 2, 3 ^ 3)]
+theorem prime_277 : Nat.Prime 277 := pock% [23, (277, 2, 23)]
+theorem prime_281 : Nat.Prime 281 := pock% [2, 5, (281, 3, 2 ^ 3 * 5)]
+theorem prime_283 : Nat.Prime 283 := pock% [47, (283, 2, 47)]
+theorem prime_293 : Nat.Prime 293 := pock% [73, (293, 2, 73)]
+
 -- theorem prime_307 : Nat.Prime 307 :=
 -- theorem prime_311 : Nat.Prime 311 :=
 -- theorem prime_313 : Nat.Prime 313 :=
@@ -90,6 +91,7 @@ theorem prime_199 : Nat.Prime 199 := pock% [2, 3, (199, 3, 2 * 3 ^ 2)]
 -- theorem prime_383 : Nat.Prime 383 :=
 -- theorem prime_389 : Nat.Prime 389 :=
 -- theorem prime_397 : Nat.Prime 397 :=
+
 -- theorem prime_401 : Nat.Prime 401 :=
 -- theorem prime_409 : Nat.Prime 409 :=
 -- theorem prime_419 : Nat.Prime 419 :=
@@ -107,6 +109,7 @@ theorem prime_199 : Nat.Prime 199 := pock% [2, 3, (199, 3, 2 * 3 ^ 2)]
 -- theorem prime_487 : Nat.Prime 487 :=
 -- theorem prime_491 : Nat.Prime 491 :=
 -- theorem prime_499 : Nat.Prime 499 :=
+
 -- theorem prime_503 : Nat.Prime 503 :=
 -- theorem prime_509 : Nat.Prime 509 :=
 -- theorem prime_521 : Nat.Prime 521 :=
@@ -121,6 +124,7 @@ theorem prime_199 : Nat.Prime 199 := pock% [2, 3, (199, 3, 2 * 3 ^ 2)]
 -- theorem prime_587 : Nat.Prime 587 :=
 -- theorem prime_593 : Nat.Prime 593 :=
 -- theorem prime_599 : Nat.Prime 599 :=
+
 -- theorem prime_601 : Nat.Prime 601 :=
 -- theorem prime_607 : Nat.Prime 607 :=
 -- theorem prime_613 : Nat.Prime 613 :=
@@ -137,6 +141,7 @@ theorem prime_199 : Nat.Prime 199 := pock% [2, 3, (199, 3, 2 * 3 ^ 2)]
 -- theorem prime_677 : Nat.Prime 677 :=
 -- theorem prime_683 : Nat.Prime 683 :=
 -- theorem prime_691 : Nat.Prime 691 :=
+
 -- theorem prime_701 : Nat.Prime 701 :=
 -- theorem prime_709 : Nat.Prime 709 :=
 -- theorem prime_719 : Nat.Prime 719 :=
@@ -151,6 +156,7 @@ theorem prime_199 : Nat.Prime 199 := pock% [2, 3, (199, 3, 2 * 3 ^ 2)]
 -- theorem prime_773 : Nat.Prime 773 :=
 -- theorem prime_787 : Nat.Prime 787 :=
 -- theorem prime_797 : Nat.Prime 797 :=
+
 -- theorem prime_809 : Nat.Prime 809 :=
 -- theorem prime_811 : Nat.Prime 811 :=
 -- theorem prime_821 : Nat.Prime 821 :=
@@ -166,6 +172,7 @@ theorem prime_199 : Nat.Prime 199 := pock% [2, 3, (199, 3, 2 * 3 ^ 2)]
 -- theorem prime_881 : Nat.Prime 881 :=
 -- theorem prime_883 : Nat.Prime 883 :=
 -- theorem prime_887 : Nat.Prime 887 :=
+
 -- theorem prime_907 : Nat.Prime 907 :=
 -- theorem prime_911 : Nat.Prime 911 :=
 -- theorem prime_919 : Nat.Prime 919 :=
@@ -188,7 +195,7 @@ local elab "make%" a:num b:num : command => do
       have name := Lean.mkIdent <| Lean.Name.mkSimple s!"prime_{i}"
       Lean.Elab.Command.elabCommand =<< `(command| theorem $name : Nat.Prime $iStx := by norm_num)
 
-make% 201 2000
+make% 301 2000
 
 /-- info: PrimeCert.prime_997 : Nat.Prime 997 -/
 #guard_msgs in

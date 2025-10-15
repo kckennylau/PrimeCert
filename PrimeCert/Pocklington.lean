@@ -282,21 +282,30 @@ structure PrimeProofEntry : Type where
 def mkPrimeName (p : Nat) : Name :=
   Name.anonymous.str "PrimeCert" |>.str s!"prime_{p}"
 
+/-- Prints an error message if the entry is not found. -/
+def retrieve (dict : Std.HashMap Nat PrimeProofEntry) (p : Nat) : MetaM PrimeProofEntry := do
+  match dict[p]? with
+  | some entry => return entry
+  | none => throwError m!"Prime {p} not yet certified."
+
 def mkPockPred (N a F₁ : Q(Nat)) (steps : Array PrimePow) (dict : Std.HashMap Nat PrimeProofEntry) :
     MetaM Q(PocklingtonPred $N $a $F₁) := do
   if h : steps.size = 0 then return mkConst ``PocklingtonPred.one
   else
     have head : Expr := ← match steps[0] with
-    | .prime p => mkAppOptM ``PocklingtonPred.base
-      #[N, a, mkNatLit p, (dict.get! p).pf, eagerReflBoolTrue, eagerReflBoolTrue]
-    | .pow p e => mkAppOptM ``PocklingtonPred.base_pow
-      #[N, a, mkNatLit p, mkNatLit e, (dict.get! p).pf, eagerReflBoolTrue, eagerReflBoolTrue]
+    | .prime p => do
+      mkAppOptM ``PocklingtonPred.base #[N, a, mkNatLit p, (← retrieve dict p).pf,
+        eagerReflBoolTrue, eagerReflBoolTrue]
+    | .pow p e => do
+      mkAppOptM ``PocklingtonPred.base_pow #[N, a, mkNatLit p, mkNatLit e, (← retrieve dict p).pf,
+        eagerReflBoolTrue, eagerReflBoolTrue]
     (steps.drop 1).foldlM (fun ih step ↦ match step with
-      | .prime p => mkAppM ``PocklingtonPred.step
-        #[(dict.get! p).pf, ih, eagerReflBoolTrue, eagerReflBoolTrue]
-      | .pow p e => mkAppOptM ``PocklingtonPred.step_pow
-        #[N, a, none, mkNatLit p, mkNatLit e,
-          (dict.get! p).pf, ih, eagerReflBoolTrue, eagerReflBoolTrue]) head
+      | .prime p => do
+        mkAppM ``PocklingtonPred.step #[(← retrieve dict p).pf, ih,
+          eagerReflBoolTrue, eagerReflBoolTrue]
+      | .pow p e => do
+        mkAppOptM ``PocklingtonPred.step_pow #[N, a, none, mkNatLit p, mkNatLit e,
+          (← retrieve dict p).pf, ih, eagerReflBoolTrue, eagerReflBoolTrue]) head
 
 /--
 A ladder in the Pocklington certificate:
