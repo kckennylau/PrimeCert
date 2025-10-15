@@ -36,40 +36,28 @@ theorem prime_83 : Nat.Prime 83 := pock% [41, (83, 2, 41)]
 theorem prime_89 : Nat.Prime 89 := pock% [11, (89, 2, 11)]
 theorem prime_97 : Nat.Prime 97 := pock% [2, (97, 5, 2 ^ 4)]
 
-local elab "make%" a:num b:num : command => do
-  for i in Array.range' a.getNat b.getNat do
-    if Nat.Prime i then
-      have iStx := Lean.Syntax.mkNatLit i
-      have name := Lean.mkIdent <| Lean.Name.mkSimple s!"prime_{i}"
-      Lean.Elab.Command.elabCommand =<< `(command| theorem $name : Nat.Prime $iStx := by norm_num)
+theorem prime_101 : Nat.Prime 101 := pock% [5, (101, 2, 5 ^ 2)]
+theorem prime_103 : Nat.Prime 103 := pock% [17, (103, 2, 17)]
+theorem prime_107 : Nat.Prime 107 := pock% [53, (107, 2, 53)]
+theorem prime_109 : Nat.Prime 109 := pock% [3, (109, 3, 3 ^ 3)]
+theorem prime_113 : Nat.Prime 113 := pock% [2, (113, 3, 2 ^ 4)]
+theorem prime_127 : Nat.Prime 127 := pock% [2, 7, (127, 3, 2 * 7)]
+theorem prime_131 : Nat.Prime 131 := pock% [13, (131, 2, 13)]
+theorem prime_137 : Nat.Prime 137 := pock% [17, (137, 2, 17)]
+theorem prime_139 : Nat.Prime 139 := pock% [23, (139, 2, 23)]
+theorem prime_149 : Nat.Prime 149 := pock% [37, (149, 2, 37)]
+theorem prime_151 : Nat.Prime 151 := pock% [5, (151, 3, 5 ^ 2)]
+theorem prime_157 : Nat.Prime 157 := pock% [13, (157, 2, 13)]
+theorem prime_163 : Nat.Prime 163 := pock% [3, (163, 2, 3 ^ 4)]
+theorem prime_167 : Nat.Prime 167 := pock% [83, (167, 2, 83)]
+theorem prime_173 : Nat.Prime 173 := pock% [43, (173, 2, 43)]
+theorem prime_179 : Nat.Prime 179 := pock% [89, (179, 2, 89)]
+theorem prime_181 : Nat.Prime 181 := pock% [2, 5, (181, 2, 2 ^ 2 * 5)]
+theorem prime_191 : Nat.Prime 191 := pock% [19, (191, 2, 19)]
+theorem prime_193 : Nat.Prime 193 := pock% [2, (193, 5, 2 ^ 6)]
+theorem prime_197 : Nat.Prime 197 := pock% [7, (197, 2, 7 ^ 2)]
+theorem prime_199 : Nat.Prime 199 := pock% [2, 3, (199, 3, 2 * 3 ^ 2)]
 
-make% 101 1000
-
-/-- info: PrimeCert.prime_997 : Nat.Prime 997 -/
-#guard_msgs in
-#check prime_997
-
--- theorem prime_101 : Nat.Prime 101 :=
--- theorem prime_103 : Nat.Prime 103 :=
--- theorem prime_107 : Nat.Prime 107 :=
--- theorem prime_109 : Nat.Prime 109 :=
--- theorem prime_113 : Nat.Prime 113 :=
--- theorem prime_127 : Nat.Prime 127 :=
--- theorem prime_131 : Nat.Prime 131 :=
--- theorem prime_137 : Nat.Prime 137 :=
--- theorem prime_139 : Nat.Prime 139 :=
--- theorem prime_149 : Nat.Prime 149 :=
--- theorem prime_151 : Nat.Prime 151 :=
--- theorem prime_157 : Nat.Prime 157 :=
--- theorem prime_163 : Nat.Prime 163 :=
--- theorem prime_167 : Nat.Prime 167 :=
--- theorem prime_173 : Nat.Prime 173 :=
--- theorem prime_179 : Nat.Prime 179 :=
--- theorem prime_181 : Nat.Prime 181 :=
--- theorem prime_191 : Nat.Prime 191 :=
--- theorem prime_193 : Nat.Prime 193 :=
--- theorem prime_197 : Nat.Prime 197 :=
--- theorem prime_199 : Nat.Prime 199 :=
 -- theorem prime_211 : Nat.Prime 211 :=
 -- theorem prime_223 : Nat.Prime 223 :=
 -- theorem prime_227 : Nat.Prime 227 :=
@@ -192,5 +180,18 @@ make% 101 1000
 -- theorem prime_983 : Nat.Prime 983 :=
 -- theorem prime_991 : Nat.Prime 991 :=
 -- theorem prime_997 : Nat.Prime 997 :=
+
+local elab "make%" a:num b:num : command => do
+  for i in Array.range' a.getNat b.getNat do
+    if Nat.Prime i then
+      have iStx := Lean.Syntax.mkNatLit i
+      have name := Lean.mkIdent <| Lean.Name.mkSimple s!"prime_{i}"
+      Lean.Elab.Command.elabCommand =<< `(command| theorem $name : Nat.Prime $iStx := by norm_num)
+
+make% 201 2000
+
+/-- info: PrimeCert.prime_997 : Nat.Prime 997 -/
+#guard_msgs in
+#check prime_997
 
 end PrimeCert
