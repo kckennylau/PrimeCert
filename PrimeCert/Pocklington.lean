@@ -174,7 +174,7 @@ theorem PocklingtonPred.step_pow {N root F₂ p e : ℕ} (hp : p.Prime)
     (step : ((predModKR (powModTR root (N.pred.div p) N) N).gcd N).beq 1 :=
       by exact eagerReduce (Eq.refl true))
     (hroot : Nat.blt 0 root = true := by exact eagerReduce (Eq.refl true)) :
-    PocklingtonPred N root (F₂ * p ^ e) := by
+    PocklingtonPred N root (F₂.mul (p.pow e)) := by
   by_cases hf₂ : F₂ = 0
   · simp [hf₂]
   by_cases he : e = 0
@@ -182,6 +182,7 @@ theorem PocklingtonPred.step_pow {N root F₂ p e : ℕ} (hp : p.Prime)
   by_cases hn : N = 0
   · simp [hn, predModKR, powModTR_eq, powMod] at step
   rw [PocklingtonPred] at ih ⊢
+  rw [Nat.mul_eq, Nat.pow_eq]
   rw [Nat.primeFactors_mul hf₂ (pow_ne_zero _ hp.ne_zero), Nat.primeFactors_prime_pow he hp]
   simp_rw [Finset.union_singleton, Finset.forall_mem_insert]
   refine ⟨?_, ih⟩
@@ -203,14 +204,14 @@ theorem PocklingtonPred.step {N root F₂ p : ℕ} (hp : p.Prime)
     (step : ((predModKR (powModTR root (N.pred.div p) N) N).gcd N).beq 1 :=
       by exact eagerReduce (Eq.refl true))
     (hroot : Nat.blt 0 root = true := by exact eagerReduce (Eq.refl true)) :
-    PocklingtonPred N root (F₂ * p) := by
+    PocklingtonPred N root (F₂.mul p) := by
   simpa using PocklingtonPred.step_pow (e := 1) hp ih step hroot
 
 theorem PocklingtonPred.base_pow {N root p e : ℕ} (hp : p.Prime)
     (step : ((predModKR (powModTR root (N.pred.div p) N) N).gcd N).beq 1 :=
       by exact eagerReduce (Eq.refl true))
     (hroot : Nat.blt 0 root = true := by exact eagerReduce (Eq.refl true)) :
-    PocklingtonPred N root (p ^ e) := by
+    PocklingtonPred N root (p.pow e) := by
   simpa using PocklingtonPred.step_pow hp .one step hroot
 
 theorem PocklingtonPred.base {N root p : ℕ} (hp : p.Prime)
@@ -229,5 +230,121 @@ theorem prime_339392917 :
 
 theorem prime_16290860017 : Nat.Prime 16290860017 :=
   pocklington_certifyKR _ 5 339392917 <| .base prime_339392917
+
+section pock
+
+open Lean Meta Qq
+
+/-- A prime power is represented by either `p ^ e` or `p`. -/
+syntax prime_pow := num (" ^ " num)?
+
+inductive PrimePow : Type
+  | prime (p : ℕ) | pow (p e : ℕ)
+
+instance : ToMessageData PrimePow where
+  toMessageData x := match x with
+    | .prime p => m!"{p}"
+    | .pow p e => m!"{p}^{e}"
+
+def parsePrimePow (stx : TSyntax ``prime_pow) : Q(Nat) × PrimePow :=
+  match stx with
+  | `(prime_pow| $p:num^$e:num) =>
+      have p := p.getNat
+      have e := e.getNat
+      (mkApp2 (mkConst ``Nat.pow) (mkNatLit p) (mkNatLit e), .pow p e)
+  | `(prime_pow| $p:num) =>
+      have p := p.getNat
+      (mkNatLit p, .prime p)
+  | _ => (mkNatLit 0, .prime 0)
+
+/-- A full factorisation of a number, written like `3 ^ 4 * 29 * 41`. -/
+syntax factored := sepBy1(prime_pow," * ")
+
+def parseFactored (stx : TSyntax ``factored) : Q(Nat) × Array PrimePow :=
+  match stx with
+  | `(factored| $head * $body**) =>
+    have head := parsePrimePow head
+    have body := body.getElems.map parsePrimePow
+    ((body.map (·.1)).foldl (fun ih new ↦ (mkApp2 (mkConst ``Nat.mul) ih new)) head.1,
+      #[head.2] ++ body.map (·.2))
+  | `(factored| $head:prime_pow) =>
+    have head := parsePrimePow head
+    (head.1, #[head.2])
+  | _ => (mkNatLit 0, #[])
+
+/-- Each step of the ladder is stored as a metavariable -/
+structure PrimeProofEntry : Type where
+  mVar : Expr
+  -- uses : Std.TreeSet ℕ
+  pf : Expr
+  deriving Repr, Inhabited
+
+def mkPrimeName (p : Nat) : Name :=
+  Name.anonymous.str "PrimeCert" |>.str s!"prime_{p}"
+
+def mkPockPred (N a F₁ : Q(Nat)) (steps : Array PrimePow) (dict : Std.HashMap Nat PrimeProofEntry) :
+    MetaM Q(PocklingtonPred $N $a $F₁) := do
+  if h : steps.size = 0 then return mkConst ``PocklingtonPred.one
+  else
+    have head : Expr := ← match steps[0] with
+    | .prime p => mkAppOptM ``PocklingtonPred.base
+      #[N, a, mkNatLit p, (dict.get! p).pf, eagerReflBoolTrue, eagerReflBoolTrue]
+    | .pow p e => mkAppOptM ``PocklingtonPred.base_pow
+      #[N, a, mkNatLit p, mkNatLit e, (dict.get! p).pf, eagerReflBoolTrue, eagerReflBoolTrue]
+    (steps.drop 1).foldlM (fun ih step ↦ match step with
+      | .prime p => mkAppM ``PocklingtonPred.step
+        #[(dict.get! p).pf, ih, eagerReflBoolTrue, eagerReflBoolTrue]
+      | .pow p e => mkAppOptM ``PocklingtonPred.step_pow
+        #[N, a, none, mkNatLit p, mkNatLit e,
+          (dict.get! p).pf, ih, eagerReflBoolTrue, eagerReflBoolTrue]) head
+
+/--
+A ladder in the Pocklington certificate:
+- a small prime `p < 1000` is specified as `p`
+- otherwise, we take a triple `(N, a, F₁)` where
+  - `N` is the number to be certified as prime
+  - `a` is a pseudo-primitive root of `N`
+  - `F₁ > √N` is a partially factored divisor of `N - 1`, written out in full like `3 ^ 4 * 29 * 41`
+-/
+syntax pock_spec := num <|> ("(" num ", " num ", " factored ")")
+
+def parsePockSpec (stx : TSyntax ``pock_spec) (dict : Std.HashMap Nat PrimeProofEntry) :
+    MetaM (Nat × (N : Q(Nat)) × Q(($N).Prime)) := do
+  match stx with
+  | `(pock_spec| ($N:num, $a:num, $F₁:factored)) =>
+      have Nnat := N.getNat
+      have N : Q(Nat) := mkNatLit Nnat
+      have a : Q(Nat) := mkNatLit a.getNat
+      have (F₁, steps) := parseFactored F₁
+      have pred := ← mkPockPred N a F₁ steps dict
+      have pf : Q(Nat.Prime $N) := ← mkAppM ``pocklington_certifyKR
+        #[N, a, F₁, pred, eagerReflBoolTrue, eagerReflBoolTrue,
+          eagerReflBoolTrue, eagerReflBoolTrue]
+      return ⟨Nnat, N, pf⟩
+  | `(pock_spec| $p:num) =>
+      have pNat := p.getNat
+      have p : Q(Nat) := mkNatLit pNat
+      return ⟨pNat, p, mkConst (mkPrimeName pNat)⟩
+  | _ => return ⟨2, mkNatLit 2, mkConst ``Nat.prime_two⟩
+
+/--
+Usage:
+```lean
+theorem prime_16290860017 : Nat.Prime 16290860017 :=
+  pock% [3, 29, 41, (339392917, 2, 3 ^ 4 * 29 * 41), (16290860017, 5, 339392917)]
+```
+-/
+scoped elab "pock%" "[" steps:pock_spec,+ "]" : term => do
+  let mut dict : Std.HashMap Nat PrimeProofEntry := ∅
+  let mut NNat := 2
+  for step in steps.getElems do
+    let ⟨NNat', N, pf⟩ ← parsePockSpec step dict
+    let mvar ← mkFreshExprMVar (mkApp (mkConst ``Nat.Prime) N)
+      (userName := .mkSimple s!"prime_{NNat'}")
+    dict := dict.insert NNat' ⟨mvar, pf⟩
+    NNat := NNat'
+  return (dict.get! NNat).pf
+
+end pock
 
 end PrimeCert
