@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kenny Lau
 -/
 
+import PrimeCert.PredMod
 import PrimeCert.PowMod
 import Mathlib.Algebra.Field.ZMod
 import Mathlib.Algebra.Order.Ring.Star
@@ -11,6 +12,7 @@ import Mathlib.Analysis.Normed.Ring.Lemmas
 import Mathlib.Data.Int.Star
 import Mathlib.Data.Nat.ChineseRemainder
 import Mathlib.Data.Nat.Totient
+import Mathlib.Tactic.NormNum.Prime
 
 /-! # Pocklington's primality certificate
 
@@ -131,15 +133,16 @@ theorem pocklington_test (N F₁ : ℕ) (hn₀ : 0 < N) (hf₁ : F₁ ∣ N - 1)
     rw [← Nat.coprime_iff_gcd_eq_one] at hanq
     exact hanq.symm.coprime_dvd_left hpn
 
+def PocklingtonPred (N root F₁ : ℕ) : Prop :=
+  ∀ p ∈ F₁.primeFactors, (root ^ ((N - 1) / p) - 1).gcd N = 1
+
 theorem pocklington_certify (N F₁ : ℕ) (h2n : 2 ≤ N) (hf₁ : F₁ ∣ N - 1) (hf₁' : N.sqrt < F₁)
-    (root : ℕ)
-    (primitive : ∀ p ∈ F₁.primeFactors, root ^ (N - 1) ≡ 1 [MOD N] ∧
-      Nat.gcd (root ^ ((N - 1) / p) - 1) N = 1) :
+    (root : ℕ) (psp : root ^ (N - 1) ≡ 1 [MOD N])
+    (primitive : PocklingtonPred N root F₁) :
     Nat.Prime N := by
   by_contra hn
   rw [Nat.sqrt_lt, ← sq] at hf₁'
-  have := pocklington_test N F₁ (by grind) hf₁
-    (fun p hp ↦ ⟨root, (primitive p hp).1, (primitive p hp).2⟩)
+  have := pocklington_test N F₁ (by grind) hf₁ (fun p hp ↦ ⟨root, psp, primitive p hp⟩)
     N.minFac (N.minFac_prime (by grind)) N.minFac_dvd
   have h1p : 2 ≤ N.minFac := (N.minFac_prime (by grind)).two_le
   rw [Nat.ModEq.comm, Nat.modEq_iff_dvd' (by grind)] at this
@@ -147,12 +150,84 @@ theorem pocklington_certify (N F₁ : ℕ) (h2n : 2 ≤ N) (hf₁ : F₁ ∣ N -
   exact lt_asymm hf₁' <| ((Nat.pow_lt_pow_iff_left (by grind)).mpr this).trans_le <|
     Nat.minFac_sq_le_self (by grind) hn
 
-example : Nat.Prime 339392917 :=
-  pocklington_certify 339392917 (3 ^ 4 * 29 * 41) (by norm_num) (by norm_num)
-    (Nat.sqrt_lt.mpr <| by norm_num)
-    2 (by native_decide)
+theorem pocklington_certifyKR (N root F₁ : ℕ)
+    (primitive : PocklingtonPred N root F₁)
+    (psp : (powModTR root N.pred N).beq 1 := by exact eagerReduce (Eq.refl true))
+    (h2n : Nat.ble 2 N := by exact eagerReduce (Eq.refl true))
+    (hf₁ : (N.pred.mod F₁).beq 0 := by exact eagerReduce (Eq.refl true))
+    (hf₁' : N.blt (F₁.mul F₁) := by exact eagerReduce (Eq.refl true)) : N.Prime := by
+  simp_all only [powModTR_eq, Nat.beq_eq, Nat.ble_eq, Nat.mod_eq_mod,
+    ← Nat.dvd_iff_mod_eq_zero, Nat.mul_eq, Nat.blt_eq, ← Nat.sqrt_lt]
+  rw [← Nat.one_mod_eq_one.mpr (show N ≠ 1 by grind)] at psp
+  exact pocklington_certify N F₁ h2n hf₁ hf₁' root psp primitive
 
-example : Nat.Prime 16290860017 :=
-  pocklington_certify 16290860017 339392917 (by norm_num) (by norm_num)
-    (Nat.sqrt_lt.mpr <| by norm_num)
-    5 (by sorry)
+@[simp] theorem PocklingtonPred.zero {N root : ℕ} :
+    PocklingtonPred N root 0 := by
+  simp [PocklingtonPred]
+
+@[simp] theorem PocklingtonPred.one {N root : ℕ} :
+    PocklingtonPred N root 1 := by
+  simp [PocklingtonPred]
+
+theorem PocklingtonPred.step_pow {N root F₂ p e : ℕ} (hp : p.Prime)
+    (ih : PocklingtonPred N root F₂)
+    (step : ((predModKR (powModTR root (N.pred.div p) N) N).gcd N).beq 1 :=
+      by exact eagerReduce (Eq.refl true))
+    (hroot : Nat.blt 0 root = true := by exact eagerReduce (Eq.refl true)) :
+    PocklingtonPred N root (F₂ * p ^ e) := by
+  by_cases hf₂ : F₂ = 0
+  · simp [hf₂]
+  by_cases he : e = 0
+  · simpa [he]
+  by_cases hn : N = 0
+  · simp [hn, predModKR, powModTR_eq, powMod] at step
+  rw [PocklingtonPred] at ih ⊢
+  rw [Nat.primeFactors_mul hf₂ (pow_ne_zero _ hp.ne_zero), Nat.primeFactors_prime_pow he hp]
+  simp_rw [Finset.union_singleton, Finset.forall_mem_insert]
+  refine ⟨?_, ih⟩
+  simp only [Nat.pred_eq_sub_one, Nat.div_eq_div, Nat.beq_eq] at step
+  simp only [Nat.blt_eq] at hroot
+  rw [predModKR_eq hn (by rw [powModTR_eq]; exact (Nat.mod_lt _ (by grind)).le),
+    ← Nat.add_sub_assoc (by grind), powModTR_eq, powMod] at step
+  by_cases hp : root ^ ((N - 1) / p) % N = 0
+  · rw [← Nat.dvd_iff_mod_eq_zero] at hp
+    obtain ⟨r, hr⟩ := hp
+    have : r ≠ 0 := by rintro rfl; rw [mul_zero, pow_eq_zero_iff'] at hr; grind
+    replace this := mul_ne_zero hn this
+    rw [hr, Nat.gcd_mul_left_sub_left (by grind), Nat.gcd_one_left]
+  rwa [add_comm, Nat.add_sub_assoc (by grind), Nat.add_mod_left, Nat.mod_sub_of_le (by grind),
+    Nat.mod_mod, ← Nat.gcd_rec, Nat.gcd_comm] at step
+
+theorem PocklingtonPred.step {N root F₂ p : ℕ} (hp : p.Prime)
+    (ih : PocklingtonPred N root F₂)
+    (step : ((predModKR (powModTR root (N.pred.div p) N) N).gcd N).beq 1 :=
+      by exact eagerReduce (Eq.refl true))
+    (hroot : Nat.blt 0 root = true := by exact eagerReduce (Eq.refl true)) :
+    PocklingtonPred N root (F₂ * p) := by
+  simpa using PocklingtonPred.step_pow (e := 1) hp ih step hroot
+
+theorem PocklingtonPred.base_pow {N root p e : ℕ} (hp : p.Prime)
+    (step : ((predModKR (powModTR root (N.pred.div p) N) N).gcd N).beq 1 :=
+      by exact eagerReduce (Eq.refl true))
+    (hroot : Nat.blt 0 root = true := by exact eagerReduce (Eq.refl true)) :
+    PocklingtonPred N root (p ^ e) := by
+  simpa using PocklingtonPred.step_pow hp .one step hroot
+
+theorem PocklingtonPred.base {N root p : ℕ} (hp : p.Prime)
+    (step : ((predModKR (powModTR root (N.pred.div p) N) N).gcd N).beq 1 :=
+      by exact eagerReduce (Eq.refl true))
+    (hroot : Nat.blt 0 root = true := by exact eagerReduce (Eq.refl true)) :
+    PocklingtonPred N root p := by
+  simpa using PocklingtonPred.base_pow (e := 1) hp step hroot
+
+namespace PrimeCert
+
+theorem prime_339392917 :
+    Nat.Prime 339392917 :=
+  pocklington_certifyKR _ 2 (3 ^ 4 * 29 * 41) <|
+    .step (by norm_num) <| .step (by norm_num) <| .base_pow (by norm_num)
+
+theorem prime_16290860017 : Nat.Prime 16290860017 :=
+  pocklington_certifyKR _ 5 339392917 <| .base prime_339392917
+
+end PrimeCert
