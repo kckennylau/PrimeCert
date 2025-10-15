@@ -130,3 +130,29 @@ theorem pocklington_test (N F₁ : ℕ) (hn₀ : 0 < N) (hf₁ : F₁ ∣ N - 1)
       ← hp.coprime_iff_not_dvd]
     rw [← Nat.coprime_iff_gcd_eq_one] at hanq
     exact hanq.symm.coprime_dvd_left hpn
+
+theorem pocklington_certify (N F₁ : ℕ) (h2n : 2 ≤ N) (hf₁ : F₁ ∣ N - 1) (hf₁' : N.sqrt < F₁)
+    (root : ℕ)
+    (primitive : ∀ p ∈ F₁.primeFactors, root ^ (N - 1) ≡ 1 [MOD N] ∧
+      Nat.gcd (root ^ ((N - 1) / p) - 1) N = 1) :
+    Nat.Prime N := by
+  by_contra hn
+  rw [Nat.sqrt_lt, ← sq] at hf₁'
+  have := pocklington_test N F₁ (by grind) hf₁
+    (fun p hp ↦ ⟨root, (primitive p hp).1, (primitive p hp).2⟩)
+    N.minFac (N.minFac_prime (by grind)) N.minFac_dvd
+  have h1p : 2 ≤ N.minFac := (N.minFac_prime (by grind)).two_le
+  rw [Nat.ModEq.comm, Nat.modEq_iff_dvd' (by grind)] at this
+  have := Nat.succ_le.mp <| (Nat.le_sub_iff_add_le (by grind)).mp <| Nat.le_of_dvd (by grind) this
+  exact lt_asymm hf₁' <| ((Nat.pow_lt_pow_iff_left (by grind)).mpr this).trans_le <|
+    Nat.minFac_sq_le_self (by grind) hn
+
+example : Nat.Prime 339392917 :=
+  pocklington_certify 339392917 (3 ^ 4 * 29 * 41) (by norm_num) (by norm_num)
+    (Nat.sqrt_lt.mpr <| by norm_num)
+    2 (by native_decide)
+
+example : Nat.Prime 16290860017 :=
+  pocklington_certify 16290860017 339392917 (by norm_num) (by norm_num)
+    (Nat.sqrt_lt.mpr <| by norm_num)
+    5 (by sorry)
