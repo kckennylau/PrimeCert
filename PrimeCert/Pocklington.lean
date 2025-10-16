@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kenny Lau
 -/
 
+import PrimeCert.Meta.SmallPrime
 import PrimeCert.PredMod
 import PrimeCert.PowMod
 import Mathlib.Algebra.Field.ZMod
@@ -12,7 +13,7 @@ import Mathlib.Analysis.Normed.Ring.Lemmas
 import Mathlib.Data.Int.Star
 import Mathlib.Data.Nat.ChineseRemainder
 import Mathlib.Data.Nat.Totient
-import Mathlib.Tactic.NormNum.Prime
+import Mathlib.Tactic.ScopedNS
 
 /-! # Pocklington's primality certificate
 
@@ -221,17 +222,15 @@ theorem PocklingtonPred.base {N root p : ℕ} (hp : p.Prime)
     PocklingtonPred N root p := by
   simpa using PocklingtonPred.base_pow (e := 1) hp step hroot
 
-namespace PrimeCert
+namespace PrimeCert.Meta
 
-theorem prime_339392917 :
-    Nat.Prime 339392917 :=
-  pocklington_certifyKR _ 2 (3 ^ 4 * 29 * 41) <|
-    .step (by norm_num) <| .step (by norm_num) <| .base_pow (by norm_num)
+-- theorem prime_339392917 :
+--     Nat.Prime 339392917 :=
+--   pocklington_certifyKR _ 2 (3 ^ 4 * 29 * 41) <|
+--     .step (by norm_num) <| .step (by norm_num) <| .base_pow (by norm_num)
 
-theorem prime_16290860017 : Nat.Prime 16290860017 :=
-  pocklington_certifyKR _ 5 339392917 <| .base prime_339392917
-
-section pock
+-- theorem prime_16290860017 : Nat.Prime 16290860017 :=
+--   pocklington_certifyKR _ 5 339392917 <| .base prime_339392917
 
 open Lean Meta Qq
 
@@ -272,53 +271,34 @@ def parseFactored (stx : TSyntax ``factored) : Q(Nat) × Array PrimePow :=
     (head.1, #[head.2])
   | _ => (mkNatLit 0, #[])
 
-/-- Each step of the ladder is stored as a metavariable -/
-structure PrimeProofEntry : Type where
-  mVar : Expr
-  -- uses : Std.TreeSet ℕ
-  pf : Expr
-  deriving Repr, Inhabited
-
-def mkPrimeName (p : Nat) : Name :=
-  Name.anonymous.str "PrimeCert" |>.str s!"prime_{p}"
-
-/-- Prints an error message if the entry is not found. -/
-def retrieve (dict : Std.HashMap Nat PrimeProofEntry) (p : Nat) : MetaM PrimeProofEntry := do
-  match dict[p]? with
-  | some entry => return entry
-  | none => throwError m!"Prime {p} not yet certified."
-
-def mkPockPred (N a F₁ : Q(Nat)) (steps : Array PrimePow) (dict : Std.HashMap Nat PrimeProofEntry) :
+def mkPockPred (N a F₁ : Q(Nat)) (steps : Array PrimePow) (dict : PrimeDict) :
     MetaM Q(PocklingtonPred $N $a $F₁) := do
   if h : steps.size = 0 then return mkConst ``PocklingtonPred.one
   else
     have head : Expr := ← match steps[0] with
     | .prime p => do
-      mkAppOptM ``PocklingtonPred.base #[N, a, mkNatLit p, (← retrieve dict p).pf,
+      mkAppOptM ``PocklingtonPred.base #[N, a, mkNatLit p, (← dict.getM p).pf,
         eagerReflBoolTrue, eagerReflBoolTrue]
     | .pow p e => do
-      mkAppOptM ``PocklingtonPred.base_pow #[N, a, mkNatLit p, mkNatLit e, (← retrieve dict p).pf,
+      mkAppOptM ``PocklingtonPred.base_pow #[N, a, mkNatLit p, mkNatLit e, (← dict.getM p).pf,
         eagerReflBoolTrue, eagerReflBoolTrue]
     (steps.drop 1).foldlM (fun ih step ↦ match step with
       | .prime p => do
-        mkAppM ``PocklingtonPred.step #[(← retrieve dict p).pf, ih,
+        mkAppM ``PocklingtonPred.step #[(← dict.getM p).pf, ih,
           eagerReflBoolTrue, eagerReflBoolTrue]
       | .pow p e => do
         mkAppOptM ``PocklingtonPred.step_pow #[N, a, none, mkNatLit p, mkNatLit e,
-          (← retrieve dict p).pf, ih, eagerReflBoolTrue, eagerReflBoolTrue]) head
+          (← dict.getM p).pf, ih, eagerReflBoolTrue, eagerReflBoolTrue]) head
 
 /--
-A ladder in the Pocklington certificate:
-- a small prime `p < 1000` is specified as `p`
-- otherwise, we take a triple `(N, a, F₁)` where
+A ladder in the Pocklington certificate is a triple `(N, a, F₁)` where
   - `N` is the number to be certified as prime
   - `a` is a pseudo-primitive root of `N`
   - `F₁ > √N` is a partially factored divisor of `N - 1`, written out in full like `3 ^ 4 * 29 * 41`
 -/
 syntax pock_spec := num <|> ("(" num ", " num ", " factored ")")
 
-def parsePockSpec (stx : TSyntax ``pock_spec) (dict : Std.HashMap Nat PrimeProofEntry) :
-    MetaM (Nat × (N : Q(Nat)) × Q(($N).Prime)) := do
+def parsePockSpec : PrimeCertMethod ``pock_spec := fun stx dict ↦ do
   match stx with
   | `(pock_spec| ($N:num, $a:num, $F₁:factored)) =>
       have Nnat := N.getNat
@@ -330,11 +310,15 @@ def parsePockSpec (stx : TSyntax ``pock_spec) (dict : Std.HashMap Nat PrimeProof
         #[N, a, F₁, pred, eagerReflBoolTrue, eagerReflBoolTrue,
           eagerReflBoolTrue, eagerReflBoolTrue]
       return ⟨Nnat, N, pf⟩
-  | `(pock_spec| $p:num) =>
-      have pNat := p.getNat
-      have p : Q(Nat) := mkNatLit pNat
-      return ⟨pNat, p, mkConst (mkPrimeName pNat)⟩
-  | _ => return ⟨2, mkNatLit 2, mkConst ``Nat.prime_two⟩
+  | _ => Elab.throwUnsupportedSyntax
+
+@[prime_cert pock] def PrimeCertExt.pock : PrimeCertExt where
+  syntaxName := ``pock_spec
+  methodName := ``parsePockSpec
+
+end Meta
+
+open Meta
 
 /--
 Usage:
@@ -343,17 +327,7 @@ theorem prime_16290860017 : Nat.Prime 16290860017 :=
   pock% [3, 29, 41, (339392917, 2, 3 ^ 4 * 29 * 41), (16290860017, 5, 339392917)]
 ```
 -/
-scoped elab "pock%" "[" steps:pock_spec,+ "]" : term => do
-  let mut dict : Std.HashMap Nat PrimeProofEntry := ∅
-  let mut NNat := 2
-  for step in steps.getElems do
-    let ⟨NNat', N, pf⟩ ← parsePockSpec step dict
-    let mvar ← mkFreshExprMVar (mkApp (mkConst ``Nat.Prime) N)
-      (userName := .mkSimple s!"prime_{NNat'}")
-    dict := dict.insert NNat' ⟨mvar, pf⟩
-    NNat := NNat'
-  return (dict.get! NNat).pf
-
-end pock
+scoped elab "pock%" "[" heads:small_spec,+ ";" steps:pock_spec,+ "]" : term => do
+  Lean.Elab.Term.elabTerm (← `(prime_cert% [small {$heads;*}, pock {$steps;*}])) none
 
 end PrimeCert

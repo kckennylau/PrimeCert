@@ -5,7 +5,6 @@ Authors: Kenny Lau
 -/
 
 import PrimeCert.Meta.PrimeCert
-import PrimeCert.SmallPrimes
 
 /-! # The default extension for small primes
 
@@ -14,12 +13,11 @@ import PrimeCert.SmallPrimes
 
 open Lean Meta Elab Qq
 
-namespace PrimeCert.Tactic
+namespace PrimeCert.Meta
 
 syntax small_spec := num
 
-def mkSmallProof (stx : TSyntax ``small_spec) (_ : Std.HashMap Nat PrimeProofEntry) :
-    MetaM (Nat × (N : Q(Nat)) × Q(($N).Prime)) := match stx with
+def mkSmallProof : PrimeCertMethod ``small_spec := fun stx _ ↦ match stx with
   | `(small_spec| $n:num) => do
     have n := n.getNat
     have name : Name := (`PrimeCert).str s!"prime_{n}"
@@ -28,12 +26,6 @@ def mkSmallProof (stx : TSyntax ``small_spec) (_ : Std.HashMap Nat PrimeProofEnt
 
 @[prime_cert small] def PrimeCertExt.small : PrimeCertExt where
   syntaxName := ``small_spec
-  method := mkSmallProof
+  methodName := ``mkSmallProof
 
-example : Nat.Prime 997 :=
-  prime_cert% [small {3; 2; 5; 997}]
-
-example : Nat.Prime 997 :=
-  prime_cert% [small 997]
-
-end PrimeCert.Tactic
+end PrimeCert.Meta

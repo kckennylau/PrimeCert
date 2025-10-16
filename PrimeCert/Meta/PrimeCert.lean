@@ -11,7 +11,7 @@ import Qq
 
 open Lean Meta Elab Command Qq
 
-namespace PrimeCert.Tactic
+namespace PrimeCert.Meta
 
 /-- Each step of the ladder is stored as a metavariable -/
 structure PrimeProofEntry : Type where
@@ -19,13 +19,22 @@ structure PrimeProofEntry : Type where
   pf : Expr
   deriving Repr, Inhabited
 
+abbrev PrimeDict := Std.HashMap Nat PrimeProofEntry
+
+def PrimeDict.getM (dict : PrimeDict) (n : ℕ) : MetaM PrimeProofEntry := do
+  let .some entry := dict.get? n
+    | throwError s!"Primality not yet certified for {n}"
+  return entry
+
+abbrev PrimeCertMethod (syntaxName : Name) :=
+  TSyntax syntaxName → PrimeDict → MetaM (Nat × (N : Q(Nat)) × Q(($N).Prime))
+
 /-- A method to climb one step in the ladder, given the dictionary of previously proved primes. -/
 structure PrimeCertExt where
   /-- The syntax specific to the certification method -/
   syntaxName : Name
   /-- The function to build the prime proof in the step -/
-  method : TSyntax syntaxName → Std.HashMap Nat PrimeProofEntry →
-    MetaM (Nat × (N : Q(Nat)) × Q(($N).Prime))
+  methodName : Name
   deriving Inhabited
 
 initialize primeCertExt : SimpleScopedEnvExtension
@@ -42,6 +51,11 @@ syntax (name := prime_cert) "prime_cert " ident : attr
 def mkPrimeCertExt (n : Name) : ImportM PrimeCertExt := do
   let { env, opts, .. } ← read
   IO.ofExcept <| unsafe env.evalConstCheck PrimeCertExt opts ``PrimeCertExt n
+
+/-- Read a prime certifying method from a declaration of the right type. -/
+def PrimeCertExt.mkMethod (ext : PrimeCertExt) : ImportM (PrimeCertMethod ext.syntaxName) := do
+  let { env, opts, .. } ← read
+  IO.ofExcept <| unsafe env.evalConst (PrimeCertMethod ext.syntaxName) opts ext.methodName
 
 -- Specification for a group of steps in the ladder
 declare_syntax_cat step_group
@@ -96,12 +110,13 @@ def parseStepGroup (stx : TSyntax `step_group) :
   | _ => throwUnsupportedSyntax
 
 elab "prime_cert% " "[" grps:step_group,+ "]" : term => do
-  let mut dict : Std.HashMap Nat PrimeProofEntry := ∅
+  let mut dict : PrimeDict := ∅
   let mut goal : ℕ := 0
   for group in grps.getElems do
     let ⟨ext, steps⟩ ← parseStepGroup group
+    let method ← ext.mkMethod
     for step in steps do
-      let ⟨n, nE, pf⟩ ← ext.method step dict
+      let ⟨n, nE, pf⟩ ← method step dict
       goal := n
       let mVar ← mkFreshExprMVar q(Nat.Prime $nE) default <| .mkSimple s!"prime_{n}"
       dict := dict.insert n ⟨mVar, pf⟩
@@ -109,4 +124,4 @@ elab "prime_cert% " "[" grps:step_group,+ "]" : term => do
     | throwError s!"Primality not certified for {goal}"
   return entry.pf
 
-end PrimeCert.Tactic
+end PrimeCert.Meta
