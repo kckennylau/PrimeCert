@@ -187,18 +187,6 @@ theorem forallB_one_iff (f : ℕ → Bool) (start len : ℕ) :
     forallB f start len ↔ ∀ n, start ≤ n → n < start + len → f n := by
   simp_rw [forallB_iff_range', List.mem_range'_1, and_imp]
 
-/-
-(N F₁ m : ℕ) (h2n : 2 ≤ N) (hn : Odd N) (hf₁ : F₁ ∣ N - 1) (hr₁ : Odd ((N - 1) / F₁))
-  (primitive : ∀ p ∈ F₁.primeFactors, ∃ a, a ^ (N - 1) ≡ 1 [MOD N] ∧ (a ^ ((N - 1) / p) - 1).gcd N = 1)
-  (divisors : ∀ (l : ℕ), 1 ≤ l → l < m → ¬l * F₁ + 1 ∣ N)
-  (bound : N + (m * F₁ + 1) * (m * F₁) < (m * F₁ + 1) * (2 * F₁ ^ 2 + (N - 1) / F₁ % (2 * F₁) * F₁ + 1))
-  (cert :
-    (N - 1) / F₁ < 2 * F₁ ∨
-      ¬IsSquare (((N - 1) / F₁ % (2 * F₁)) ^ 2 - 8 * ((N - 1) / F₁ / (2 * F₁))) ∨
-        ((N - 1) / F₁ % (2 * F₁)) ^ 2 < 8 * ((N - 1) / F₁ / (2 * F₁))) :
-  Nat.Prime N
--/
-
 /--
 Inputs:
 * `N`: the number to be certified as prime
