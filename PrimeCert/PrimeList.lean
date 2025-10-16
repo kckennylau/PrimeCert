@@ -5,7 +5,7 @@ Authors: Kenny Lau
 -/
 
 import PrimeCert.SmallPrimes
-import PrimeCert.Pocklington
+import PrimeCert.Pocklington3
 
 /-! # Examples for prime certificates
 
@@ -114,3 +114,8 @@ end PrimeCert
 -- theorem wieferich_100 : ∀ n < 100, Nat.blt 1 (powModTR 4 n (n.mul 2 |>.succ |>.pow 2)) ||
 --     n.beq 0 || n.beq 546 || n.beq 1755 :=
 --   by decide
+
+-- set_option maxRecDepth 10000 in
+-- #time
+-- #reduce Nat.rec (motive := fun _ ↦ Nat × Bool) (4001, true)
+--   (fun _ ih ↦ ih.rec fun n b ↦ (n.add 2, Nat.blt 1 (powModTR 2 n.pred (n.mul n)) && b)) 1000
