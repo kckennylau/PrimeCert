@@ -4,12 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kenny Lau
 -/
 
+import Mathlib.NumberTheory.LegendreSymbol.Basic
 import PrimeCert.Pocklington
 
 /-! # An improved version of Pocklington's primality test -/
-
-#check PocklingtonPred
-#check pocklington_test
 
 theorem Nat.prime_iff_not_exists_mul_eq' (p : ℕ) :
     Nat.Prime p ↔ 2 ≤ p ∧ ¬∃ m n, 2 ≤ m ∧ m < p ∧ 2 ≤ n ∧ n < p ∧ m * n = p := by
@@ -62,6 +60,8 @@ theorem Nat.add_sq_eq_dist_sq_add_four_mul (c d : ℕ) :
   obtain ⟨d, rfl⟩ := le_iff_exists_add.mp h
   rw [max_eq_right h, min_eq_left h, Nat.add_sub_cancel_left]
   ring
+
+namespace PrimeCert
 
 section
 
@@ -155,6 +155,7 @@ theorem pocklington3_test (N F₁ m : ℕ) (h2n : 2 ≤ N) (hn : Odd N) (hf₁ :
 
 end
 
+-- MOVE
 def forallB (f : ℕ → Bool) (start len : ℕ) (step : ℕ := 1) : Bool :=
   (Nat.rec (motive := fun _ ↦ ℕ × Bool) (start, true)
     (fun _ ih ↦ ih.rec fun i b ↦ (eagerReduce (i.add step), f i && b)) len).2
@@ -187,6 +188,9 @@ theorem forallB_one_iff (f : ℕ → Bool) (start len : ℕ) :
     forallB f start len ↔ ∀ n, start ≤ n → n < start + len → f n := by
   simp_rw [forallB_iff_range', List.mem_range'_1, and_imp]
 
+def Pocklington3Cert (r s : ℕ) : Prop :=
+  s = 0 ∨ ¬ IsSquare (r ^ 2 - 8 * s) ∨ r ^ 2 < 8 * s
+
 /--
 Inputs:
 * `N`: the number to be certified as prime
@@ -198,29 +202,35 @@ Inputs:
 * `m`: an arbitrary number (`> 0`), which should be small for better performance.
 * `s, r := divmod(R, 2*F)`, given as literals
 -/
-theorem pocklington3_certKR (N F F' e R root m r s : ℕ) (hn : Nat.ble 2 N) (he : Nat.blt 0 e)
+theorem pocklington3_certKR (N F F' e R root m r s : ℕ)
+    (pred : PocklingtonPred N root (F'.mul <| Nat.pow 2 e))
+    (cert : Pocklington3Cert r s)
+    (hn : Nat.ble 2 N) (he : Nat.blt 0 e)
     (psp : (powModTR root N.pred N).beq 1)
-    (pred : PocklingtonPred N root (Nat.pow 2 e |>.mul F'))
-    (e_def : F = 2 ^ e * F') (hfr : N = F * R + 1) (odd_r : (R.mod 2).beq 1)
+    (e_def : F.beq <| F'.mul <| Nat.pow 2 e) (hfr : N.beq <| (F.mul R).succ)
+    (odd_r : (R.mod 2).beq 1)
     (divisors : forallB (fun l ↦ Nat.blt 0 (N.mod l)) F.succ m.pred F)
-    (r_def : r = R % (2 * F)) (s_def : s = R / (2 * F))
+    (r_def : r.beq <| R.mod <| F.mul 2) (s_def : s.beq <| R.div <| F.mul 2)
     (bound : N.add (m.mul F |>.succ |>.mul (m.mul F)) |>.blt
-      (m.mul F |>.succ |>.mul (F.pow 2 |>.mul 2 |>.add (r.mul F |>.succ))))
-    (cert : s.beq 0 ∨ ¬ IsSquare (r.pow 2 |>.sub (s.mul 8)) ∨ (r.pow 2 |>.blt (s.mul 8))) :
+      (m.mul F |>.succ |>.mul (F.pow 2 |>.mul 2 |>.add (r.mul F |>.succ)))) :
     Nat.Prime N := by
   simp only [Nat.ble_eq] at hn
   simp only [Nat.blt_eq] at he
   simp only [Nat.pred_eq_sub_one, Nat.beq_eq, powModTR_eq, powMod] at psp
-  simp only [Nat.mod_eq_mod, Nat.beq_eq, ← Nat.odd_iff] at odd_r
   simp only [Nat.pow_eq, Nat.mul_eq] at pred
+  simp only [Nat.pow_eq, Nat.mul_eq, Nat.beq_eq] at e_def
+  simp only [Nat.mul_eq, Nat.succ_eq_add_one, Nat.beq_eq] at hfr
+  simp only [Nat.mod_eq_mod, Nat.beq_eq, ← Nat.odd_iff] at odd_r
+  simp only [Nat.mul_eq, Nat.mod_eq_mod, Nat.beq_eq, mul_comm F] at r_def
+  simp only [Nat.mul_eq, Nat.div_eq_div, Nat.beq_eq, mul_comm F] at s_def
   simp only [Nat.mul_eq, Nat.succ_eq_add_one, Nat.add_eq, Nat.pow_eq, Nat.blt_eq] at bound
-  simp only [Nat.pow_eq, Nat.mul_eq, Nat.sub_eq, Nat.blt_eq, Nat.beq_eq] at cert
+  simp only [Pocklington3Cert] at cert
   have hf₀ : F ≠ 0 := by rintro rfl; rw [zero_mul] at hfr; grind
   have R_def : R = (N - 1) / F := by
     rw [hfr, Nat.succ_sub_one, Nat.mul_div_cancel_left _ (by grind)]
   refine pocklington3_test N F m (by simpa using hn) ?_ ?_ ?_ ?_ ?_ ?_ ?_
-  · rw [hfr, Nat.odd_add_one, Nat.not_odd_iff_even, e_def, mul_assoc]
-    exact (Nat.even_pow.mpr ⟨even_two, by simpa [Nat.pos_iff_ne_zero] using he⟩).mul_right _
+  · rw [hfr, Nat.odd_add_one, Nat.not_odd_iff_even, e_def, mul_right_comm]
+    exact (Nat.even_pow.mpr ⟨even_two, by simpa [Nat.pos_iff_ne_zero] using he⟩).mul_left _
   · rw [hfr, Nat.succ_sub_one]; tauto
   · rwa [← R_def]
   · rw [← e_def, PocklingtonPred] at pred
@@ -230,4 +240,105 @@ theorem pocklington3_certKR (N F F' e R root m r s : ℕ) (hn : Nat.ble 2 N) (he
       ← Nat.dvd_iff_mod_eq_zero] at divisors
     exact fun l hl₁ hl₂ ↦ divisors l hl₁ (by grind)
   · rwa [← R_def, ← r_def, mul_comm 2]
-  · rwa [← R_def, ← r_def, ← s_def, mul_comm 8, ← Nat.div_eq_zero_iff_lt (by grind), ← s_def]
+  · rwa [← R_def, ← r_def, ← s_def, ← Nat.div_eq_zero_iff_lt (by grind), ← s_def]
+
+theorem Pocklington3Cert.of_zero (r s : Nat) (h : s.beq 0) : Pocklington3Cert r s := by
+  unfold Pocklington3Cert; rw [Nat.beq_eq] at h; tauto
+
+theorem Pocklington3Cert.of_prime (r s p : Nat) (hp : Nat.Prime p) (h2p : Nat.blt 2 p)
+    (cond : powModTR (r.pow 2 |>.sub (s.mul 8)) (p.div 2) p |>.beq p.pred) :
+    Pocklington3Cert r s := by
+  refine .inr <| .inl fun h ↦ ?_
+  simp only [Nat.pow_eq, Nat.mul_eq, Nat.sub_eq, Nat.div_eq_div, Nat.pred_eq_sub_one,
+    Nat.beq_eq, powModTR_eq, mul_comm s] at cond
+  rw [Nat.blt_eq] at h2p
+  have p_odd : p % 2 = 1 := by rw [← Nat.not_even_iff, Nat.Prime.even_iff hp]; grind
+  obtain ⟨a, ha⟩ := h
+  rw [ha, powMod, ← sq, ← pow_mul, Nat.two_mul_odd_div_two p_odd] at cond
+  replace cond := congr(($cond : ZMod p))
+  have := Fact.mk hp
+  rw [ZMod.natCast_mod, Nat.cast_pow, Nat.cast_sub hp.one_le, ZMod.natCast_self, zero_sub,
+    Nat.cast_one] at cond
+  have ha : (a : ZMod p) ≠ 0 := by
+    rintro ha; rw [ha, zero_pow (by grind), eq_comm, neg_eq_zero] at cond; grind
+  rw [ZMod.pow_card_sub_one_eq_one ha, eq_neg_iff_add_eq_zero, one_add_one_eq_two, ← Nat.cast_two,
+    ZMod.natCast_eq_zero_iff] at cond
+  exact not_lt_of_ge (Nat.le_of_dvd (by grind) cond) h2p
+
+theorem Pocklington3Cert.of_lt (r s : Nat) (h : r.pow 2 |>.blt (s.mul 8)) : Pocklington3Cert r s :=
+  .inr <| .inr <| by simpa [mul_comm s] using h
+
+namespace Meta
+
+open Lean Meta Qq
+
+syntax pock3_mode := num <|> "<"
+
+inductive Pock3Mode
+  | zero | prime (p : ℕ) | lt
+
+def parsePock3Mode (stx : TSyntax ``pock3_mode) : Pock3Mode := match stx with
+  | `(pock3_mode| $n:num) => have n := n.getNat; if n = 0 then .zero else .prime n
+  | `(pock3_mode| <) => .lt
+  | _ => .zero
+
+def Pock3Mode.mkCert (mode : Pock3Mode) (r s : ℕ) (rE sE : Q(ℕ)) (dict : PrimeDict) :
+    MetaM Q(Pocklington3Cert $r $s) := match mode with
+  | .zero => return mkAppN (mkConst ``Pocklington3Cert.of_zero) #[rE, sE, eagerReflBoolTrue]
+  | .prime p => do
+    have pE : Q(ℕ) := mkNatLit p
+    return mkAppN (mkConst ``Pocklington3Cert.of_prime)
+      #[rE, sE, pE, (← dict.getM p).pf, eagerReflBoolTrue, eagerReflBoolTrue]
+  | .lt => return mkAppN (mkConst ``Pocklington3Cert.of_lt) #[rE, sE, eagerReflBoolTrue]
+
+/-- `(N, root, m, mode, F₁)` where `mode` is:
+* `0` for `s = 0`;
+* `p` for a small prime witnessing `r^2-8s` is not square;
+* `<` for `r^2 < 8s`.
+-/
+syntax pock3_spec := "(" num "," num "," num "," pock3_mode "," prime_pow "*" factored")"
+
+def PrimePow.base : PrimePow → ℕ
+| .prime p => p
+| .pow p _ => p
+
+-- TODO: special case for `F = 2 ^ e`
+
+def parsePock3Spec : PrimeCertMethod ``pock3_spec := fun stx dict ↦ match stx with
+  | `(pock3_spec| ($N:num, $root:num, $m:num, $mode:pock3_mode,
+      $head:prime_pow * $F:factored)) => do
+    have (headE, headF) := parsePrimePow head
+    unless headF.base == 2 do throwError "the first prime in the factorization must be 2"
+    have (F'E, factors) := parseFactored F
+    have N := N.getNat
+    have NE : Q(ℕ) := mkNatLit N
+    let .some F ← evalNat q($headE * $F'E) | throwError "failed to evaluate F"
+    have FE : Q(ℕ) := mkNatLit F
+    have e := match headF with | .prime _ => 1 | .pow _ e => e
+    have eE : Q(ℕ) := mkNatLit e
+    let .some R ← evalNat q($NE / $FE) | throwError "failed to evaluate R"
+    have RE : Q(ℕ) := mkNatLit R
+    have root := root.getNat
+    have rootE : Q(ℕ) := mkNatLit root
+    have m := m.getNat
+    have mE : Q(ℕ) := mkNatLit m
+    let .some s ← evalNat q($RE / ($FE * 2)) | throwError "failed to evaluate s"
+    have sE : Q(ℕ) := mkNatLit s
+    let .some r ← evalNat q($RE % ($FE * 2)) | throwError "failed to evaluate r"
+    have rE : Q(ℕ) := mkNatLit r
+    let pred ← mkPockPred NE rootE q(($F'E).mul (Nat.pow 2 $eE)) (factors.push <| .pow 2 e) dict
+    have mode := parsePock3Mode mode
+    let cert ← mode.mkCert r s rE sE dict
+    have pf : Q(Nat.Prime $NE) := mkAppN (mkConst ``pocklington3_certKR)
+      #[NE, FE, F'E, eE, RE, rootE, mE, rE, sE, pred, cert,
+      eagerReflBoolTrue, eagerReflBoolTrue, eagerReflBoolTrue, eagerReflBoolTrue,
+      eagerReflBoolTrue, eagerReflBoolTrue, eagerReflBoolTrue, eagerReflBoolTrue,
+      eagerReflBoolTrue, eagerReflBoolTrue]
+    return ⟨N, NE, pf⟩
+  | _ => Elab.throwUnsupportedSyntax
+
+@[prime_cert pock3] def pock3 : PrimeCertExt where
+  syntaxName := ``pock3_spec
+  methodName := ``parsePock3Spec
+
+end PrimeCert.Meta
