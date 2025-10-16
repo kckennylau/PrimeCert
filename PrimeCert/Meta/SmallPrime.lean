@@ -28,11 +28,7 @@ def mkSmallProof (stx : TSyntax ``small_spec) (_ : Std.HashMap Nat PrimeProofEnt
 
 @[prime_cert small] def PrimeCertExt.small : PrimeCertExt where
   syntaxName := ``small_spec
-  quotedSyntax := .mk <| mkNode `stx #[mkIdent ``small_spec]
   method := mkSmallProof
-
-syntax "small" small_spec : step_group
-syntax "small" "{" sepBy1(small_spec,"; ") "}" : step_group
 
 example : Nat.Prime 997 :=
   prime_cert% [small {3; 2; 5; 997}]

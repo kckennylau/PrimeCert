@@ -23,8 +23,6 @@ structure PrimeProofEntry : Type where
 structure PrimeCertExt where
   /-- The syntax specific to the certification method -/
   syntaxName : Name
-  /-- The quoted syntax name -/
-  quotedSyntax : TSyntax `stx
   /-- The function to build the prime proof in the step -/
   method : TSyntax syntaxName → Std.HashMap Nat PrimeProofEntry →
     MetaM (Nat × (N : Q(Nat)) × Q(($N).Prime))
@@ -48,15 +46,20 @@ def mkPrimeCertExt (n : Name) : ImportM PrimeCertExt := do
 -- Specification for a group of steps in the ladder
 declare_syntax_cat step_group
 
--- /-- If we're given a syntax `pock_spec` for a step in `pock`, we do the following:
--- ```lean
--- syntax "pock" pock_spec : step_spec
--- syntax "pock" "{" pock_spec;+ "}" : step_spec
--- ```
--- -/
--- def mkSyntax (key : String) (spec : TSyntax `stx) : CommandElabM Unit := do
---   elabCommand =<< `(command| syntax $(quote key):str $spec : step_group)
---   elabCommand =<< `(command| syntax $(quote key):str "{" sepBy1($spec,"; ") "}" : step_group)
+/-- Convert a syntax category name to a ``TSyntax `stx`` dynamically. -/
+def _root_.Lean.Name.toSyntaxCat (cat : Name) : TSyntax `stx :=
+  .mk <| mkNode `Lean.Parser.Syntax.cat #[mkIdent cat, mkNullNode]
+
+/-- If we're given a syntax `pock_spec` for a step in `pock`, we do the following:
+```lean
+syntax "pock" pock_spec : step_spec
+syntax "pock" "{" pock_spec;+ "}" : step_spec
+```
+-/
+def mkSyntax (key : String) (spec : Name) : CommandElabM Unit := do
+  have spec := spec.toSyntaxCat
+  elabCommand =<< `(command| syntax $(quote key):str $spec : step_group)
+  elabCommand =<< `(command| syntax $(quote key):str "{" sepBy1($spec,"; ") "}" : step_group)
 
 initialize registerBuiltinAttribute {
   name := `prime_cert
@@ -66,7 +69,7 @@ initialize registerBuiltinAttribute {
     | `(attr| prime_cert $key) => do
       have key := key.getId.toString
       let ext ← mkPrimeCertExt declName
-      -- liftCommandElabM <| mkSyntax key ext.quotedSyntax
+      liftCommandElabM <| mkSyntax key ext.syntaxName
       primeCertExt.add (key, ext) kind
     | _ => throwUnsupportedSyntax
 }
