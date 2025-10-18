@@ -224,14 +224,6 @@ theorem PocklingtonPred.base {N root p : ℕ} (hp : p.Prime)
 
 namespace PrimeCert.Meta
 
--- theorem prime_339392917 :
---     Nat.Prime 339392917 :=
---   pocklington_certifyKR _ 2 (3 ^ 4 * 29 * 41) <|
---     .step (by norm_num) <| .step (by norm_num) <| .base_pow (by norm_num)
-
--- theorem prime_16290860017 : Nat.Prime 16290860017 :=
---   pocklington_certifyKR _ 5 339392917 <| .base prime_339392917
-
 open Lean Meta Qq
 
 /-- A prime power is represented by either `p ^ e` or `p`. -/
@@ -277,18 +269,18 @@ def mkPockPred (N a F₁ : Q(Nat)) (steps : Array PrimePow) (dict : PrimeDict) :
   else
     have head : Expr := ← match steps[0] with
     | .prime p => do
-      mkAppOptM ``PocklingtonPred.base #[N, a, mkNatLit p, (← dict.getM p).pf,
+      mkAppOptM ``PocklingtonPred.base #[N, a, mkNatLit p, ← dict.getM p,
         eagerReflBoolTrue, eagerReflBoolTrue]
     | .pow p e => do
-      mkAppOptM ``PocklingtonPred.base_pow #[N, a, mkNatLit p, mkNatLit e, (← dict.getM p).pf,
+      mkAppOptM ``PocklingtonPred.base_pow #[N, a, mkNatLit p, mkNatLit e, ← dict.getM p,
         eagerReflBoolTrue, eagerReflBoolTrue]
     (steps.drop 1).foldlM (fun ih step ↦ match step with
       | .prime p => do
-        mkAppM ``PocklingtonPred.step #[(← dict.getM p).pf, ih,
+        mkAppM ``PocklingtonPred.step #[← dict.getM p, ih,
           eagerReflBoolTrue, eagerReflBoolTrue]
       | .pow p e => do
         mkAppOptM ``PocklingtonPred.step_pow #[N, a, none, mkNatLit p, mkNatLit e,
-          (← dict.getM p).pf, ih, eagerReflBoolTrue, eagerReflBoolTrue]) head
+          ← dict.getM p, ih, eagerReflBoolTrue, eagerReflBoolTrue]) head
 
 /--
 A ladder in the Pocklington certificate is a triple `(N, a, F₁)` where

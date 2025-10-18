@@ -13,15 +13,10 @@ open Lean Meta Elab Command Qq
 
 namespace PrimeCert.Meta
 
-/-- Each step of the ladder is stored as a metavariable -/
-structure PrimeProofEntry : Type where
-  mVar : Expr
-  pf : Expr
-  deriving Repr, Inhabited
+/-- We store the metavariable assigned to each certified prime. -/
+abbrev PrimeDict := Std.HashMap Nat Expr
 
-abbrev PrimeDict := Std.HashMap Nat PrimeProofEntry
-
-def PrimeDict.getM (dict : PrimeDict) (n : ℕ) : MetaM PrimeProofEntry := do
+def PrimeDict.getM (dict : PrimeDict) (n : ℕ) : MetaM Expr := do
   let .some entry := dict.get? n
     | throwError s!"Primality not yet certified for {n}"
   return entry
@@ -119,9 +114,10 @@ elab "prime_cert% " "[" grps:step_group,+ "]" : term => do
       let ⟨n, nE, pf⟩ ← method step dict
       goal := n
       let mVar ← mkFreshExprMVar q(Nat.Prime $nE) default <| .mkSimple s!"prime_{n}"
-      dict := dict.insert n ⟨mVar, pf⟩
+      dict := dict.insert n mVar
+      mVar.mvarId!.assign pf
   let .some entry := dict.get? goal
     | throwError s!"Primality not certified for {goal}"
-  return entry.pf
+  return entry
 
 end PrimeCert.Meta
