@@ -22,6 +22,8 @@ def powMod (a b n : ℕ) : ℕ := a ^ b % n
 /-- The pow-mod auxiliary function, named explicitly to allow more precise control of reduction. -/
 def powModAux (a b c n : ℕ) : ℕ := (a ^ b * c) % n
 
+def Nat.eager (k : Nat → Nat) (n : Nat) : Nat := k (eagerReduce n)
+
 noncomputable def powModTR (a b n : Nat) : Nat :=
   aux b.succ (a.mod n) b 1
 where

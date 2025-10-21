@@ -21,6 +21,8 @@ set_option trace.profiler true
 theorem prime_16290860017' : Nat.Prime 16290860017 :=
   pock% [3, 29, 41; (339392917, 2, 3 ^ 4 * 29 * 41), (16290860017, 5, 339392917)]
 
+set_option trace.profiler.threshold 0
+
 #time
 -- randomly generated 60-digit prime
 theorem prime_236684654874665389773181956283167565443541280517430278333971 :
@@ -50,7 +52,8 @@ theorem prime_236684654874665389773181956283167565443541280517430278333971 :
 -/
 
 -- randomly generated 100-digit prime
-#time
+
+
 set_option maxRecDepth 4000 in
 example : Nat.Prime
     33706834100337092016588185336355794213783999136111596309066868786749483370039300586702754215489223467 := pock%
@@ -77,7 +80,7 @@ theorem prime_25519' : Nat.Prime (2 ^ 255 - 19) := pock%
   (57896044618658097711785492504343953926634992332820282019728792003956564819949,
     2, 74058212732561358302231226437062788676166966415465897661863160754340907)]
 
-#time
+set_option maxRecDepth 4000 in
 theorem prime_25519'' : Nat.Prime (2 ^ 255 - 19) := prime_cert%
   [small {2; 3; 5; 7; 43},
   pock3 (430751, 17, 1, 7, 2 * 5^3),
@@ -106,7 +109,6 @@ theorem prime_448_224_1 : Nat.Prime (2^448 - 2^224 - 1) := pock%
 167773885276849215533569 × 596242599987116128415063 × 37414057161322375957408148834323969
 -/
 
-#time
 set_option maxRecDepth 4000 in
 set_option exponentiation.threshold 3000 in
 theorem prime_448_224_1' : Nat.Prime (2^448 - 2^224 - 1) := prime_cert%
@@ -119,6 +121,7 @@ theorem prime_448_224_1' : Nat.Prime (2^448 - 2^224 - 1) := prime_cert%
   pock3(726838724295606890549323807888004534353641360687318060281490199180612328166730772686396383698676545930088884461843637361053498018365439,
     7, 1, 3, 2 * 641 * 167773885276849215533569 * 1469495262398780123809)]
 
+#print prime_448_224_1'
 -- set_option exponentiation.threshold 30000000 in
 -- set_option maxRecDepth 7843 in
 -- example : Nat.Prime (3 * 2 ^ 3912 + 1) :=
@@ -150,6 +153,10 @@ end PrimeCert
 --   by decide
 
 -- set_option maxRecDepth 10000 in
--- #time
+-- #time -- 796 ms
 -- #reduce Nat.rec (motive := fun _ ↦ Nat × Bool) (4001, true)
 --   (fun _ ih ↦ ih.rec fun n b ↦ (n.add 2, Nat.blt 1 (powModTR 2 n.pred (n.mul n)) && b)) 1000
+
+-- #time -- 228 ms
+-- #eval Nat.rec (motive := fun _ ↦ Nat × Bool) (4001, true)
+--   (fun _ ih ↦ ih.rec fun n b ↦ (n.add 2, Nat.blt 1 (powModTR' 2 n.pred (n.mul n)) && b)) 1000
