@@ -53,6 +53,7 @@ theorem forallB_one_iff (f : ℕ → Bool) (start len : ℕ) :
 end forallB
 
 section forall_step
+/-! # Tools for automation of ∀ n, lo ≤ n → n < hi → P n -/
 
 theorem forall_start {P : ℕ → Prop} {hi : ℕ}
     (ih : ∀ n, 0 ≤ n → n < hi → P n) : ∀ n < hi, P n :=
@@ -69,9 +70,10 @@ theorem forall_bisect {P : ℕ → Prop} {lo hi : ℕ} (mi : ℕ)
     ∀ n, lo ≤ n → n < hi → P n :=
   fun n hn₁ hn₂ ↦ (le_or_gt mi n).elim (h₂ n · hn₂) (h₁ n hn₁ ·)
 
-theorem forall_succ {P : ℕ → Prop} {lo : ℕ} (h : P lo) :
-    ∀ n, lo ≤ n → n < lo.succ → P n :=
-  fun _n hn₁ hn₂ ↦ le_antisymm hn₁ (Nat.le_of_lt_succ hn₂) ▸ h
+theorem forall_succ {P : ℕ → Prop} {lo hi : ℕ} (h : P lo) (spec : hi.ble lo.succ := by rfl) :
+    ∀ n, lo ≤ n → n < hi → P n :=
+  fun _n hn₁ hn₂ ↦ le_antisymm hn₁
+    (Nat.le_of_lt_succ <| hn₂.trans_le <| Nat.le_of_ble_eq_true spec) ▸ h
 
 theorem forall_last {P : ℕ → Prop} {hi : ℕ} :
     ∀ n, hi ≤ n → n < hi → P n :=
@@ -81,90 +83,174 @@ theorem forall_exceed {P : ℕ → Prop} {lo hi : ℕ} (h : hi.ble lo) :
     ∀ n, lo ≤ n → n < hi → P n :=
   fun _n hn₁ hn₂ ↦ (not_le_of_gt (hn₁.trans_lt hn₂) <| Nat.le_of_ble_eq_true h).elim
 
+end forall_step
+
+section forall_mod
+/-! # Tools for automation of ∀ n, lo ≤ n → n < hi → n % b = r → P n -/
+
+theorem forall_mod_start {P : ℕ → Prop} {hi b r : ℕ}
+    (ih : ∀ n, r ≤ n → n < hi → n % b = r → P n) :
+    ∀ n < hi, n % b = r → P n :=
+  fun n h₂ h₃ ↦ ih n (h₃ ▸ Nat.mod_le n b) h₂ h₃
+
+theorem forall_mod_step {P : ℕ → Prop} {lo hi b r : ℕ} (next : ℕ)
+    (now : P lo) (ih : ∀ n, next ≤ n → n < hi → n % b = r → P n)
+    (spec₁ : lo + b = next := by rfl) (spec₂ : lo % b = r := by rfl) :
+    ∀ n, lo ≤ n → n < hi → n % b = r → P n :=
+  fun n h₁ h₂ h₃ ↦ (eq_or_lt_of_le h₁).elim (· ▸ now) fun h₁ ↦ by
+    suffices next ≤ n from ih n this h₂ h₃
+    rw [← spec₁]
+    rw [← Nat.div_add_mod' lo b, ← Nat.div_add_mod' n b, spec₂, h₃] at h₁ ⊢
+    replace h₁ := Nat.succ_le_of_lt <| lt_of_mul_lt_mul_right' <| (add_lt_add_iff_right _).mp h₁
+    grw [add_right_comm, ← Nat.succ_mul, h₁]
+
+-- A useful closing tool.
+theorem forall_mod_succ {P : ℕ → Prop} {lo hi b r : ℕ}
+    (now : P lo) (spec₁ : lo % b = r := by rfl) (spec₂ : hi.ble (lo.add b) := by rfl) :
+    ∀ n, lo ≤ n → n < hi → n % b = r → P n :=
+  forall_mod_step (lo + b) now (forall_exceed spec₂) rfl spec₁
+
+-- For convenience (so that `P` does not need to change).
+theorem forall_mod_bisect {P : ℕ → Prop} {lo hi b r : ℕ} (mi : ℕ)
+    (ih₁ : ∀ n, lo ≤ n → n < mi → n % b = r → P n)
+    (ih₂ : ∀ n, mi ≤ n → n < hi → n % b = r → P n) :
+    ∀ n, lo ≤ n → n < hi → n % b = r → P n :=
+  forall_bisect mi ih₁ ih₂
+
+-- For convenience (so that `P` does not need to change).
+theorem forall_mod_exceed {P : ℕ → Prop} {lo hi b r : ℕ} (h : hi.ble lo) :
+    ∀ n, lo ≤ n → n < hi → n % b = r → P n :=
+  forall_exceed h
+
+end forall_mod
+
+section Meta
+
 open Lean Meta
 
-def makeForallBisect' (P : Expr) (lo hi : ℕ) (pf : ℕ → Expr) : Expr :=
-  if h₁ : hi ≤ lo then
-    mkApp4 (mkConst ``forall_exceed) P (mkRawNatLit lo) (mkRawNatLit hi) reflBoolTrue
-  else if h₂ : lo.succ = hi then
-    mkApp3 (mkConst ``forall_succ) P (mkRawNatLit lo) (pf lo)
+local notation:max "rnl%" n => mkRawNatLit n
+local notation:max "reflNat%" n => mkApp2 (mkConst `Eq.refl [1]) (mkConst `Nat) n
+
+/-- An expression to prove statement of the form `∀ n, lo ≤ n → n < hi → P n` -/
+def makeForallBisectLoHi (P : Expr) (lo hi : ℕ) (pf : ℕ → Expr) : Expr :=
+  if hi ≤ lo + 1 then
+    mkApp5 (mkConst ``forall_succ) P (rnl% lo) (rnl% hi) (pf lo) reflBoolTrue
   else
     have mi := (lo + hi) / 2
-    mkApp6 (mkConst ``forall_bisect) P (mkRawNatLit lo) (mkRawNatLit hi) (mkRawNatLit mi)
-      (makeForallBisect' P lo mi pf)
-      (makeForallBisect' P mi hi pf)
+    mkApp6 (mkConst ``forall_bisect) P (rnl% lo) (rnl% hi) (rnl% mi)
+      (makeForallBisectLoHi P lo mi pf)
+      (makeForallBisectLoHi P mi hi pf)
 
-def makeForallBisect (P : Expr) (hi : ℕ) (pf : ℕ → Expr) : Expr :=
-  mkApp3 (mkConst ``forall_start) P (mkRawNatLit hi) <| makeForallBisect' P 0 hi pf
+/-- An expression to prove statement of the form `∀ n < hi → P n` -/
+def makeForallBisectHi (P : Expr) (hi : ℕ) (pf : ℕ → Expr) : Expr :=
+  mkApp3 (mkConst ``forall_start) P (rnl% hi) <| makeForallBisectLoHi P 0 hi pf
 
-end forall_step
+/-- An expression to prove statement of the form `∀ n, lo ≤ n → n < hi → n % b = r → P n`.
+This always assumes `lo % b = r`. -/
+partial def makeForallModBisectLoHi
+    (P : Expr) (lo hi b r : ℕ) (bE rE : Expr) (pf : ℕ → Expr) : Expr :=
+  if hi ≤ lo + b then
+    mkApp8 (mkConst ``forall_mod_succ)
+      P (rnl% lo) (rnl% hi) bE rE (pf lo) (reflNat% rE) reflBoolTrue
+  else
+    have mi := (lo / b + (hi - r) / b + 1) / 2 * b + r
+    mkApp8 (mkConst ``forall_mod_bisect) P (rnl% lo) (rnl% hi) bE rE (rnl% mi)
+      (makeForallModBisectLoHi P lo mi b r bE rE pf)
+      (makeForallModBisectLoHi P mi hi b r bE rE pf)
+
+/-- An expression to prove statement of the form `∀ n < hi → n % b = r → P n`. -/
+def makeForallModBisectHi
+    (P : Expr) (hi b r : ℕ) (bE rE : Expr) (pf : ℕ → Expr) : Expr :=
+  mkApp5 (mkConst ``forall_mod_start) P (rnl% hi) bE rE <|
+    makeForallModBisectLoHi P r hi b r bE rE pf
+
+elab "check_interval" : tactic => Elab.Tactic.liftMetaFinishingTactic fun mId ↦ do
+  let goal ← inferType <| .mvar mId
+  let .forallE _ _ P₀ _ := goal | throwError "goal is not ∀"
+  let .forallE _ P₁ P₂ _ := P₀ | throwError "goal is not bounded (1)"
+  let mut lo? : Option ℕ := none
+  let mut hiPE : Expr := default
+  let mut P : Expr := default
+  match P₁.getAppFnArgs with
+  | (``LE.le, #[_, _, loE, .bvar _]) =>
+    lo? := loE.nat?
+    unless lo?.isSome do throwError "goal is not bounded (2)"
+    let .forallE _ P₃ P₄ _ := P₂ | throwError "goal is not bounded (3)"
+    hiPE := P₃
+    P := P₄
+  | _ =>
+    hiPE := P₁
+    P := P₂
+  let (``LT.lt, #[_, _, .bvar _, hiE]) := hiPE.getAppFnArgs | throwError "goal is not bounded (4)"
+  let some hi := hiE.nat? | throwError "goal is not bounded (5)"
+  have br? : Option (ℕ × ℕ × Expr) := do
+    let .forallE _ P₅ P₆ _ := P | none
+    let (``Eq, #[_, e, rE]) := P₅.getAppFnArgs | none
+    let (``HMod.hMod, #[_, _, _, _, .bvar _, bE]) := e.getAppFnArgs | none
+    return (← bE.nat?, ← rE.nat?, P₆)
+  if let some (_, _, PE) := br? then P := PE
+  P := P.lowerLooseBVars 1 1 |>.lowerLooseBVars 1 1 |>.lowerLooseBVars 1 1
+  P := .lam `n (mkConst ``Nat) P .default
+  match lo?, br? with
+  | some lo, none =>
+    mId.assign <| makeForallBisectLoHi P lo hi fun _ ↦ reflBoolTrue
+  | none, none =>
+    mId.assign <| makeForallBisectHi P hi fun _ ↦ reflBoolTrue
+  | some lo, some (b, r, _) =>
+    mId.assign <| makeForallModBisectLoHi P lo hi b r (rnl% b) (rnl% r) fun _ ↦ reflBoolTrue
+  | none, some (b, r, _) =>
+    mId.assign <| makeForallModBisectHi P hi b r (rnl% b) (rnl% r) fun _ ↦ reflBoolTrue
+
+end Meta
 -- END MOVE
 
 def Wieferich (p : ℕ) : Prop :=
-  2 ^ (p - 1) ≡ 1 [MOD p ^ 2]
+  2 ^ (p - 1) ≡ 1 [MOD p^2]
+
+def Mirimanoff (p : ℕ) : Prop :=
+  3 ^ (p - 1) ≡ 1 [MOD p^2]
 
 noncomputable def wieferichKR (p : ℕ) : Bool :=
   powModTR 2 p.pred (p.pow 2) |>.beq 1
 
-theorem wieferichKR_iff (p : ℕ) (hp : p ≠ 1) : wieferichKR p ↔ Wieferich p := by
+noncomputable def mirimanoffKR (p : ℕ) : Bool :=
+  powModTR 3 p.pred (p.pow 2) |>.beq 1
+
+@[simp] theorem wieferichKR_eq_true_iff (p : ℕ) (hp : p ≠ 1) : wieferichKR p ↔ Wieferich p := by
   have hp2 : p ^ 2 ≠ 1 := by rwa [ne_eq, sq, mul_eq_one, and_self]
   rw [Wieferich, wieferichKR, Nat.beq_eq, Nat.ModEq, Nat.one_mod_eq_one.mpr hp2,
     powModTR_eq, powMod, Nat.pow_eq, Nat.pred_eq_sub_one]
 
-open Lean Meta
+@[simp] theorem wieferichKR_eq_false_iff (p : ℕ) (hp : p ≠ 1) :
+    wieferichKR p = false ↔ ¬Wieferich p := by
+  rw [← Bool.not_eq_true, wieferichKR_eq_true_iff p hp]
 
-def makeWieferichPred (start step : ℕ) : Expr :=
-  have startE : Expr := mkRawNatLit start
-  have stepE : Expr := mkRawNatLit step
-  -- n ↦ !wieferichKR (n * step + start) = true
-  have e₁ : Expr := mkApp2 (mkConst ``Nat.mul) (.bvar 0) stepE
-  have e₂ : Expr := mkApp2 (mkConst ``Nat.add) e₁ startE
-  have e₃ : Expr := mkApp (mkConst ``Bool.not) (mkApp (mkConst ``wieferichKR) e₂)
-  have e₄ : Expr := mkApp3 (mkConst ``Eq [1]) (mkConst ``Bool) e₃ (mkConst ``true)
-  .lam `n (mkConst ``Nat) e₄ default
+@[simp] theorem mirimanoffKR_eq_true_iff (p : ℕ) (hp : p ≠ 1) : mirimanoffKR p ↔ Mirimanoff p := by
+  have hp2 : p ^ 2 ≠ 1 := by rwa [ne_eq, sq, mul_eq_one, and_self]
+  rw [Mirimanoff, mirimanoffKR, Nat.beq_eq, Nat.ModEq, Nat.one_mod_eq_one.mpr hp2,
+    powModTR_eq, powMod, Nat.pow_eq, Nat.pred_eq_sub_one]
 
-def checkWieferich (start step len : ℕ) : Expr :=
-  have lenE : Expr := mkRawNatLit len
-  have PE : Expr := makeWieferichPred start step
-  have e₅ : Expr := mkApp2 (mkConst ``forall_last) PE lenE
-  let rec go (curr : ℕ) : Expr :=
-    if curr < len then
-      mkApp7 (mkConst ``forall_step) PE (mkRawNatLit curr) lenE (mkRawNatLit curr.succ)
-        reflBoolTrue (mkApp2 (mkConst ``Eq.refl [1]) (mkConst ``Nat) (mkRawNatLit curr.succ))
-        (go curr.succ)
-      else e₅
-  mkApp3 (mkConst ``forall_start) PE lenE (go 0)
+@[simp] theorem mirimanoffKR_eq_false_iff (p : ℕ) (hp : p ≠ 1) :
+    mirimanoffKR p = false ↔ ¬Mirimanoff p := by
+  rw [← Bool.not_eq_true, mirimanoffKR_eq_true_iff p hp]
 
-def checkWieferichBisect (start step len : ℕ) : Expr :=
-  makeForallBisect (makeWieferichPred start step) len fun _ ↦ reflBoolTrue
+/-! # We check odd numbers up to 6000 in the classes 1%6 and 5%6 -/
 
-elab "check_wieferich% " start:num step:num len:num : term =>
-  return checkWieferich start.getNat step.getNat len.getNat
+-- set_option trace.profiler true
+-- set_option trace.profiler.threshold 0
 
-elab "check_wieferich_bisect% " start:num step:num len:num : term =>
-  return checkWieferichBisect start.getNat step.getNat len.getNat
+-- elab: 37 ms
+-- kernel: 470 ms
+-- 6n+1 to 6000
+theorem wieferich_mirimanoff₁ : ∀ n < 6000, n % 6 = 1 →
+    (wieferichKR n).not'.or' (mirimanoffKR n).not' := by
+  check_interval
 
-/-! # We check odd numbers up to 6000 -/
-
--- 70 ms
--- 6n+1 to 1093
-theorem wieferich₁ : ∀ n < 182, !wieferichKR (n.mul 6 |>.add 1) :=
-  check_wieferich% 1 6 182
-
--- 274 ms
--- 6n+1 from 1099 to 3511
-theorem wieferich₂ : ∀ n < 402, !wieferichKR (n.mul 6 |>.add 1099) :=
-  check_wieferich% 1099 6 402
-
--- 283 ms
--- 6n+1 from 3517 to 5000
-theorem wieferich₃ : ∀ n < 414, !wieferichKR (n.mul 6 |>.add 3517) :=
-  check_wieferich% 3517 6 414
-
--- 570 ms
--- 6n+5 to 5000
-theorem wieferich₄ : ∀ n < 1000, !wieferichKR (n.mul 6 |>.add 5) :=
-  check_wieferich% 5 6 1000
+-- elab: 57 ms
+-- kernel: 561 ms
+-- 6n+5 to 6000
+theorem wieferich₅ : ∀ n < 6000, n % 6 = 5 → !wieferichKR n := by
+  check_interval
 
 theorem Nat.Prime.mod_6 {p : ℕ} (hp : p.Prime) (hp₂ : p ≠ 2) (hp₃ : p ≠ 3) :
     p % 6 = 1 ∨ p % 6 = 5 := by
@@ -185,39 +271,16 @@ theorem Nat.Prime.mod_6 {p : ℕ} (hp : p.Prime) (hp₂ : p ≠ 2) (hp₃ : p �
     grind
   · grind
 
-theorem wieferich {p : ℕ} (hp : p.Prime) (hp₁ : p < 6000) :
+theorem wieferich_mirimanoff {p : ℕ} (hp : p.Prime) (p_bound : p < 6000) :
     ¬(2 ^ (p - 1) ≡ 1 [MOD p^2]) ∨ ¬(3 ^ (p - 1) ≡ 1 [MOD p^2]) := by
-  by_cases hp₂ : p = 2
-  · rw [hp₂]; decide
-  by_cases hp₃ : p = 3
-  · rw [hp₃]; decide
-  rw [← Wieferich, ← wieferichKR_iff _ hp.ne_one, Bool.not_eq_true, ← Bool.not_eq_true']
-  rw [Nat.ModEq, ← powMod, ← powModTR_eq]
-  have h₁ := hp.mod_6 hp₂ hp₃
-  clear hp₂ hp₃
-  have h₂ := Nat.div_lt_div_of_lt_of_dvd (d := 6) ⟨1000, by rfl⟩ hp₁
-  clear hp₁
-  have h₃ := Nat.div_add_mod' p 6
-  generalize p / 6 = k at *
-  generalize p % 6 = r at *
-  subst h₃
-  obtain rfl | rfl := h₁
-  · obtain h₄ | rfl | h₄ := lt_trichotomy k 182
-    · exact .inl <| wieferich₁ k h₄
-    · exact .inr <| by decide
-    obtain ⟨k, rfl⟩ := (le_iff_exists_add' (a := 183)).mp h₄
-    change k + 183 < 817 + 183 at h₂
-    rw [add_lt_add_iff_right] at h₂
-    rw [show (k + 183) * 6 + 1 = k * 6 + 1099 by ring]
-    obtain h₅ | rfl | h₅ := lt_trichotomy k 402
-    · exact .inl <| wieferich₂ k h₅
-    · exact .inr <| by decide
-    obtain ⟨k, rfl⟩ := (le_iff_exists_add' (a := 403)).mp h₅
-    change k + 403 < 414 + 403 at h₂
-    rw [add_lt_add_iff_right] at h₂
-    rw [show (k + 403) * 6 + 1099 = k * 6 + 3517 by ring]
-    exact .inl <| wieferich₃ k h₂
-  · exact .inl <| wieferich₄ k h₂
+  obtain hp₄ | hp₄ := lt_or_ge p 4
+  · clear p_bound
+    revert hp
+    decide +revert +kernel
+  have hp₁ : p ≠ 1 := by grind
+  obtain h₁ | h₅ := hp.mod_6 (by grind) (by grind)
+  · simpa [hp₁] using wieferich_mirimanoff₁ p p_bound h₁
+  · simpa [hp₁] using Or.inl <| wieferich₅ p p_bound h₅
 
 theorem _root_.pow_eq_one_of_dvd {M : Type*} [Monoid M] {x : M} {m n : ℕ}
     (h₁ : x ^ m = 1) (h₂ : m ∣ n) : x ^ n = 1 := by
@@ -251,41 +314,5 @@ theorem miller_rabin_squarefree {n : ℕ} (hn₀ : n ≠ 0) (hn : n < 36000000)
     rw [Nat.gcd_mul_right_right_of_gcd_eq_one h₅] at ha₂
     replace ha₂ := pow_eq_one_of_dvd ha₂ (Nat.gcd_dvd_right _ _)
     convert congr(($ha₂ : ZMod (p ^ 2)))
-  have := wieferich hp h₁
+  have := wieferich_mirimanoff hp h₁
   tauto
-
-elab "delay% " t:term : term => do
-  let mId ← mkFreshExprMVar none default (.mkSimple "delayed")
-  mId.mvarId!.assign =<< Elab.Term.elabTerm t none
-  return mId
-
--- set_option trace.profiler true
--- set_option trace.profiler.threshold 0
--- set_option maxRecDepth 99999
-
--- -- elab 23 ms
--- -- kernel 450 ms
--- theorem wieferich1 : ∀ n < 1000, !wieferichKR (n.mul 2 |>.add 4001) :=
---   check_wieferich% 4001 2 1000
-
--- -- elab 14 ms
--- -- kernel 481 ms
--- theorem wieferich4 : ∀ n < 1000, !wieferichKR (n.mul 2 |>.add 4001) :=
---   check_wieferich_bisect% 4001 2 1000
-
--- -- elab 1 ms
--- -- kernel 423 ms
--- theorem wieferich2 : forallB (!wieferichKR ·) 4001 1000 2 :=
---   delay% (Eq.refl true)
-
--- -- -- elab 1322 ms
--- -- -- kernel 413 ms
--- -- theorem wieferich3 : forallB (!wieferichKR ·) 4001 1000 2 :=
--- --   eagerReduce (Eq.refl true)
-
--- -- elab 433 ms
--- -- kernel 0 ms
--- theorem wieferich5 : forallB (!wieferichKR ·) 4001 1000 2 :=
---   by decide +kernel
-
--- #min_imports
