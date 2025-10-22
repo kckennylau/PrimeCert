@@ -1,3 +1,4 @@
+import PrimeCert.Interval
 import PrimeCert.Meta.PrimeCert
 import PrimeCert.Meta.SmallPrime
 import PrimeCert.Pocklington
