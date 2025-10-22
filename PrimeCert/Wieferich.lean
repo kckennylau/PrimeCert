@@ -4,11 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kenny Lau
 -/
 
-import Mathlib.Algebra.Order.Group.Nat
-import Mathlib.Data.Nat.ModEq
-import Mathlib.Data.Nat.Prime.Basic
-import Mathlib.Tactic.IntervalCases
-import Mathlib.Tactic.Ring.RingNF
+import Mathlib.Data.Nat.Totient
 import PrimeCert.PowMod
 
 /-! # Checking for Wieferich primes
@@ -21,13 +17,14 @@ We seek solutions to `2^(p-1) ≡ 1 [MOD p^2]`. Until 2025, the only known such 
 section forallB
 
 -- MOVE
-def forallB (f : ℕ → Bool) (start len : ℕ) (step : ℕ := 1) : Bool :=
+noncomputable def forallB (f : ℕ → Bool) (start len : ℕ) (step : ℕ := 1) : Bool :=
   (Nat.rec (motive := fun _ ↦ ℕ × Bool) (start, true)
-    (fun _ ih ↦ ih.rec fun i b ↦ (i.add step, f i && b)) len).2
+    (fun _ ih ↦ ih.rec fun i b ↦ (i.add step, (f i).and' b)) len).2
 
 theorem forallB_iff_range' (f : ℕ → Bool) (start len step : ℕ) :
     forallB f start len step ↔ ∀ n ∈ List.range' start len step, f n := by
   unfold forallB
+  simp only [Bool.and'_eq_and]
   induction len with
   | zero => simp
   | succ len ih =>
@@ -222,28 +219,73 @@ theorem wieferich {p : ℕ} (hp : p.Prime) (hp₁ : p < 6000) :
     exact .inl <| wieferich₃ k h₂
   · exact .inl <| wieferich₄ k h₂
 
-/-
-set_option trace.profiler true
-set_option trace.profiler.threshold 0
-set_option maxRecDepth 99999
+theorem _root_.pow_eq_one_of_dvd {M : Type*} [Monoid M] {x : M} {m n : ℕ}
+    (h₁ : x ^ m = 1) (h₂ : m ∣ n) : x ^ n = 1 := by
+  obtain ⟨k, rfl⟩ := h₂
+  rw [pow_mul, h₁, one_pow]
 
--- elab 23 ms
--- kernel 492 ms
-theorem wieferich1 : ∀ n < 1000, !wieferichKR (n.mul 2 |>.add 4001) :=
-  check_wieferich% 4001 2 1000
+theorem miller_rabin_squarefree {n : ℕ} (hn₀ : n ≠ 0) (hn : n < 36000000)
+    (h₂ : 2 ^ (n - 1) ≡ 1 [MOD n]) (h₃ : 3 ^ (n - 1) ≡ 1 [MOD n])
+    {p : ℕ} (hp : p.Prime) (hpn : p ^ 2 ∣ n) : False := by
+  have hn₁ : n ≠ 1 := by
+    rintro rfl
+    rw [Nat.dvd_one, sq, mul_eq_one, and_self] at hpn
+    subst hpn
+    exact absurd hp (by decide)
+  have h₁ : _ < 6000 ^ 2 := (Nat.le_of_dvd (pos_of_ne_zero hn₀) hpn).trans_lt hn
+  rw [Nat.pow_lt_pow_iff_left (by decide)] at h₁
+  have hn₁' : n - 1 ≠ 0 := by grind
+  have hp₁ : p ^ 2 ≠ 0 := pow_ne_zero _ hp.ne_zero
+  have := NeZero.mk hp₁
+  have h₅ : (n - 1).gcd p = 1 := by
+    rw [Nat.gcd_sub_left_left_of_dvd _ (by grind only)
+      (dvd_trans (dvd_pow_self _ (by grind only)) hpn), Nat.gcd_one_left]
+  have h₄ (a) (ha : a ^ (n - 1) ≡ 1 [MOD n]) : a ^ (p - 1) ≡ 1 [MOD p^2] := by
+    replace ha := ha.of_dvd hpn
+    rw [← ZMod.natCast_eq_natCast_iff, Nat.cast_pow, Nat.cast_one] at ha ⊢
+    let a' := Units.ofPowEqOne _ _ ha hn₁'
+    have ha₁ : a' ^ (n - 1) = 1 := Units.pow_ofPowEqOne _ _
+    have ha₂ := pow_card_eq_one (x := a')
+    rw [ZMod.card_units_eq_totient, Nat.totient_prime_pow_succ hp, pow_one] at ha₂
+    replace ha₂ := pow_gcd_eq_one _ ha₁ ha₂
+    rw [Nat.gcd_mul_right_right_of_gcd_eq_one h₅] at ha₂
+    replace ha₂ := pow_eq_one_of_dvd ha₂ (Nat.gcd_dvd_right _ _)
+    convert congr(($ha₂ : ZMod (p ^ 2)))
+  have := wieferich hp h₁
+  tauto
 
--- elab 22 ms
--- kernel 483 ms
-theorem wieferich4 : ∀ n < 1000, !wieferichKR (n.mul 2 |>.add 4001) :=
-  check_wieferich_bisect% 4001 2 1000
+elab "delay% " t:term : term => do
+  let mId ← mkFreshExprMVar none default (.mkSimple "delayed")
+  mId.mvarId!.assign =<< Elab.Term.elabTerm t none
+  return mId
 
--- elab 1192 ms
--- kernel 456 ms
-theorem wieferich2 : forallB (!wieferichKR ·) 4001 1000 2 :=
-  rfl
+-- set_option trace.profiler true
+-- set_option trace.profiler.threshold 0
+-- set_option maxRecDepth 99999
 
--- elab 1322 ms
--- kernel 413 ms
-theorem wieferich3 : forallB (!wieferichKR ·) 4001 1000 2 :=
-  eagerReduce (Eq.refl true)
--/
+-- -- elab 23 ms
+-- -- kernel 450 ms
+-- theorem wieferich1 : ∀ n < 1000, !wieferichKR (n.mul 2 |>.add 4001) :=
+--   check_wieferich% 4001 2 1000
+
+-- -- elab 14 ms
+-- -- kernel 481 ms
+-- theorem wieferich4 : ∀ n < 1000, !wieferichKR (n.mul 2 |>.add 4001) :=
+--   check_wieferich_bisect% 4001 2 1000
+
+-- -- elab 1 ms
+-- -- kernel 423 ms
+-- theorem wieferich2 : forallB (!wieferichKR ·) 4001 1000 2 :=
+--   delay% (Eq.refl true)
+
+-- -- -- elab 1322 ms
+-- -- -- kernel 413 ms
+-- -- theorem wieferich3 : forallB (!wieferichKR ·) 4001 1000 2 :=
+-- --   eagerReduce (Eq.refl true)
+
+-- -- elab 433 ms
+-- -- kernel 0 ms
+-- theorem wieferich5 : forallB (!wieferichKR ·) 4001 1000 2 :=
+--   by decide +kernel
+
+-- #min_imports

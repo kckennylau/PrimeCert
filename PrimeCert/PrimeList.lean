@@ -142,21 +142,9 @@ theorem prime_448_224_1' : Nat.Prime (2^448 - 2^224 - 1) := prime_cert%
 --     .base step₁
 
 
+theorem foo''' : True := by
+  have := pock% [47; (283, 2, 47)]
+  guard_hyp this :ₛ Nat.Prime 283
+  trivial
+
 end PrimeCert
-
---    1, 1093, 3511
--- => 0,  546, 1755
-
--- #time
--- theorem wieferich_100 : ∀ n < 100, Nat.blt 1 (powModTR 4 n (n.mul 2 |>.succ |>.pow 2)) ||
---     n.beq 0 || n.beq 546 || n.beq 1755 :=
---   by decide
-
--- set_option maxRecDepth 10000 in
--- #time -- 796 ms
--- #reduce Nat.rec (motive := fun _ ↦ Nat × Bool) (4001, true)
---   (fun _ ih ↦ ih.rec fun n b ↦ (n.add 2, Nat.blt 1 (powModTR 2 n.pred (n.mul n)) && b)) 1000
-
--- #time -- 228 ms
--- #eval Nat.rec (motive := fun _ ↦ Nat × Bool) (4001, true)
---   (fun _ ih ↦ ih.rec fun n b ↦ (n.add 2, Nat.blt 1 (powModTR' 2 n.pred (n.mul n)) && b)) 1000
