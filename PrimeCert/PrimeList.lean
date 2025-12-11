@@ -16,7 +16,7 @@ Helpful links:
 
 namespace PrimeCert
 
-set_option trace.profiler true
+-- set_option trace.profiler true
 
 theorem prime_16290860017' : Nat.Prime 16290860017 :=
   pock% [3, 29, 41; (339392917, 2, 3 ^ 4 * 29 * 41), (16290860017, 5, 339392917)]
