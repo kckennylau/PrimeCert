@@ -7,6 +7,7 @@ Authors: Bhavik Mehta
 import Mathlib.Algebra.Group.Nat.Even
 import Mathlib.Data.Nat.Basic
 import Mathlib.Tactic.NormNum.PowMod
+import PrimeCert.Util
 
 /-!
 # Proof-producing evaluation of `a ^ b % n`
@@ -22,19 +23,18 @@ def powMod (a b n : ℕ) : ℕ := a ^ b % n
 /-- The pow-mod auxiliary function, named explicitly to allow more precise control of reduction. -/
 def powModAux (a b c n : ℕ) : ℕ := (a ^ b * c) % n
 
-def Nat.eager (k : Nat → Nat) (n : Nat) : Nat := k (eagerReduce n)
-
 noncomputable def powModTR (a b n : Nat) : Nat :=
   aux b.succ (a.mod n) b 1
 where
   aux : Nat → ((a b c : Nat) → Nat) :=
     Nat.rec (fun _ _ _ => 0)
       (fun _ r a b c =>
-        (b.beq 0).rec
-          (((b.mod 2).beq 0).rec
-            (r ((a.mul a).mod n) (b.div 2) ((a.mul c).mod n))
-            (r ((a.mul a).mod n) (b.div 2) c))
-          (c.mod n))
+        a.eager fun a =>
+          (b.beq 0).rec
+            (((b.mod 2).beq 0).rec
+              (r ((a.mul a).mod n) (b.div 2) ((a.mul c).mod n))
+              (r ((a.mul a).mod n) (b.div 2) c))
+            (c.mod n))
 
 def powModTR' (a b n : ℕ) : ℕ :=
   aux (a % n) b 1
@@ -47,18 +47,11 @@ def powModTR' (a b n : ℕ) : ℕ :=
       aux (a * a % n) (b / 2) (a * c % n)
     partial_fixpoint
 
-lemma Bool.rec_eq_ite {α : Type*} {b : Bool} {t f : α} : b.rec f t = if b then t else f := by
-  cases b <;> simp
-
-@[simp] lemma Nat.mod_eq_mod {a b : ℕ} : a.mod b = a % b := rfl
-@[simp] lemma Nat.div_eq_div {a b : ℕ} : a.div b = a / b := rfl
-@[simp] lemma Nat.land_eq_land {a b : ℕ} : a.land b = a &&& b := rfl
-
 @[simp] lemma powModTR_aux_zero_eq {n a b c : ℕ} :
     powModTR.aux n 0 a b c = 0 := rfl
 
 lemma powModTR_aux_succ_eq {n a b c fuel : ℕ} :
-    powModTR.aux n (fuel + 1) a b c =
+    powModTR.aux n (fuel + 1) a b c = a.eager fun a =>
       (b.beq 0).rec (true := c % n)
       (((b % 2).beq 0).rec
         (powModTR.aux n fuel (a * a % n) (b / 2) (a * c % n))
@@ -70,7 +63,7 @@ lemma powModTR_aux_succ_eq' {n a b c fuel : ℕ} :
       if b = 0 then c % n else
       if b % 2 = 0 then powModTR.aux n fuel (a * a % n) (b / 2) c
       else powModTR.aux n fuel (a * a % n) (b / 2) (a * c % n) := by
-  simp only [powModTR_aux_succ_eq, Bool.rec_eq_ite, beq_eq]
+  simp only [powModTR_aux_succ_eq, Bool.rec_eq_ite, beq_eq, Nat.eager_eq]
 
 lemma powModTR_aux_eq (n a b c fuel) (hfuel : b < fuel) :
     powModTR.aux n fuel a b c = powModAux a b c n := by
@@ -154,29 +147,3 @@ def prove_pow_mod_tac (g : MVarId) : MetaM Unit := do
 elab "prove_pow_mod" : tactic => liftMetaFinishingTactic prove_pow_mod_tac
 
 end Tactic.powMod
-
-set_option diagnostics.threshold 0
-set_option diagnostics true
-
--- theorem powMod_11_100002_100003 : powMod 11 100002 100003 = 1 := by prove_pow_mod
--- #print powMod_11_100002_100003
-
--- #time
--- example :
---     powMod 2
---       131715931587485903133664770501783872901180735752961173191222502260846184802138117218820246495979164495762424017769215925882581565859513559697500346853208717730048481311930278737221764046227216650748207028546755348290341925152606053939920784122173626831732721956717186562885471376983969828398653806056
---       131715931587485903133664770501783872901180735752961173191222502260846184802138117218820246495979164495762424017769215925882581565859513559697500346853208717730048481311930278737221764046227216650748207028546755348290341925152606053939920784122173626831732721956717186562885471376983969828398653806057 =
---       1 := by
---   prove_pow_mod
-
--- #time
--- example :
---     powMod 2
---       131715931587485903133664770501783872901180735752961173191222502260846184802138117218820246495979164495762424017769215925882581565859513559697500346853208717730048481311930278737221764046227216650748207028546755348290341925152606053939920784122173626831732721956717186562885471376983969828398653806056
---       131715931587485903133664770501783872901180735752961173191222502260846184802138117218820246495979164495762424017769215925882581565859513559697500346853208717730048481311930278737221764046227216650748207028546755348290341925152606053939920784122173626831732721956717186562885471376983969828398653806057 =
---       1 := by
---   prove_pow_mod'
-
--- #eval powModTR' 2 (31 ^ 100) (31 ^ 100 + 7)
-
--- #eval 68700266508534171304139668405538781983844090880155308447315415736868121904417993012859336490047417444352793669286109720181816751709874535850447534937862879222650085866396891801700313186135778700458822 / 2

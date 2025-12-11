@@ -7,6 +7,7 @@ Authors: Kenny Lau
 import Mathlib.Data.Nat.Totient
 import PrimeCert.Interval
 import PrimeCert.PowMod
+import PrimeCert.PredMod
 
 /-! # Checking for Wieferich primes and Mirimanoff primes
 
@@ -25,15 +26,15 @@ def Mirimanoff (p : ℕ) : Prop :=
   3 ^ (p - 1) ≡ 1 [MOD p^2]
 
 noncomputable def wieferichKR (p : ℕ) : Bool :=
-  powModTR 2 p.pred (p.pow 2) |>.beq 1
+  powModTR 2 (predKR p) (p.pow 2) |>.beq 1
 
 noncomputable def mirimanoffKR (p : ℕ) : Bool :=
-  powModTR 3 p.pred (p.pow 2) |>.beq 1
+  powModTR 3 (predKR p) (p.pow 2) |>.beq 1
 
 @[simp] theorem wieferichKR_eq_true_iff (p : ℕ) (hp : p ≠ 1) : wieferichKR p ↔ Wieferich p := by
   have hp2 : p ^ 2 ≠ 1 := by rwa [ne_eq, sq, mul_eq_one, and_self]
   rw [Wieferich, wieferichKR, Nat.beq_eq, Nat.ModEq, Nat.one_mod_eq_one.mpr hp2,
-    powModTR_eq, powMod, Nat.pow_eq, Nat.pred_eq_sub_one]
+    powModTR_eq, powMod, Nat.pow_eq, predKR_eq_pred, Nat.pred_eq_sub_one]
 
 @[simp] theorem wieferichKR_eq_false_iff (p : ℕ) (hp : p ≠ 1) :
     wieferichKR p = false ↔ ¬Wieferich p := by
@@ -42,7 +43,7 @@ noncomputable def mirimanoffKR (p : ℕ) : Bool :=
 @[simp] theorem mirimanoffKR_eq_true_iff (p : ℕ) (hp : p ≠ 1) : mirimanoffKR p ↔ Mirimanoff p := by
   have hp2 : p ^ 2 ≠ 1 := by rwa [ne_eq, sq, mul_eq_one, and_self]
   rw [Mirimanoff, mirimanoffKR, Nat.beq_eq, Nat.ModEq, Nat.one_mod_eq_one.mpr hp2,
-    powModTR_eq, powMod, Nat.pow_eq, Nat.pred_eq_sub_one]
+    powModTR_eq, powMod, Nat.pow_eq, predKR_eq_pred, Nat.pred_eq_sub_one]
 
 @[simp] theorem mirimanoffKR_eq_false_iff (p : ℕ) (hp : p ≠ 1) :
     mirimanoffKR p = false ↔ ¬Mirimanoff p := by
@@ -50,8 +51,11 @@ noncomputable def mirimanoffKR (p : ℕ) : Bool :=
 
 /-! # We check odd numbers up to 6000 in the classes 1%6 and 5%6 -/
 
--- set_option trace.profiler true
+set_option trace.profiler true
 -- set_option trace.profiler.threshold 0
+
+-- set_option diagnostics true
+-- set_option diagnostics.threshold 0
 
 -- elab: 37 ms
 -- kernel: 470 ms
@@ -59,6 +63,8 @@ noncomputable def mirimanoffKR (p : ℕ) : Bool :=
 theorem wieferich_mirimanoff₁ : ∀ n < 6000, n % 6 = 1 →
     (wieferichKR n).not'.or' (mirimanoffKR n).not' := by
   check_interval
+
+#exit
 
 -- elab: 57 ms
 -- kernel: 561 ms

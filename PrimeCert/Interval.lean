@@ -1,11 +1,12 @@
 /-
 Copyright (c) 2025 Kenny Lau. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Kenny Lau
+Authors: Kenny Lau, Bhavik Mehta
 -/
 
 import Mathlib.Algebra.Order.Group.Nat
 import Mathlib.Algebra.Ring.Nat
+import PrimeCert.Util
 
 /-! # A tactic to check interval by binary search
 
@@ -93,10 +94,11 @@ theorem forall_mod_start {P : ℕ → Prop} {hi b r : ℕ}
 
 theorem forall_mod_step {P : ℕ → Prop} {lo hi b r : ℕ} (next : ℕ)
     (now : P lo) (ih : ∀ n, next ≤ n → n < hi → n % b = r → P n)
-    (spec₁ : lo + b = next := by rfl) (spec₂ : lo % b = r := by rfl) :
+    (spec₁ : (lo.add b).beq next) (spec₂ : (lo.mod b).beq r) :
     ∀ n, lo ≤ n → n < hi → n % b = r → P n :=
   fun n h₁ h₂ h₃ ↦ (eq_or_lt_of_le h₁).elim (· ▸ now) fun h₁ ↦ by
     suffices next ≤ n from ih n this h₂ h₃
+    simp only [Nat.add_eq, Nat.beq_eq, Nat.mod_eq_mod] at spec₁ spec₂
     rw [← spec₁]
     rw [← Nat.div_add_mod' lo b, ← Nat.div_add_mod' n b, spec₂, h₃] at h₁ ⊢
     replace h₁ := Nat.succ_le_of_lt <| lt_of_mul_lt_mul_right' <| (add_lt_add_iff_right _).mp h₁
@@ -104,9 +106,9 @@ theorem forall_mod_step {P : ℕ → Prop} {lo hi b r : ℕ} (next : ℕ)
 
 -- A useful closing tool.
 theorem forall_mod_succ {P : ℕ → Prop} {lo hi b r : ℕ}
-    (now : P lo) (spec₁ : lo % b = r := by rfl) (spec₂ : hi.ble (lo.add b) := by rfl) :
+    (now : P lo) (spec₁ : (lo.mod b).beq r) (spec₂ : hi.ble (lo.add b)) :
     ∀ n, lo ≤ n → n < hi → n % b = r → P n :=
-  forall_mod_step (lo + b) now (forall_exceed spec₂) rfl spec₁
+  forall_mod_step (lo + b) now (forall_exceed spec₂) (by simp) spec₁
 
 -- For convenience (so that `P` does not need to change).
 theorem forall_mod_bisect {P : ℕ → Prop} {lo hi b r : ℕ} (mi : ℕ)
@@ -149,7 +151,7 @@ partial def makeForallModBisectLoHi
     (P : Expr) (lo hi b r : ℕ) (bE rE : Expr) (pf : ℕ → Expr) : Expr :=
   if hi ≤ lo + b then
     mkApp8 (mkConst ``forall_mod_succ)
-      P (rnl% lo) (rnl% hi) bE rE (pf lo) (reflNat% rE) reflBoolTrue
+      P (rnl% lo) (rnl% hi) bE rE (pf lo) reflBoolTrue reflBoolTrue
   else
     have mi := (lo / b + (hi - r) / b + 1) / 2 * b + r
     mkApp8 (mkConst ``forall_mod_bisect) P (rnl% lo) (rnl% hi) bE rE (rnl% mi)
@@ -189,6 +191,7 @@ elab "check_interval" : tactic => Elab.Tactic.liftMetaFinishingTactic fun mId �
   if let some (_, _, PE) := br? then P := PE
   P := P.lowerLooseBVars 1 1 |>.lowerLooseBVars 1 1 |>.lowerLooseBVars 1 1
   P := .lam `n (mkConst ``Nat) P .default
+  trace[debug] "lo?, br?"
   match lo?, br? with
   | some lo, none =>
     mId.assign <| makeForallBisectLoHi P lo hi fun _ ↦ reflBoolTrue
