@@ -14,6 +14,7 @@ import Mathlib.Data.Int.Star
 import Mathlib.Data.Nat.ChineseRemainder
 import Mathlib.Data.Nat.Totient
 import Mathlib.Tactic.ScopedNS
+import Mathlib.Data.Finset.Pairwise
 
 /-! # Pocklington's primality certificate
 
