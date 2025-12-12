@@ -191,7 +191,6 @@ elab "check_interval" : tactic => Elab.Tactic.liftMetaFinishingTactic fun mId â†
   if let some (_, _, PE) := br? then P := PE
   P := P.lowerLooseBVars 1 1 |>.lowerLooseBVars 1 1 |>.lowerLooseBVars 1 1
   P := .lam `n (mkConst ``Nat) P .default
-  trace[debug] "lo?, br?"
   match lo?, br? with
   | some lo, none =>
     mId.assign <| makeForallBisectLoHi P lo hi fun _ â†¦ reflBoolTrue

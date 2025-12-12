@@ -51,45 +51,20 @@ noncomputable def mirimanoffKR (p : ℕ) : Bool :=
 
 /-! # We check odd numbers up to 6000 in the classes 1%6 and 5%6 -/
 
-set_option trace.profiler true
--- set_option trace.profiler.threshold 0
-
--- set_option diagnostics true
--- set_option diagnostics.threshold 0
-
--- elab: 37 ms
--- kernel: 470 ms
 -- 6n+1 to 6000
 theorem wieferich_mirimanoff₁ : ∀ n < 6000, n % 6 = 1 →
     (wieferichKR n).not'.or' (mirimanoffKR n).not' := by
   check_interval
 
-#exit
-
--- elab: 57 ms
--- kernel: 561 ms
 -- 6n+5 to 6000
 theorem wieferich₅ : ∀ n < 6000, n % 6 = 5 → !wieferichKR n := by
   check_interval
 
 theorem Nat.Prime.mod_6 {p : ℕ} (hp : p.Prime) (hp₂ : p ≠ 2) (hp₃ : p ≠ 3) :
     p % 6 = 1 ∨ p % 6 = 5 := by
-  have h₁ := div_add_mod p 6
-  have h₂ := mod_lt p (by decide +kernel : 0 < 6)
-  generalize p / 6 = k at *
-  generalize p % 6 = r at *
-  subst p
-  interval_cases r
-  · rw [add_zero, prime_mul_iff, eq_false (p := Prime 6) (by decide)] at hp
-    grind
-  · grind
-  · rw [show 6 * k + 2 = 2 * (3 * k + 1) by ring, prime_mul_iff] at hp
-    grind
-  · rw [show 6 * k + 3 = 3 * (2 * k + 1) by ring, prime_mul_iff] at hp
-    grind
-  · rw [show 6 * k + 4 = 2 * (3 * k + 2) by ring, prime_mul_iff] at hp
-    grind
-  · grind
+  have hp2 : ¬ 2 ∣ p := by rwa [Nat.Prime.dvd_iff_eq hp (by simp)]
+  have hp3 : ¬ 3 ∣ p := by rwa [Nat.Prime.dvd_iff_eq hp (by simp)]
+  grind
 
 theorem wieferich_mirimanoff {p : ℕ} (hp : p.Prime) (p_bound : p < 6000) :
     ¬(2 ^ (p - 1) ≡ 1 [MOD p^2]) ∨ ¬(3 ^ (p - 1) ≡ 1 [MOD p^2]) := by
@@ -102,7 +77,7 @@ theorem wieferich_mirimanoff {p : ℕ} (hp : p.Prime) (p_bound : p < 6000) :
   · simpa [hp₁] using wieferich_mirimanoff₁ p p_bound h₁
   · simpa [hp₁] using Or.inl <| wieferich₅ p p_bound h₅
 
-theorem _root_.pow_eq_one_of_dvd {M : Type*} [Monoid M] {x : M} {m n : ℕ}
+theorem pow_eq_one_of_dvd {M : Type*} [Monoid M] {x : M} {m n : ℕ}
     (h₁ : x ^ m = 1) (h₂ : m ∣ n) : x ^ n = 1 := by
   obtain ⟨k, rfl⟩ := h₂
   rw [pow_mul, h₁, one_pow]
@@ -115,7 +90,7 @@ theorem miller_rabin_squarefree {n : ℕ} (hn₀ : n ≠ 0) (hn : n < 36000000)
     rw [Nat.dvd_one, sq, mul_eq_one, and_self] at hpn
     subst hpn
     exact absurd hp (by decide)
-  have h₁ : _ < 6000 ^ 2 := (Nat.le_of_dvd (pos_of_ne_zero hn₀) hpn).trans_lt hn
+  have h₁ : p ^ 2 < 6000 ^ 2 := (Nat.le_of_dvd (pos_of_ne_zero hn₀) hpn).trans_lt hn
   rw [Nat.pow_lt_pow_iff_left (by decide)] at h₁
   have hn₁' : n - 1 ≠ 0 := by grind
   have hp₁ : p ^ 2 ≠ 0 := pow_ne_zero _ hp.ne_zero
