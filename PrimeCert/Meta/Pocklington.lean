@@ -20,15 +20,15 @@ open Lean Meta Qq
 /-- A prime power is represented by either `p ^ e` or `p`. -/
 syntax prime_pow := num (" ^ " num)?
 
-inductive PrimePow : Type
+inductive ParsedPrimePow : Type
   | prime (p : ℕ) | pow (p e : ℕ)
 
-instance : ToMessageData PrimePow where
+instance : ToMessageData ParsedPrimePow where
   toMessageData x := match x with
     | .prime p => m!"{p}"
     | .pow p e => m!"{p}^{e}"
 
-def parsePrimePow (stx : TSyntax ``prime_pow) : Q(Nat) × PrimePow :=
+def parsePrimePow (stx : TSyntax ``prime_pow) : Q(Nat) × ParsedPrimePow :=
   match stx with
   | `(prime_pow| $p:num^$e:num) =>
       have p := p.getNat
@@ -42,7 +42,7 @@ def parsePrimePow (stx : TSyntax ``prime_pow) : Q(Nat) × PrimePow :=
 /-- A full factorisation of a number, written like `3 ^ 4 * 29 * 41`. -/
 syntax factored := sepBy1(prime_pow," * ")
 
-def parseFactored (stx : TSyntax ``factored) : Q(Nat) × Array PrimePow :=
+def parseFactored (stx : TSyntax ``factored) : Q(Nat) × Array ParsedPrimePow :=
   match stx with
   | `(factored| $head * $body**) =>
     have head := parsePrimePow head
@@ -54,7 +54,7 @@ def parseFactored (stx : TSyntax ``factored) : Q(Nat) × Array PrimePow :=
     (head.1, #[head.2])
   | _ => (mkNatLit 0, #[])
 
-def mkPockPred (N a F₁ : Q(Nat)) (steps : Array PrimePow) (dict : PrimeDict) :
+def mkPockPred (N a F₁ : Q(Nat)) (steps : Array ParsedPrimePow) (dict : PrimeDict) :
     MetaM Q(PocklingtonPred $N $a $F₁) := do
   if h : steps.size = 0 then return mkConst ``PocklingtonPred.one
   else

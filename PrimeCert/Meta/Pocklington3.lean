@@ -56,7 +56,7 @@ pock3 (32560621, 2, 1, 7, 2 ^ 2 * 3 * 29)
 -/
 syntax pock3_spec := "(" num "," num "," num "," pock3_mode "," prime_pow "*" factored")"
 
-def PrimePow.base : PrimePow → ℕ
+def ParsedPrimePow.base : ParsedPrimePow → ℕ
 | .prime p => p
 | .pow p _ => p
 
