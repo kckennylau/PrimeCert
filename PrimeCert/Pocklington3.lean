@@ -6,6 +6,7 @@ Authors: Kenny Lau, Bhavik Mehta
 
 import Mathlib.NumberTheory.LegendreSymbol.Basic
 import Mathlib.Algebra.BigOperators.ModEq
+import PrimeCert.ForMathlib
 import PrimeCert.Pocklington
 
 /-! # Pocklington's primality test, cube-root variant
@@ -16,51 +17,14 @@ an additional divisibility sieve up to a small bound `m` and a non-square check 
 (where `R = (N-1)/F` and `R = 2·F·s + r`).
 -/
 
-theorem Nat.prime_iff_not_exists_mul_eq' (p : ℕ) :
-    Nat.Prime p ↔ 2 ≤ p ∧ ¬∃ m n, 2 ≤ m ∧ m < p ∧ 2 ≤ n ∧ n < p ∧ m * n = p := by
-  rw [prime_iff_not_exists_mul_eq]
-  refine and_congr_right fun hp ↦ not_congr <| exists_congr fun m ↦ exists_congr fun n ↦ ?_
-  refine ⟨fun ⟨hmp, hnp, hmnp⟩ ↦ ⟨?_, hmp, ?_, hnp, hmnp⟩, by tauto⟩
-  · by_contra hm; interval_cases m <;> lia
-  · by_contra hn; interval_cases n <;> lia
-
-theorem Nat.modEq_one_of_dvd_of_prime (n b : ℕ) (prime : ∀ p, Nat.Prime p → p ∣ n → p ≡ 1 [MOD b])
-    (d : ℕ) (hdn : d ∣ n) : d ≡ 1 [MOD b] := by
-  by_cases hn : n = 0
-  · have := prime 2 prime_two <| hn ▸ dvd_zero _
-    rw [ModEq.comm, modEq_iff_dvd' (by lia), dvd_one] at this
-    exact this ▸ modEq_one
-  have hd : d ≠ 0 := by rintro rfl; rw [zero_dvd_iff] at hdn; lia
-  rw [← prod_factorization_pow_eq_self hd, Finsupp.prod,
-    ← Finset.prod_const_one (s := d.factorization.support)]
-  refine Nat.ModEq.prod fun p hp ↦ ?_
-  rw [support_factorization, mem_primeFactors] at hp
-  exact ((prime p hp.1 (hp.2.1.trans hdn)).pow _).trans <| by simp; rfl
-
-theorem Nat.modEq_iff_exists_mul_add {p q b : ℕ} (hqb : q < b) :
-    p ≡ q [MOD b] ↔ ∃ k, k * b + q = p := by
-  rw [ModEq]
-  constructor
-  · intro h
-    rw [mod_eq_of_lt hqb] at h
-    exact ⟨p / b, by rw [← h, Nat.div_add_mod']⟩
-  · rintro ⟨k, rfl⟩
-    rw [mul_add_mod']
-
+/-- `Nat.modEq_iff_exists_eq_add` reshaped into the `k * b + q = p` form that
+`pocklington3_test` consumes directly. -/
 theorem Nat.modEq_iff_exists_mul_add' {p q b : ℕ} (hqp : q ≤ p) :
     p ≡ q [MOD b] ↔ ∃ k, k * b + q = p := by
   rw [ModEq.comm, modEq_iff_dvd' hqp]
   rw [le_iff_exists_add'] at hqp
   obtain ⟨c, rfl⟩ := hqp
   simp_rw [add_tsub_cancel_right, add_left_inj, dvd_iff_exists_eq_mul_left, eq_comm]
-
-theorem Nat.add_sq_eq_dist_sq_add_four_mul (c d : ℕ) :
-    (c + d) ^ 2 = (max c d - min c d) ^ 2 + 4 * (c * d) := by
-  wlog h : c ≤ d
-  · rw [add_comm, max_comm, min_comm, mul_comm c d]; exact this d c (by order)
-  obtain ⟨d, rfl⟩ := le_iff_exists_add.mp h
-  rw [max_eq_right h, min_eq_left h, Nat.add_sub_cancel_left]
-  ring
 
 namespace PrimeCert
 
