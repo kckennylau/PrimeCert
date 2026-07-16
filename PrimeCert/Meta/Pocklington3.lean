@@ -3,9 +3,12 @@ Copyright (c) 2025 Kenny Lau, Bhavik Mehta. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kenny Lau, Bhavik Mehta
 -/
+module
 
-import PrimeCert.Pocklington3
-import PrimeCert.Meta.Pocklington
+public import PrimeCert.Pocklington3
+public import PrimeCert.Meta.Pocklington
+public meta import PrimeCert.Meta.Pocklington
+public meta import PrimeCert.Meta.PrimeCert
 
 /-! # The `pock3` certificate method
 
@@ -19,13 +22,15 @@ namespace PrimeCert.Meta
 
 open Lean Meta Qq
 
+public section
+
 /-- Syntax for the non-square certificate mode in `pock3`:
 - A numeric literal `0` means `s = 0`
 - A numeric literal `p` (prime, `p > 2`) means `r² - 8s` is a quadratic non-residue mod `p`
 - `<` means `r² < 8s` -/
 syntax pock3_mode := num <|> "<"
 
-def parsePock3Mode (stx : TSyntax ``pock3_mode) (dict : PrimeDict) :
+meta def parsePock3Mode (stx : TSyntax ``pock3_mode) (dict : PrimeDict) :
     MetaM Q(Pocklington3CertMode) := match stx with
   | `(pock3_mode| $n:num) =>
     have n := n.getNat
@@ -56,11 +61,11 @@ pock3 (32560621, 2, 1, 7, 2 ^ 2 * 3 * 29)
 -/
 syntax pock3_spec := "(" num "," num "," num "," pock3_mode "," prime_pow "*" factored")"
 
-def ParsedPrimePow.base : ParsedPrimePow → ℕ
+meta def ParsedPrimePow.base : ParsedPrimePow → ℕ
 | .prime p => p
 | .pow p _ => p
 
-def parsePrimePow' (stx : TSyntax ``prime_pow) (dict : PrimeDict) :
+meta def parsePrimePow' (stx : TSyntax ``prime_pow) (dict : PrimeDict) :
     MetaM Q(PrimeCert.PrimePow) := match stx with
   | `(prime_pow| $p ^ $e) => do
     have p := p.getNat; have pE := mkNatLit p
@@ -73,7 +78,7 @@ def parsePrimePow' (stx : TSyntax ``prime_pow) (dict : PrimeDict) :
     return mkApp4 (mkConst ``PrimeCert.PrimePow.mk) pE (mkNatLit 1) pf eagerReflBoolTrue
   | _ => Elab.throwUnsupportedSyntax
 
-def parseFactored' (stx : TSyntax ``factored) (dict : PrimeDict) :
+meta def parseFactored' (stx : TSyntax ``factored) (dict : PrimeDict) :
     MetaM Q(List PrimeCert.PrimePow) := do
   match stx with
   | `(factored| $pps:prime_pow**) =>
@@ -82,7 +87,7 @@ def parseFactored' (stx : TSyntax ``factored) (dict : PrimeDict) :
 
 -- TODO: special case for `F = 2 ^ e`
 
-def parsePock3Spec : PrimeCertMethod ``pock3_spec := fun stx dict ↦ match stx with
+meta def parsePock3Spec : PrimeCertMethod ``pock3_spec := fun stx dict ↦ match stx with
   | `(pock3_spec| ($N:num, $root:num, $m:num, $mode:pock3_mode,
       $head:prime_pow * $F:factored)) => do
     have (_, headF) := parsePrimePow head
@@ -102,8 +107,10 @@ def parsePock3Spec : PrimeCertMethod ``pock3_spec := fun stx dict ↦ match stx 
     return ⟨N, NE, pf⟩
   | _ => Elab.throwUnsupportedSyntax
 
-@[prime_cert pock3] def pock3 : PrimeCertExt where
+@[prime_cert pock3] meta def pock3 : PrimeCertExt where
   syntaxName := ``pock3_spec
   methodName := ``parsePock3Spec
+
+end
 
 end PrimeCert.Meta

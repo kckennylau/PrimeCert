@@ -3,8 +3,10 @@ Copyright (c) 2025 Kenny Lau. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kenny Lau
 -/
+module
 
-import PrimeCert.Meta.PrimeCert
+public import PrimeCert.Meta.PrimeCert
+public meta import PrimeCert.Meta.PrimeCert
 
 /-! # The `small` certificate method
 
@@ -15,6 +17,8 @@ e.g. `PrimeCert.prime_31`. Used as a base case in certificate ladders.
 open Lean Meta Elab Qq
 
 namespace PrimeCert.Meta
+
+public section
 
 /-- Syntax for the `small` method: just a numeric literal `n`.
 Looks up the declaration `PrimeCert.prime_<n>` in the environment.
@@ -27,15 +31,17 @@ prime_cert% [small {2; 3; 5; 7}, ...]
 -/
 syntax small_spec := num
 
-def mkSmallProof : PrimeCertMethod ``small_spec := fun stx _ ↦ match stx with
+meta def mkSmallProof : PrimeCertMethod ``small_spec := fun stx _ ↦ match stx with
   | `(small_spec| $n:num) => do
     have n := n.getNat
     have name : Name := (`PrimeCert).str s!"prime_{n}"
     return ⟨n, mkNatLit n, mkConst name⟩
   | _ => throwUnsupportedSyntax
 
-@[prime_cert small] def PrimeCertExt.small : PrimeCertExt where
+@[prime_cert small] meta def PrimeCertExt.small : PrimeCertExt where
   syntaxName := ``small_spec
   methodName := ``mkSmallProof
+
+end
 
 end PrimeCert.Meta

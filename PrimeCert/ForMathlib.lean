@@ -3,12 +3,13 @@ Copyright (c) 2025 Kenny Lau, Bhavik Mehta. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kenny Lau, Bhavik Mehta
 -/
+module
 
-import Mathlib.Algebra.BigOperators.ModEq
-import Mathlib.Data.Nat.ChineseRemainder
-import Mathlib.Data.Nat.Totient
-import Mathlib.Data.Finset.Pairwise
-import Mathlib.RingTheory.Multiplicity
+public import Mathlib.Algebra.BigOperators.ModEq
+public import Mathlib.Data.Nat.ChineseRemainder
+public import Mathlib.Data.Nat.Totient
+public import Mathlib.Data.Finset.Pairwise
+public import Mathlib.RingTheory.Multiplicity
 import Mathlib.Tactic.IntervalCases
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Order
@@ -19,6 +20,8 @@ General-purpose facts about `Nat.ModEq`, `multiplicity`, and primality used by t
 certificate proofs. None of these are specific to primality certificates; they are collected
 here as candidates for upstreaming to Mathlib.
 -/
+
+public section
 
 theorem Nat.prime_iff_not_exists_mul_eq' (p : ℕ) :
     Nat.Prime p ↔ 2 ≤ p ∧ ¬∃ m n, 2 ≤ m ∧ m < p ∧ 2 ≤ n ∧ n < p ∧ m * n = p := by
@@ -101,3 +104,5 @@ theorem Nat.add_sq_eq_dist_sq_add_four_mul (c d : ℕ) :
   obtain ⟨d, rfl⟩ := le_iff_exists_add.mp h
   rw [max_eq_right h, min_eq_left h, Nat.add_sub_cancel_left]
   ring
+
+end

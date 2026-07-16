@@ -3,11 +3,12 @@ Copyright (c) 2025 Kenny Lau. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kenny Lau
 -/
+module
 
-import Mathlib.Data.Nat.Totient
+public import Mathlib.Data.Nat.Totient
+public import PrimeCert.Interval
+public import PrimeCert.PowMod
 import Mathlib.Tactic.IntervalCases
-import PrimeCert.Interval
-import PrimeCert.PowMod
 
 /-! # Wieferich and Mirimanoff primes
 
@@ -19,6 +20,8 @@ The main result `wieferich_mirimanoff` shows that no prime below 6000 is simulta
 Wieferich and Mirimanoff. This is used in `miller_rabin_squarefree` to rule out
 squarefree pseudoprimes below 36 million (to bases 2 and 3).
 -/
+
+public section
 
 def Wieferich (p : ℕ) : Prop :=
   2 ^ (p - 1) ≡ 1 [MOD p^2]
@@ -131,3 +134,5 @@ theorem miller_rabin_squarefree {n : ℕ} (hn₀ : n ≠ 0) (hn : n < 36000000)
     simpa [a'] using congr(($ha₂ : ZMod (p ^ 2)))
   have := wieferich_mirimanoff hp h₁
   tauto
+
+end

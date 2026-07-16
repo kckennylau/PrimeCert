@@ -3,9 +3,10 @@ Copyright (c) 2025 Kenny Lau. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kenny Lau
 -/
+module
 
-import Mathlib.Algebra.Order.Group.Nat
-import Mathlib.Algebra.Ring.Nat
+public import Mathlib.Algebra.Order.Group.Nat
+public import Mathlib.Algebra.Ring.Nat
 
 /-! # Interval checking by binary search
 
@@ -13,6 +14,8 @@ The `check_interval` tactic proves goals of the form
 `∀ n, lo ≤ n → n < hi → P n` or `∀ n, lo ≤ n → n < hi → n % b = r → P n`
 by building a balanced binary tree of `eagerReduce` proof terms, one per value in the range.
 -/
+
+public section
 
 section forall_step
 /-! # Tools for automation of ∀ n, lo ≤ n → n < hi → P n -/
@@ -86,6 +89,8 @@ theorem forall_mod_exceed {P : ℕ → Prop} {lo hi b r : ℕ} (h : hi.ble lo) :
 
 end forall_mod
 
+end
+
 section Meta
 
 open Lean Meta
@@ -94,7 +99,7 @@ local notation:max "rnl%" n => mkRawNatLit n
 local notation:max "reflNat%" n => mkApp2 (mkConst `Eq.refl [1]) (mkConst `Nat) n
 
 /-- An expression to prove statement of the form `∀ n, lo ≤ n → n < hi → P n` -/
-def makeForallBisectLoHi (P : Expr) (lo hi : ℕ) (pf : ℕ → Expr) : Expr :=
+meta def makeForallBisectLoHi (P : Expr) (lo hi : ℕ) (pf : ℕ → Expr) : Expr :=
   if hi ≤ lo + 1 then
     mkApp5 (mkConst ``forall_succ) P (rnl% lo) (rnl% hi) (pf lo) reflBoolTrue
   else
@@ -104,12 +109,12 @@ def makeForallBisectLoHi (P : Expr) (lo hi : ℕ) (pf : ℕ → Expr) : Expr :=
       (makeForallBisectLoHi P mi hi pf)
 
 /-- An expression to prove statement of the form `∀ n < hi → P n` -/
-def makeForallBisectHi (P : Expr) (hi : ℕ) (pf : ℕ → Expr) : Expr :=
+meta def makeForallBisectHi (P : Expr) (hi : ℕ) (pf : ℕ → Expr) : Expr :=
   mkApp3 (mkConst ``forall_start) P (rnl% hi) <| makeForallBisectLoHi P 0 hi pf
 
 /-- An expression to prove statement of the form `∀ n, lo ≤ n → n < hi → n % b = r → P n`.
 This always assumes `lo % b = r`. -/
-partial def makeForallModBisectLoHi
+meta partial def makeForallModBisectLoHi
     (P : Expr) (lo hi b r : ℕ) (bE rE : Expr) (pf : ℕ → Expr) : Expr :=
   if hi ≤ lo + b then
     mkApp8 (mkConst ``forall_mod_succ)
@@ -121,7 +126,7 @@ partial def makeForallModBisectLoHi
       (makeForallModBisectLoHi P mi hi b r bE rE pf)
 
 /-- An expression to prove statement of the form `∀ n < hi → n % b = r → P n`. -/
-def makeForallModBisectHi
+meta def makeForallModBisectHi
     (P : Expr) (hi b r : ℕ) (bE rE : Expr) (pf : ℕ → Expr) : Expr :=
   mkApp5 (mkConst ``forall_mod_start) P (rnl% hi) bE rE <|
     makeForallModBisectLoHi P r hi b r bE rE pf

@@ -3,9 +3,10 @@ Copyright (c) 2022 Bhavik Mehta. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bhavik Mehta
 -/
+module
 
-import Mathlib.Algebra.Group.Nat.Even
-import Mathlib.Data.Nat.Basic
+public import Mathlib.Algebra.Group.Nat.Even
+public import Mathlib.Data.Nat.Basic
 import Mathlib.Tactic.NormNum.PowMod
 
 /-!
@@ -17,16 +18,18 @@ slower and less efficiently than the one here.
 
 open Nat
 
-/-- The pow-mod function, named explicitly to allow more precise control of reduction. -/
-def powMod (a b n : ℕ) : ℕ := a ^ b % n
-/-- The pow-mod auxiliary function, named explicitly to allow more precise control of reduction. -/
-def powModAux (a b c n : ℕ) : ℕ := (a ^ b * c) % n
+public section
 
-def Nat.eager (k : Nat → Nat) (n : Nat) : Nat := k (eagerReduce n)
+/-- The pow-mod function, named explicitly to allow more precise control of reduction. -/
+@[expose] def powMod (a b n : ℕ) : ℕ := a ^ b % n
+/-- The pow-mod auxiliary function, named explicitly to allow more precise control of reduction. -/
+@[expose] def powModAux (a b c n : ℕ) : ℕ := (a ^ b * c) % n
+
+@[expose] def Nat.eager (k : Nat → Nat) (n : Nat) : Nat := k (eagerReduce n)
 
 /-- Kernel-reducible tail-recursive modular exponentiation: computes `a ^ b % n`.
 Uses `Nat.rec` with bounded fuel so the kernel can reduce it via `eagerReduce`. -/
-noncomputable def powModTR (a b n : Nat) : Nat :=
+@[expose] noncomputable def powModTR (a b n : Nat) : Nat :=
   aux b.succ (a.mod n) b 1
 where
   aux : Nat → ((a b c : Nat) → Nat) :=
@@ -40,7 +43,7 @@ where
 
 /-- Computable version of `powModTR` using `partial_fixpoint`. Used at elaboration time
 (e.g. in `mkPowModEq'`) where we need actual computation, not kernel reduction. -/
-def powModTR' (a b n : ℕ) : ℕ :=
+meta def powModTR' (a b n : ℕ) : ℕ :=
   aux (a % n) b 1
   where aux (a b c : ℕ) : ℕ :=
     if b = 0 then c % n
@@ -110,29 +113,31 @@ lemma powMod_ne_of_powModTR (a b n m : ℕ) (h : (powModTR a b n).beq m = false)
   have := Nat.ne_of_beq_eq_false h
   rwa [powModTR_eq] at this
 
+end
+
 namespace Tactic.powMod
 
 open Lean Meta Elab Tactic
 
 /-- Given `a, b, n : ℕ`, return `(m, ⊢ powMod a b n = m)`. -/
-def mkPowModEq' (a b n : ℕ) (aE bE nE : Expr) : MetaM (ℕ × Expr × Expr) := do
+meta def mkPowModEq' (a b n : ℕ) (aE bE nE : Expr) : MetaM (ℕ × Expr × Expr) := do
   let m := powModTR' a b n
   let mE := mkNatLit m
   return (m, mE, mkApp5 (mkConst ``powMod_eq_of_powModTR) aE bE nE mE eagerReflBoolTrue)
 
 /-- Given `a, b, n, m : ℕ`, if `powMod a b n = m` then return a proof of that fact. -/
-def provePowModEq' (a b n m : ℕ) (aE bE nE : Expr) : MetaM Expr := do
+meta def provePowModEq' (a b n m : ℕ) (aE bE nE : Expr) : MetaM Expr := do
   let (m', _, eq) ← mkPowModEq' a b n aE bE nE
   unless m = m' do throwError "attempted to prove {a} ^ {b} % {n} = {m} but it's actually {m'}"
   return eq
 
 /-- Given `a, b, n, m : ℕ`, if `powMod a b n ≠ m` then return a proof of that fact. -/
-def provePowModNe' (a b n m : ℕ) (aE bE nE mE : Expr) : MetaM Expr := do
+meta def provePowModNe' (a b n m : ℕ) (aE bE nE mE : Expr) : MetaM Expr := do
   let m' := powModTR' a b n
   if m = m' then throwError "attempted to prove {a} ^ {b} % {n} ≠ {m} but it is {m'}"
   return mkApp5 (mkConst ``powMod_ne_of_powModTR) aE bE nE mE eagerReflBoolFalse
 
-def prove_pow_mod_tac (g : MVarId) : MetaM Unit := do
+meta def prove_pow_mod_tac (g : MVarId) : MetaM Unit := do
   let t : Expr ← g.getType
   match_expr t with
   | Eq ty lhsE rhsE =>

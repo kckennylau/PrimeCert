@@ -3,19 +3,19 @@ Copyright (c) 2025 Kenny Lau, Bhavik Mehta. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kenny Lau, Bhavik Mehta
 -/
+module
 
-import PrimeCert.ForMathlib
-import PrimeCert.Meta.SmallPrime
-import PrimeCert.PredMod
-import PrimeCert.PowMod
-import Mathlib.Algebra.Field.ZMod
-import Mathlib.Algebra.Order.Ring.Star
-import Mathlib.Analysis.Normed.Ring.Lemmas
-import Mathlib.Data.Int.Star
-import Mathlib.Data.Nat.ChineseRemainder
-import Mathlib.Data.Nat.Totient
+public import PrimeCert.ForMathlib
+public import PrimeCert.PredMod
+public import PrimeCert.PowMod
+public import Mathlib.Algebra.Field.ZMod
+public import Mathlib.Algebra.Order.Ring.Star
+public import Mathlib.Analysis.Normed.Ring.Lemmas
+public import Mathlib.Data.Int.Star
+public import Mathlib.Data.Nat.ChineseRemainder
+public import Mathlib.Data.Nat.Totient
+public import Mathlib.Data.Finset.Pairwise
 import Mathlib.Tactic.ScopedNS
-import Mathlib.Data.Finset.Pairwise
 
 /-! # Pocklington's primality certificate
 
@@ -27,6 +27,8 @@ To use this certificate for primality of `N`, factorise `N - 1` completely.
   - `a ^ (N - 1) ≡ 1 (mod N)`
   - For each prime factor `p` of `F₁`, `gcd(a ^ ((N - 1) / p) - 1, N) = 1`.
 -/
+
+public section
 
 /-- Let `N` be a natural number whose primality we want to certify.
 Assume we have a partial factorisation `N - 1 = F₁ * R₁`, where `F₁` is fully factorised with
@@ -163,3 +165,5 @@ theorem PocklingtonPred.base {N root p : ℕ} (hp : p.Prime)
     (hroot : Nat.blt 0 root = true := by exact eagerReduce (Eq.refl true)) :
     PocklingtonPred N root p := by
   simpa using PocklingtonPred.base_pow (e := 1) hp step hroot
+
+end

@@ -3,11 +3,12 @@ Copyright (c) 2025 Kenny Lau, Bhavik Mehta. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kenny Lau, Bhavik Mehta
 -/
+module
 
-import Mathlib.NumberTheory.LegendreSymbol.Basic
-import Mathlib.Algebra.BigOperators.ModEq
-import PrimeCert.ForMathlib
-import PrimeCert.Pocklington
+public import Mathlib.NumberTheory.LegendreSymbol.Basic
+public import Mathlib.Algebra.BigOperators.ModEq
+public import PrimeCert.ForMathlib
+public import PrimeCert.Pocklington
 
 /-! # Pocklington's primality test, cube-root variant
 
@@ -16,6 +17,8 @@ This variant (due to Brillhart–Lehmer–Selfridge) only needs `F > N^(1/3)`, a
 an additional divisibility sieve up to a small bound `m` and a non-square check on `r² - 8s`
 (where `R = (N-1)/F` and `R = 2·F·s + r`).
 -/
+
+public section
 
 /-- `Nat.modEq_iff_exists_eq_add` reshaped into the `k * b + q = p` form that
 `pocklington3_test` consumes directly. -/
@@ -113,7 +116,7 @@ theorem pocklington3_test (N F R m r s : ℕ)
     · lia
 
 -- MOVE
-def forallB (f : ℕ → Bool) (start len : ℕ) (step : ℕ := 1) : Bool :=
+@[expose] def forallB (f : ℕ → Bool) (start len : ℕ) (step : ℕ := 1) : Bool :=
   (Nat.rec (motive := fun _ ↦ ℕ × Bool) (start, true)
     (fun _ ih ↦ ih.rec fun i b ↦ (eagerReduce (i.add step), f i && b)) len).2
 
@@ -170,7 +173,8 @@ theorem Pocklington3Cert.of_prime (r s p : Nat) (hp : Nat.Prime p) (h2p : 2 < p)
 inductive Pocklington3CertMode : Type
   | zero | prime (p : ℕ) (hp : Nat.Prime p) | lt
 
-noncomputable def Pocklington3CertMode.calculate (m : Pocklington3CertMode) (r s : ℕ) : Bool :=
+@[expose] noncomputable def Pocklington3CertMode.calculate (m : Pocklington3CertMode) (r s : ℕ) :
+    Bool :=
   m.rec (s.beq 0) (fun p _ ↦ (2).blt p && (powModTR (r.pow 2 |>.sub <| s.mul 8) (p.div 2) p).beq
     p.pred) (r.pow 2 |>.blt <| s.mul 8)
 
@@ -187,7 +191,7 @@ theorem Pocklington3CertMode.to_cert (m : Pocklington3CertMode) (r s : ℕ) (h :
 structure PrimePow : Type where
   (prime : ℕ) (pow : ℕ) (pf : prime.Prime) (pow_ne_zero : (0).blt pow)
 
-noncomputable def PrimePow.toNat (pp : PrimePow) : ℕ :=
+@[expose] noncomputable def PrimePow.toNat (pp : PrimePow) : ℕ :=
   pp.rec fun p v _ _ ↦ p.pow v
 
 @[simp] theorem PrimePow.toNat_def (pp : PrimePow) : pp.toNat = pp.prime ^ pp.pow := rfl
@@ -195,7 +199,7 @@ noncomputable def PrimePow.toNat (pp : PrimePow) : ℕ :=
 theorem PrimePow.prime_dvd_toNat (pp : PrimePow) : pp.prime ∣ pp.toNat :=
   dvd_pow_self _ <| ne_of_gt <| Nat.blt_eq.to_iff.mp pp.pow_ne_zero
 
-noncomputable def pocklington3_calculate (N e root m : ℕ) (F' : List PrimePow)
+@[expose] noncomputable def pocklington3_calculate (N e root m : ℕ) (F' : List PrimePow)
     (mode : Pocklington3CertMode) : Bool :=
   let F := Nat.mul (F'.rec 1 fun pp _ ih ↦ pp.rec fun p vp _ _ ↦ ih.mul <| p.pow vp) <| (2).pow e
   let two_F := F.mul 2
@@ -326,4 +330,6 @@ theorem pocklington3_certKR (N root m e : ℕ) (F' : List PrimePow) (mode : Pock
   · exact mode.to_cert _ _ cert
 
 end PrimeCert
+
+end
 
