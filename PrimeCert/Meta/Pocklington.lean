@@ -5,6 +5,7 @@ Authors: Kenny Lau, Bhavik Mehta
 -/
 
 import PrimeCert.Pocklington
+import PrimeCert.Meta.SmallPrime
 
 /-! # The `pock` certificate method
 
