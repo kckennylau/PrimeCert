@@ -5,7 +5,6 @@ Authors: Kenny Lau, Bhavik Mehta
 -/
 
 import PrimeCert.ForMathlib
-import PrimeCert.Meta.SmallPrime
 import PrimeCert.PredMod
 import PrimeCert.PowMod
 import Mathlib.Algebra.Field.ZMod
