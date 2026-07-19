@@ -14,7 +14,15 @@ import Mathlib.Tactic.Ring
 `forallB f start len step` computes `∀ n` in the arithmetic range
 `start, start + step, …` (length `len`) whether `f n` holds, as a single `Bool` the kernel
 can reduce via `eagerReduce`. The `forallB_iff*` lemmas connect it to the ordinary `∀`.
+`List.rec_and` is the analogous bridge for a `List.rec` fold of `&&` over an explicit list.
 -/
+
+theorem List.rec_and {α : Type*} (f : α → Bool) (b : Bool) (l : List α) :
+    (List.rec b (fun hd _ ih ↦ f hd && ih) l : Bool) = true ↔
+    b = true ∧ ∀ x ∈ l, f x := by
+  induction l with
+  | nil => simp
+  | cons _ _ ih => simp only [Bool.and_eq_true, ih, List.mem_cons, forall_eq_or_imp]; tauto
 
 namespace PrimeCert
 

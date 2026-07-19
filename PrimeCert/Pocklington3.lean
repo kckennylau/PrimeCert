@@ -179,13 +179,6 @@ noncomputable def pocklington3_calculate (N e root m : ℕ) (F' : List PrimePow)
   (forallB (fun l ↦ Nat.blt 0 (N.mod l)) F.succ m.pred F) &&
   (s.mul 2 |>.add (m.pow 2) |>.blt (two_F.add r |>.mul m |>.add 2))
 
-theorem _root_.List.rec_and {α : Type*} (f : α → Bool) (b : Bool) (l : List α) :
-    (List.rec b (fun hd _ ih ↦ f hd && ih) l : Bool) = true ↔
-    b = true ∧ ∀ x ∈ l, f x := by
-  induction l with
-  | nil => simp
-  | cons _ _ ih => simp only [Bool.and_eq_true, ih, List.mem_cons, forall_eq_or_imp]; tauto
-
 theorem mem_primeFactors_prod_toNat (L : List PrimePow) (p : ℕ) :
     p ∈ (L.map PrimePow.toNat |>.prod |>.primeFactors) → ∃ pp ∈ L, pp.prime = p := by
   induction L with
