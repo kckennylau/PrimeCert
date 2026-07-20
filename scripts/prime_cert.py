@@ -123,6 +123,15 @@ def factor(n):
         except (subprocess.TimeoutExpired, subprocess.CalledProcessError): pass
     return _py_factor(n)
 
+def icbrt(n):
+    """Exact integer cube root: largest x with x^3 <= n (Newton's method)."""
+    if n <= 0: return 0
+    x = 1 << ((n.bit_length() + 2) // 3)
+    while True:
+        y = (2 * x + n // (x * x)) // 3
+        if y >= x: return x
+        x = y
+
 def parse_factorisation(s):
     """Parse '2^4 * 3 * 29' or '2^4 3 29'. Returns {prime: exponent}."""
     fs = {}
@@ -145,8 +154,7 @@ def certify(N, nm1_factors=None):
         e = fs.pop(2, 0)
 
         # Select smallest odd factors until F > p^(1/3)
-        F, target = 1 << e, int(p ** (1/3)) + 2
-        while (target + 1) ** 3 <= p: target += 1
+        F, target = 1 << e, icbrt(p)
         sel = []
         for q in sorted(fs):
             sel.append((q, fs[q])); F *= q ** fs[q]
