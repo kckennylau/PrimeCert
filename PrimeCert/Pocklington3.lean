@@ -7,6 +7,7 @@ Authors: Kenny Lau, Bhavik Mehta
 import Mathlib.NumberTheory.LegendreSymbol.Basic
 import Mathlib.Algebra.BigOperators.ModEq
 import PrimeCert.ForMathlib
+import PrimeCert.ForallB
 import PrimeCert.Pocklington
 
 /-! # Pocklington's primality test, cube-root variant
@@ -112,40 +113,6 @@ theorem pocklington3_test (N F R m r s : ℕ)
     · exact cert ⟨_, sq _⟩
     · lia
 
--- MOVE
-def forallB (f : ℕ → Bool) (start len : ℕ) (step : ℕ := 1) : Bool :=
-  (Nat.rec (motive := fun _ ↦ ℕ × Bool) (start, true)
-    (fun _ ih ↦ ih.rec fun i b ↦ (eagerReduce (i.add step), f i && b)) len).2
-
-theorem forallB_iff_range' (f : ℕ → Bool) (start len step : ℕ) :
-    forallB f start len step ↔ ∀ n ∈ List.range' start len step, f n := by
-  unfold forallB
-  induction len with
-  | zero => simp
-  | succ len ih =>
-    simp only [Bool.and_eq_true, ih, List.range'_concat, List.forall_mem_append,
-      List.forall_mem_singleton, and_comm]
-    refine and_congr_left fun _a ↦ Eq.congr_left <| congr_arg f ?_
-    clear ih _a
-    induction len with
-    | zero => simp
-    | succ len ih => simp only; rw [ih, eagerReduce, Nat.add_eq]; ring
-
-theorem forallB_iff (f : ℕ → Bool) (start len step : ℕ) :
-    forallB f start len step ↔ ∀ n < len, f (n * step + start) := by
-  simp_rw [add_comm, mul_comm, forallB_iff_range', List.mem_range']; aesop
-
-theorem forallB_iff' (f : ℕ → Bool) (start r len step : ℕ) :
-    forallB f (start * step + r) len step ↔
-    ∀ n, start ≤ n → n < start + len → f (n * step + r) := by
-  simp_rw [forallB_iff, ← add_assoc, ← add_mul, le_iff_exists_add, exists_imp,
-    forall_eq_apply_imp_iff, add_lt_add_iff_left, add_comm]
-
-theorem forallB_one_iff (f : ℕ → Bool) (start len : ℕ) :
-    forallB f start len ↔ ∀ n, start ≤ n → n < start + len → f n := by
-  simp_rw [forallB_iff_range', List.mem_range'_1, and_imp]
--- END MOVE
-
 theorem Pocklington3Cert.of_prime (r s p : Nat) (hp : Nat.Prime p) (h2p : 2 < p)
     (cond : powMod (r ^ 2 - 8 * s) (p / 2) p = p - 1) :
     Pocklington3Cert r s := by
@@ -211,14 +178,6 @@ noncomputable def pocklington3_calculate (N e root m : ℕ) (F' : List PrimePow)
   (powModTR root N.pred N |>.beq 1) &&
   (forallB (fun l ↦ Nat.blt 0 (N.mod l)) F.succ m.pred F) &&
   (s.mul 2 |>.add (m.pow 2) |>.blt (two_F.add r |>.mul m |>.add 2))
-
--- MOVE
-theorem _root_.List.rec_and {α : Type*} (f : α → Bool) (b : Bool) (l : List α) :
-    (List.rec b (fun hd _ ih ↦ f hd && ih) l : Bool) = true ↔
-    b = true ∧ ∀ x ∈ l, f x := by
-  induction l with
-  | nil => simp
-  | cons _ _ ih => simp only [Bool.and_eq_true, ih, List.mem_cons, forall_eq_or_imp]; tauto
 
 theorem mem_primeFactors_prod_toNat (L : List PrimePow) (p : ℕ) :
     p ∈ (L.map PrimePow.toNat |>.prod |>.primeFactors) → ∃ pp ∈ L, pp.prime = p := by
