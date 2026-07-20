@@ -89,13 +89,22 @@ def parseFactored' (stx : TSyntax ``factored) (dict : PrimeDict) :
 -- TODO: special case for `F = 2 ^ e`
 
 /-- The smallest `m ≥ 1` with `2s + m² < (2F + r)·m + 2` (the `pock3` bound condition), or `0`
-if none is found below the cap — which indicates `F` is too small for a valid certificate. -/
-def minimalSieveBound (twoF r s : ℕ) : ℕ := Id.run do
-  let mut m := 1
-  for _ in [0:100000] do
-    if 2 * s + m * m < (twoF + r) * m + 2 then return m
-    m := m + 1
-  return 0
+if no such `m` exists — which indicates `F` is too small for a valid certificate.
+
+Writing `b := 2F + r`, the condition is `m² - b·m + (2s - 2) < 0`, satisfied on the open interval
+between the roots of that quadratic. A solution exists iff the discriminant `b² - 8s + 8` is
+positive, and the least one sits just above the lower root `(b - √(b² - 8s + 8)) / 2`. So we
+compute it directly with an integer square root and confirm against a tiny window, rather than
+scanning — the failure case (`F` too small) returns at once instead of iterating. -/
+def minimalSieveBound (twoF r s : ℕ) : ℕ :=
+  let b := twoF + r
+  if b * b + 8 ≤ 8 * s then 0
+  else Id.run do
+    let sq := Nat.sqrt (b * b + 8 - 8 * s)
+    let cand := (b - sq) / 2
+    for m in [max 1 (cand - 3) : cand + 4] do
+      if 2 * s + m * m < b * m + 2 then return m
+    return 0
 
 def parsePock3Spec : PrimeCertMethod `pock3_spec := fun stx dict ↦ do
   -- Both forms share every field except `m`: the new form computes it, the legacy form
