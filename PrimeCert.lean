@@ -1,3 +1,4 @@
+import PrimeCert.ForLean
 import PrimeCert.ForMathlib
 import PrimeCert.ForallB
 import PrimeCert.Interval
