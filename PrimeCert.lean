@@ -1,8 +1,10 @@
+import PrimeCert.ForLean
 import PrimeCert.ForMathlib
 import PrimeCert.ForallB
 import PrimeCert.Interval
 import PrimeCert.Meta.Pocklington
 import PrimeCert.Meta.Pocklington3
+import PrimeCert.Meta.PowMod
 import PrimeCert.Meta.PrimeCert
 import PrimeCert.Meta.SmallPrime
 import PrimeCert.Pocklington
