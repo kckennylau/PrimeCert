@@ -22,7 +22,7 @@ open Nat
 /-- The pow-mod function, named explicitly to allow more precise control of reduction. -/
 @[expose] public def powMod (a b n : ℕ) : ℕ := a ^ b % n
 /-- The pow-mod auxiliary function, named explicitly to allow more precise control of reduction. -/
-private def powModAux (a b c n : ℕ) : ℕ := (a ^ b * c) % n
+public def powModAux (a b c n : ℕ) : ℕ := (a ^ b * c) % n
 
 private def Nat.eager (k : Nat → Nat) (n : Nat) : Nat := k (eagerReduce n)
 
@@ -109,3 +109,35 @@ public lemma powMod_ne_of_powModTR (a b n m : ℕ) (h : (powModTR a b n).beq m =
     powMod a b n ≠ m := by
   have := Nat.ne_of_beq_eq_false h
   rwa [powModTR_eq] at this
+
+/-! ## Step lemmas for elaborator-driven pow-mod
+
+An alternative to the single `eagerReduce` of `powModTR`: recurse on the exponent's bits in the
+elaborator, emitting one small step per bit. Each of these lemmas is one such step, closed by a
+tiny `rfl` at the call site. See `PrimeCert.Meta.PowModSteps` for the tactic that chains them. -/
+
+public lemma powModAux_zero_eq {a c n m : ℕ} (hm : c % n = m) : powModAux a 0 c n = m := by
+  simpa [powModAux]
+
+public lemma powModAux_one_eq {a c n m : ℕ} (hm : (a * c) % n = m) : powModAux a 1 c n = m := by
+  simp_all [powModAux]
+
+public lemma powModAux_even_eq {a a' b b' c n m : ℕ}
+    (ha' : a * a % n = a') (hb' : b' <<< 1 = b)
+    (h : powModAux a' b' c n = m) :
+    powModAux a b c n = m := by
+  rw [← ha', powModAux, mul_mod] at h
+  rw [Nat.shiftLeft_eq, mul_comm, pow_one] at hb'
+  rw [← hb', powModAux, pow_mul, mul_mod, pow_two, pow_mod, h]
+
+public lemma powModAux_odd_eq {a a' b b' c c' n m : ℕ}
+    (hb' : 2 * b' + 1 = b) (ha' : a * a % n = a') (hc' : a * c % n = c')
+    (h : powModAux a' b' c' n = m) :
+    powModAux a b c n = m := by
+  rw [← ha', ← hc', powModAux, mul_mod, mod_mod] at h
+  rw [← hb', powModAux, pow_succ, pow_mul, mul_assoc, mul_mod, pow_mod, pow_two, h]
+
+public lemma powMod_eq_steps (a : ℕ) {a' b n m : ℕ}
+    (h : powModAux a' b 1 n = m) (ha : a % n = a') :
+    powMod a b n = m := by
+  rwa [powModAux, mul_one, ← ha, pow_mod, mod_mod, ← pow_mod] at h
