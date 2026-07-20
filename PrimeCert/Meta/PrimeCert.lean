@@ -124,7 +124,7 @@ Each group is a registered method name followed by one or more steps:
 
 Groups are processed left-to-right, steps within a group in order. Every certified prime is
 added to the `PrimeDict` so later steps can reference it. -/
-def runPrimeCertLadder (grps : Array (TSyntax `step_group)) : TermElabM (PrimeDict × Nat) := do
+def runPrimeCertLadder (grps : Array (TSyntax `step_group)) : MetaM (PrimeDict × Nat) := do
   let mut dict : PrimeDict := ∅
   let mut goal : ℕ := 0
   for group in grps do
