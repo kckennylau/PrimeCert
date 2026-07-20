@@ -9,12 +9,12 @@ import Mathlib.Data.List.Range
 import Mathlib.Algebra.Order.Monoid.Canonical.Defs
 import Mathlib.Tactic.Ring
 
-/-! # Kernel-reducible bounded `Bool` quantifier
+/-! # A kernel-reducible bounded `Bool` quantifier
 
-`forallB f start len step` computes `∀ n` in the arithmetic range
-`start, start + step, …` (length `len`) whether `f n` holds, as a single `Bool` the kernel
-can reduce via `eagerReduce`. The `forallB_iff*` lemmas connect it to the ordinary `∀`.
-`List.rec_and` is the analogous bridge for a `List.rec` fold of `&&` over an explicit list.
+`forallB f start len step` folds `f` over the `len`-term arithmetic progression
+`start, start + step, …`, returning a `Bool` that the kernel can reduce via `eagerReduce`.
+The `forallB_iff*` lemmas rewrite it as an ordinary `∀`. `List.rec_and` does the same for a
+`List.rec` fold of `&&` over an explicit list.
 -/
 
 theorem List.rec_and {α : Type*} (f : α → Bool) (b : Bool) (l : List α) :
