@@ -132,16 +132,24 @@ def parse_factorisation(s):
 
 # -- Certificate generation --
 
-def certify(N, nm1_factors=None):
-    """Return a prime_cert% Lean term certifying N is prime."""
+def certify(N, nm1_factors=None, pool=None):
+    """Return a prime_cert% Lean term certifying N is prime.
+
+    `pool` is an optional `{prime: {factor: exponent}}` map of *already-proven* factorisations
+    of `prime - 1`, consulted at every level of the recursion. This lets a certificate be
+    rebuilt from an existing ladder without re-factoring any large `p - 1` (only enough of each
+    `p - 1` to build the cube-root `F` is needed)."""
     smalls, steps, done = set(), [], set()
+    pool = pool or {}
 
     def go(p):
         if p <= SMALL: smalls.add(p); return
         if p in done: return
         done.add(p)
 
-        fs = dict(nm1_factors) if (p == N and nm1_factors) else factor(p - 1)
+        fs = (dict(pool[p]) if p in pool
+              else dict(nm1_factors) if (p == N and nm1_factors)
+              else factor(p - 1))
         e = fs.pop(2, 0)
 
         # Select smallest odd factors until F > p^(1/3)
@@ -184,10 +192,26 @@ def certify(N, nm1_factors=None):
     body = ",\n   ".join([f"small {{{ss}}}"] + steps)
     return f"theorem prime_{N} : Nat.Prime {N} := prime_cert%\n  [{body}]"
 
+def load_pool(path):
+    """Load a factor pool. Each line is `prime: factorisation` (e.g.
+    `339392917: 2^2 * 3^4 * 29`); blank lines and `#` comments are ignored. The factorisation
+    need only cover enough of `prime - 1` to build a cube-root `F`."""
+    pool = {}
+    with open(path) as fh:
+        for line in fh:
+            line = line.split("#", 1)[0].strip()
+            if not line: continue
+            p, fac = line.split(":", 1)
+            pool[int(p)] = parse_factorisation(fac)
+    return pool
+
 if __name__ == "__main__":
-    if len(sys.argv) < 2: print(__doc__); sys.exit(1)
-    N = int(sys.argv[1])
-    fs = parse_factorisation(sys.argv[2]) if len(sys.argv) >= 3 else None
+    pos = [a for a in sys.argv[1:] if not a.startswith("--")]
+    pool_path = next((a.split("=", 1)[1] for a in sys.argv[1:] if a.startswith("--pool=")), None)
+    if not pos: print(__doc__); sys.exit(1)
+    N = int(pos[0])
+    pool = load_pool(pool_path) if pool_path else None
+    fs = parse_factorisation(pos[1]) if len(pos) >= 2 else None
     if fs: assert math.prod(p**e for p, e in fs.items()) == N - 1, \
         f"factorisation product doesn't match N-1 = {N-1}"
-    print(certify(N, fs))
+    print(certify(N, fs, pool))
