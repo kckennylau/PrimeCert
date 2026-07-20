@@ -58,7 +58,6 @@ private lemma Bool.rec_eq_ite {α : Type*} {b : Bool} {t f : α} :
 
 @[simp] public lemma Nat.mod_eq_mod {a b : ℕ} : a.mod b = a % b := rfl
 @[simp] public lemma Nat.div_eq_div {a b : ℕ} : a.div b = a / b := rfl
-@[simp] public lemma Nat.land_eq_land {a b : ℕ} : a.land b = a &&& b := rfl
 
 @[simp] private lemma powModTR_aux_zero_eq {n a b c : ℕ} :
     powModTR.aux n 0 a b c = 0 := rfl
