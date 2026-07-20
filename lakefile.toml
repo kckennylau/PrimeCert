@@ -14,7 +14,7 @@ maxSynthPendingDepth = 3
 [[require]]
 name = "mathlib"
 scope = "leanprover-community"
-rev = "79d0395a1825a6264ad5d269e35e60537518955e"
+rev = "4608056c77c52468b80773e8dcd585ef821c7c5e"
 
 [[lean_lib]]
 name = "PrimeCert"
