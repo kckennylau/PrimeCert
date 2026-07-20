@@ -1,4 +1,4 @@
-import PrimeCert.PowMod
+import PrimeCert.Meta.PowMod
 
 /-! # Tests for `prove_pow_mod`
 
