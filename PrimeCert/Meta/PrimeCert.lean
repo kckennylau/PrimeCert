@@ -114,18 +114,34 @@ def parseStepGroup (stx : TSyntax `step_group) :
     return ⟨ext, Syntax.TSepArray.getElems <| .mk (sep := ";") steps⟩
   | _ => throwUnsupportedSyntax
 
-/-- The main primality certificate elaborator.
-
-Syntax: `prime_cert% [group₁, group₂, ...]`
+/-- Run the certificate ladder `[group₁, group₂, ...]`, returning the dictionary of every
+certified prime together with its proof term, plus the last prime certified.
 
 Each group is a registered method name followed by one or more steps:
 - `small {p₁; p₂; ...}` — look up pre-proved small primes
 - `pock (N, root, F₁)` or `pock {step₁; step₂; ...}` — Pocklington certificates
 - `pock3 (N, root, m, mode, F)` — cube-root Pocklington certificates
 
-Groups are processed left-to-right. Within each group, steps are processed in order.
-Every certified prime is added to an internal `PrimeDict` so later steps can reference it.
-The last prime certified becomes the result.
+Groups are processed left-to-right, steps within a group in order. Every certified prime is
+added to the `PrimeDict` so later steps can reference it. -/
+def runPrimeCertLadder (grps : Array (TSyntax `step_group)) : MetaM (PrimeDict × Nat) := do
+  let mut dict : PrimeDict := ∅
+  let mut goal : ℕ := 0
+  for group in grps do
+    let ⟨ext, steps⟩ ← parseStepGroup group
+    let method ← ext.mkMethod
+    for step in steps do
+      let ⟨n, nE, pf⟩ ← method step dict
+      goal := n
+      let mVar ← mkFreshExprMVar q(Nat.Prime $nE) default <| .mkSimple s!"prime_{n}"
+      dict := dict.insert n mVar
+      mVar.mvarId!.assign pf
+  return (dict, goal)
+
+/-- The main primality certificate elaborator.
+
+Syntax: `prime_cert% [group₁, group₂, ...]`; see `runPrimeCertLadder` for the group syntax.
+Returns the proof of the last prime certified.
 
 ```lean
 theorem prime_60digit :
@@ -139,17 +155,7 @@ theorem prime_60digit :
 ```
 -/
 elab "prime_cert% " "[" grps:step_group,+ "]" : term => do
-  let mut dict : PrimeDict := ∅
-  let mut goal : ℕ := 0
-  for group in grps.getElems do
-    let ⟨ext, steps⟩ ← parseStepGroup group
-    let method ← ext.mkMethod
-    for step in steps do
-      let ⟨n, nE, pf⟩ ← method step dict
-      goal := n
-      let mVar ← mkFreshExprMVar q(Nat.Prime $nE) default <| .mkSimple s!"prime_{n}"
-      dict := dict.insert n mVar
-      mVar.mvarId!.assign pf
+  let (dict, goal) ← runPrimeCertLadder grps.getElems
   let .some entry := dict.get? goal
     | throwError s!"Primality not certified for {goal}"
   return entry
