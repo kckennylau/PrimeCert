@@ -170,7 +170,7 @@ partial def closePrimeGoal (g : MVarId) (dict : PrimeDict) : MetaM Unit := do
   let t ← whnfR (← g.getType)
   match_expr t with
   | And _ _ =>
-    let gs ← g.apply (← mkConstWithFreshMVarLevels ``And.intro)
+    let gs ← g.apply (mkConst ``And.intro)
     gs.forM (closePrimeGoal · dict)
   | Nat.Prime nE =>
     let some n := nE.nat?
