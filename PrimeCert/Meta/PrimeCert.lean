@@ -160,4 +160,44 @@ elab "prime_cert% " "[" grps:step_group,+ "]" : term => do
     | throwError s!"Primality not certified for {goal}"
   return entry
 
+/-- Close a primality goal from a completed `PrimeDict`. Handles a conjunction `A ∧ B`,
+a `Nat.Prime n`, or the general `Prime n` (for `n : ℕ`), recursing through conjunctions.
+Each prime must have been certified by the ladder.
+
+This is the MetaM entry point into the machinery: given a `dict` (built by `runPrimeCertLadder`),
+other tactics can close a goal with `liftMetaTactic (closePrimeGoal · dict)`. -/
+partial def closePrimeGoal (g : MVarId) (dict : PrimeDict) : MetaM Unit := do
+  let t ← whnfR (← g.getType)
+  match_expr t with
+  | And _ _ =>
+    let gs ← g.apply (← mkConstWithFreshMVarLevels ``And.intro)
+    gs.forM (closePrimeGoal · dict)
+  | Nat.Prime nE =>
+    let some n := nE.nat?
+      | throwError "prime_cert: the goal `Nat.Prime {nE}` is not a numeral"
+    g.assign (← dict.getM n)
+  | Prime _ _ nE =>
+    let some n := nE.nat?
+      | throwError "prime_cert: the goal `Prime {nE}` is not a numeral"
+    g.assign (← mkAppM ``Nat.Prime.prime #[← dict.getM n])
+  | _ =>
+    throwError "prime_cert: unsupported goal {t}; expected `Nat.Prime _`, `Prime _`, \
+      or a conjunction of these"
+
+/-- The primality certificate tactic. Runs the ladder `[group₁, group₂, ...]` (same syntax as
+`prime_cert%`), then closes the goal, which may be `Nat.Prime n`, the general `Prime n`, or a
+conjunction of such (each prime must be certified by the ladder).
+
+```lean
+theorem prime_pair : Nat.Prime 32560621 ∧ Nat.Prime 73471 := by
+  prime_cert [small {2; 3; 7; 29; 31}, pock3 (73471, 3, 1, 7, 2 * 31),
+    pock3 (32560621, 2, 1, 7, 2 ^ 2 * 3 * 29)]
+```
+-/
+elab "prime_cert " "[" grps:step_group,+ "]" : tactic =>
+  Lean.Elab.Tactic.liftMetaTactic fun g => do
+    let (dict, _) ← runPrimeCertLadder grps.getElems
+    closePrimeGoal g dict
+    return []
+
 end PrimeCert.Meta
