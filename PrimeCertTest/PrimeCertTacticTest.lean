@@ -30,3 +30,8 @@ example : Nat.Prime 73471 ∧ Nat.Prime 7 := by
 
 -- nested/longer conjunction
 example : Nat.Prime 2 ∧ Nat.Prime 3 ∧ Prime 31 := by prime_cert [small {2; 3; 31}]
+
+-- a non-ℕ `Prime` goal is rejected cleanly, not passed off to the kernel
+/-- error: prime_cert: the general `Prime` goal is only supported over ℕ, not ℚ -/
+#guard_msgs in
+example : Prime (3 : ℚ) := by prime_cert [small {3}]

@@ -176,7 +176,9 @@ partial def closePrimeGoal (g : MVarId) (dict : PrimeDict) : MetaM Unit := do
     let some n := nE.nat?
       | throwError "prime_cert: the goal `Nat.Prime {nE}` is not a numeral"
     g.assign (← dict.getM n)
-  | Prime _ _ nE =>
+  | Prime α _ nE =>
+    unless (← whnfR α).isConstOf ``Nat do
+      throwError "prime_cert: the general `Prime` goal is only supported over ℕ, not {α}"
     let some n := nE.nat?
       | throwError "prime_cert: the goal `Prime {nE}` is not a numeral"
     g.assign (← mkAppM ``Nat.Prime.prime #[← dict.getM n])
