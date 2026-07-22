@@ -167,7 +167,7 @@ Each prime must have been certified by the ladder.
 This is the MetaM entry point into the machinery: given a `dict` (built by `runPrimeCertLadder`),
 other tactics can close a goal with `liftMetaTactic (closePrimeGoal · dict)`. -/
 partial def closePrimeGoal (g : MVarId) (dict : PrimeDict) : MetaM Unit := do
-  let t ← whnfR (← g.getType)
+  let t ← g.getType
   match_expr t with
   | And _ _ =>
     let gs ← g.apply (mkConst ``And.intro)
@@ -177,7 +177,7 @@ partial def closePrimeGoal (g : MVarId) (dict : PrimeDict) : MetaM Unit := do
       | throwError "prime_cert: the goal `Nat.Prime {nE}` is not a numeral"
     g.assign (← dict.getM n)
   | Prime α _ nE =>
-    unless (← whnfR α).isConstOf ``Nat do
+    unless α.isConstOf ``Nat do
       throwError "prime_cert: the general `Prime` goal is only supported over ℕ, not {α}"
     let some n := nE.nat?
       | throwError "prime_cert: the goal `Prime {nE}` is not a numeral"
