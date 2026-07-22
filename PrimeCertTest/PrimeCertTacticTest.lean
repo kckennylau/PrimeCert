@@ -35,3 +35,6 @@ example : Nat.Prime 2 ∧ Nat.Prime 3 ∧ Prime 31 := by prime_cert [small {2; 3
 /-- error: prime_cert: the general `Prime` goal is only supported over ℕ, not ℚ -/
 #guard_msgs in
 example : Prime (3 : ℚ) := by prime_cert [small {3}]
+
+-- left-associated conjunction (And.intro splits either association)
+example : (Nat.Prime 2 ∧ Nat.Prime 3) ∧ Nat.Prime 5 := by prime_cert [small {2; 3; 5}]
