@@ -181,7 +181,7 @@ partial def closePrimeGoal (g : MVarId) (dict : PrimeDict) : MetaM Unit := do
       throwError "prime_cert: the general `Prime` goal is only supported over ℕ, not {α}"
     let some n := nE.nat?
       | throwError "prime_cert: the goal `Prime {nE}` is not a numeral"
-    g.assign (← mkAppM ``Nat.Prime.prime #[← dict.getM n])
+    g.assign (mkAppN (mkConst ``Nat.Prime.prime) #[nE, ← dict.getM n])
   | _ =>
     throwError "prime_cert: unsupported goal {t}; expected `Nat.Prime _`, `Prime _`, \
       or a conjunction of these"
