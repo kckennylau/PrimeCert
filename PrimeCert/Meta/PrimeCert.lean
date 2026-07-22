@@ -198,9 +198,8 @@ theorem prime_pair : Nat.Prime 32560621 ∧ Nat.Prime 73471 := by
 ```
 -/
 elab "prime_cert" ppSpace "[" grps:step_group,+ "]" : tactic =>
-  Lean.Elab.Tactic.liftMetaTactic fun g => do
+  Lean.Elab.Tactic.liftMetaFinishingTactic fun g => do
     let (dict, _) ← runPrimeCertLadder grps.getElems
     closePrimeGoal g dict
-    return []
 
 end PrimeCert.Meta
