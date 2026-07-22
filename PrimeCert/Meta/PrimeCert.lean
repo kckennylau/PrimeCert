@@ -162,7 +162,10 @@ elab "prime_cert% " "[" grps:step_group,+ "]" : term => do
 
 /-- Build a proof term for the primality goal `t` from a completed `PrimeDict`. Handles a
 conjunction `A ∧ B`, a `Nat.Prime n`, or the general `Prime n` (for `n : ℕ`), recursing through
-conjunctions. Each prime must have been certified by the ladder. -/
+conjunctions. Each prime must have been certified by the ladder.
+
+This is the MetaM entry point into the machinery: given a `dict` (built by `runPrimeCertLadder`)
+and a goal type, it returns the proof term, so other tactics can reuse it. -/
 partial def provePrimeGoal (dict : PrimeDict) (t : Expr) : MetaM Expr := do
   match_expr t with
   | And a b =>
@@ -181,12 +184,6 @@ partial def provePrimeGoal (dict : PrimeDict) (t : Expr) : MetaM Expr := do
     throwError "prime_cert: unsupported goal {t}; expected `Nat.Prime _`, `Prime _`, \
       or a conjunction of these"
 
-/-- Close a primality goal from a completed `PrimeDict`, the MetaM entry point into the machinery:
-given a `dict` (built by `runPrimeCertLadder`), other tactics can close a goal with
-`liftMetaTactic (closePrimeGoal · dict)`. See `provePrimeGoal` for the accepted goals. -/
-def closePrimeGoal (g : MVarId) (dict : PrimeDict) : MetaM Unit := do
-  g.assign (← provePrimeGoal dict (← g.getType))
-
 /-- The primality certificate tactic. Runs the ladder `[group₁, group₂, ...]` (same syntax as
 `prime_cert%`), then closes the goal, which may be `Nat.Prime n`, the general `Prime n`, or a
 conjunction of such (each prime must be certified by the ladder).
@@ -200,6 +197,6 @@ theorem prime_pair : Nat.Prime 32560621 ∧ Nat.Prime 73471 := by
 elab "prime_cert" ppSpace "[" grps:step_group,+ "]" : tactic =>
   Lean.Elab.Tactic.liftMetaFinishingTactic fun g => do
     let (dict, _) ← runPrimeCertLadder grps.getElems
-    closePrimeGoal g dict
+    g.assign (← provePrimeGoal dict (← g.getType))
 
 end PrimeCert.Meta
