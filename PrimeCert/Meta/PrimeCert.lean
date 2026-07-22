@@ -160,31 +160,32 @@ elab "prime_cert% " "[" grps:step_group,+ "]" : term => do
     | throwError s!"Primality not certified for {goal}"
   return entry
 
-/-- Close a primality goal from a completed `PrimeDict`. Handles a conjunction `A ∧ B`,
-a `Nat.Prime n`, or the general `Prime n` (for `n : ℕ`), recursing through conjunctions.
-Each prime must have been certified by the ladder.
-
-This is the MetaM entry point into the machinery: given a `dict` (built by `runPrimeCertLadder`),
-other tactics can close a goal with `liftMetaTactic (closePrimeGoal · dict)`. -/
-partial def closePrimeGoal (g : MVarId) (dict : PrimeDict) : MetaM Unit := do
-  let t ← g.getType
+/-- Build a proof term for the primality goal `t` from a completed `PrimeDict`. Handles a
+conjunction `A ∧ B`, a `Nat.Prime n`, or the general `Prime n` (for `n : ℕ`), recursing through
+conjunctions. Each prime must have been certified by the ladder. -/
+partial def provePrimeGoal (dict : PrimeDict) (t : Expr) : MetaM Expr := do
   match_expr t with
-  | And _ _ =>
-    let gs ← g.apply (mkConst ``And.intro)
-    gs.forM (closePrimeGoal · dict)
+  | And a b =>
+    return mkApp4 (mkConst ``And.intro) a b (← provePrimeGoal dict a) (← provePrimeGoal dict b)
   | Nat.Prime nE =>
     let some n := nE.nat?
       | throwError "prime_cert: the goal `Nat.Prime {nE}` is not a numeral"
-    g.assign (← dict.getM n)
+    dict.getM n
   | Prime α _ nE =>
     unless α.isConstOf ``Nat do
       throwError "prime_cert: the general `Prime` goal is only supported over ℕ, not {α}"
     let some n := nE.nat?
       | throwError "prime_cert: the goal `Prime {nE}` is not a numeral"
-    g.assign (mkAppN (mkConst ``Nat.Prime.prime) #[nE, ← dict.getM n])
+    return mkAppN (mkConst ``Nat.Prime.prime) #[nE, ← dict.getM n]
   | _ =>
     throwError "prime_cert: unsupported goal {t}; expected `Nat.Prime _`, `Prime _`, \
       or a conjunction of these"
+
+/-- Close a primality goal from a completed `PrimeDict`, the MetaM entry point into the machinery:
+given a `dict` (built by `runPrimeCertLadder`), other tactics can close a goal with
+`liftMetaTactic (closePrimeGoal · dict)`. See `provePrimeGoal` for the accepted goals. -/
+def closePrimeGoal (g : MVarId) (dict : PrimeDict) : MetaM Unit := do
+  g.assign (← provePrimeGoal dict (← g.getType))
 
 /-- The primality certificate tactic. Runs the ladder `[group₁, group₂, ...]` (same syntax as
 `prime_cert%`), then closes the goal, which may be `Nat.Prime n`, the general `Prime n`, or a
