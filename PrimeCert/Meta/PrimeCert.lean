@@ -171,8 +171,18 @@ partial def provePrimeGoal (dict : PrimeDict) (t : Expr) : MetaM Expr := do
   | And a b =>
     return mkApp4 (mkConst ``And.intro) a b (← provePrimeGoal dict a) (← provePrimeGoal dict b)
   | Nat.Prime nE =>
-    let some n := nE.nat?
-      | throwError "prime_cert: the goal `Nat.Prime {nE}` is not a numeral"
+    let n ← match nE.nat? with
+      | some n => pure n
+      | none =>
+        -- expression-form goal (e.g. 2^255 - 19): find the dict entry that matches by defEq
+        let mut found : Option Nat := none
+        for (n, _) in dict do
+          if ← isDefEq (mkNatLit n) nE then
+            found := some n
+            break
+        let some n := found
+          | throwError "prime_cert: the goal `Nat.Prime {nE}` does not match any certified prime"
+        pure n
     dict.getM n
   | Prime α _ nE =>
     unless α.isConstOf ``Nat do
