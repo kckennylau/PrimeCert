@@ -116,28 +116,40 @@ An alternative to the single `eagerReduce` of `powModTR`: recurse on the exponen
 elaborator, emitting one small step per bit. Each of these lemmas is one such step, closed by a
 tiny `rfl` at the call site. See `PrimeCert.Meta.PowModSteps` for the tactic that chains them. -/
 
-public lemma powModAux_zero_eq {a c n m : ℕ} (hm : c % n = m) : powModAux a 0 c n = m := by
-  simpa [powModAux]
+public lemma powModAux_zero_eq {a c n m : ℕ} (hm : Nat.beq (Nat.mod c n) m = true) :
+    powModAux a 0 c n = m := by
+  simpa [powModAux] using Nat.eq_of_beq_eq_true hm
 
-public lemma powModAux_one_eq {a c n m : ℕ} (hm : (a * c) % n = m) : powModAux a 1 c n = m := by
+public lemma powModAux_one_eq {a c n m : ℕ} (hm : Nat.beq (Nat.mod (Nat.mul a c) n) m = true) :
+    powModAux a 1 c n = m := by
+  have hm' : (a * c) % n = m := Nat.eq_of_beq_eq_true hm
   simp_all [powModAux]
 
 public lemma powModAux_even_eq {a a' b b' c n m : ℕ}
-    (ha' : a * a % n = a') (hb' : b' <<< 1 = b)
+    (ha' : Nat.beq (Nat.mod (Nat.mul a a) n) a' = true)
+    (hb' : Nat.beq (Nat.shiftLeft b' 1) b = true)
     (h : powModAux a' b' c n = m) :
     powModAux a b c n = m := by
-  rw [← ha', powModAux, mul_mod] at h
-  rw [Nat.shiftLeft_eq, mul_comm, pow_one] at hb'
-  rw [← hb', powModAux, pow_mul, mul_mod, pow_two, pow_mod, h]
+  have ha'' : a * a % n = a' := Nat.eq_of_beq_eq_true ha'
+  have hb'' : b' <<< 1 = b := Nat.eq_of_beq_eq_true hb'
+  rw [← ha'', powModAux, mul_mod] at h
+  rw [Nat.shiftLeft_eq, mul_comm, pow_one] at hb''
+  rw [← hb'', powModAux, pow_mul, mul_mod, pow_two, pow_mod, h]
 
 public lemma powModAux_odd_eq {a a' b b' c c' n m : ℕ}
-    (hb' : 2 * b' + 1 = b) (ha' : a * a % n = a') (hc' : a * c % n = c')
+    (hb' : Nat.beq (Nat.add (Nat.mul 2 b') 1) b = true)
+    (ha' : Nat.beq (Nat.mod (Nat.mul a a) n) a' = true)
+    (hc' : Nat.beq (Nat.mod (Nat.mul a c) n) c' = true)
     (h : powModAux a' b' c' n = m) :
     powModAux a b c n = m := by
-  rw [← ha', ← hc', powModAux, mul_mod, mod_mod] at h
-  rw [← hb', powModAux, pow_succ, pow_mul, mul_assoc, mul_mod, pow_mod, pow_two, h]
+  have hb'' : 2 * b' + 1 = b := Nat.eq_of_beq_eq_true hb'
+  have ha'' : a * a % n = a' := Nat.eq_of_beq_eq_true ha'
+  have hc'' : a * c % n = c' := Nat.eq_of_beq_eq_true hc'
+  rw [← ha'', ← hc'', powModAux, mul_mod, mod_mod] at h
+  rw [← hb'', powModAux, pow_succ, pow_mul, mul_assoc, mul_mod, pow_mod, pow_two, h]
 
 public lemma powMod_eq_steps (a : ℕ) {a' b n m : ℕ}
-    (h : powModAux a' b 1 n = m) (ha : a % n = a') :
+    (h : powModAux a' b 1 n = m) (ha : Nat.beq (Nat.mod a n) a' = true) :
     powMod a b n = m := by
-  rwa [powModAux, mul_one, ← ha, pow_mod, mod_mod, ← pow_mod] at h
+  have ha' : a % n = a' := Nat.eq_of_beq_eq_true ha
+  rwa [powModAux, mul_one, ← ha', pow_mod, mod_mod, ← pow_mod] at h
