@@ -1,3 +1,4 @@
 import PrimeCertTest.PowModTest
+import PrimeCertTest.Pock3FieldsTest
 import PrimeCertTest.PrimeCertTacticTest
 import PrimeCertTest.PrimeListTest
