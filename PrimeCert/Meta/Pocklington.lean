@@ -55,24 +55,38 @@ def parseFactored (stx : TSyntax ``factored) : Q(Nat) × Array ParsedPrimePow :=
     (head.1, #[head.2])
   | _ => (mkNatLit 0, #[])
 
+/-- The `Nat` expression for a single factor `p` or `p ^ e`, matching how `parseFactored`
+builds the product `F₁`. -/
+def ParsedPrimePow.toExpr : ParsedPrimePow → Q(Nat)
+  | .prime p => mkNatLit p
+  | .pow p e => mkApp2 (mkConst ``Nat.pow) (mkNatLit p) (mkNatLit e)
+
 def mkPockPred (N a F₁ : Q(Nat)) (steps : Array ParsedPrimePow) (dict : PrimeDict) :
     MetaM Q(PocklingtonPred $N $a $F₁) := do
   if h : steps.size = 0 then return mkConst ``PocklingtonPred.one
   else
-    have head : Expr := ← match steps[0] with
-    | .prime p => do
-      mkAppOptM ``PocklingtonPred.base #[N, a, mkNatLit p, ← dict.getM p,
-        eagerReflBoolTrue, eagerReflBoolTrue]
-    | .pow p e => do
-      mkAppOptM ``PocklingtonPred.base_pow #[N, a, mkNatLit p, mkNatLit e, ← dict.getM p,
-        eagerReflBoolTrue, eagerReflBoolTrue]
-    (steps.drop 1).foldlM (fun ih step ↦ match step with
-      | .prime p => do
-        mkAppM ``PocklingtonPred.step #[← dict.getM p, ih,
-          eagerReflBoolTrue, eagerReflBoolTrue]
-      | .pow p e => do
-        mkAppOptM ``PocklingtonPred.step_pow #[N, a, none, mkNatLit p, mkNatLit e,
-          ← dict.getM p, ih, eagerReflBoolTrue, eagerReflBoolTrue]) head
+    -- Build the proof by hand with `mkAppN` (no elaboration-time type checking). `mkStep` returns
+    -- the proof plus the running product `F₂`, threaded so the `.step`/`.step_pow` implicit matches
+    -- `parseFactored`'s `F₁`. `ih?` is the accumulated proof and product, `none` at the base.
+    let mkStep (step : ParsedPrimePow) (ih? : Option (Expr × Expr)) : MetaM (Expr × Expr) := do
+      match step, ih? with
+      | .prime p, none =>
+        return (mkAppN (mkConst ``PocklingtonPred.base) #[N, a, mkNatLit p, ← dict.getM p,
+          eagerReflBoolTrue, eagerReflBoolTrue], mkNatLit p)
+      | .pow p e, none =>
+        return (mkAppN (mkConst ``PocklingtonPred.base_pow) #[N, a, mkNatLit p, mkNatLit e,
+          ← dict.getM p, eagerReflBoolTrue, eagerReflBoolTrue], step.toExpr)
+      | .prime p, some (ih, F₂) =>
+        return (mkAppN (mkConst ``PocklingtonPred.step) #[N, a, F₂, mkNatLit p, ← dict.getM p, ih,
+          eagerReflBoolTrue, eagerReflBoolTrue], mkApp2 (mkConst ``Nat.mul) F₂ (mkNatLit p))
+      | .pow p e, some (ih, F₂) =>
+        return (mkAppN (mkConst ``PocklingtonPred.step_pow) #[N, a, F₂, mkNatLit p, mkNatLit e,
+          ← dict.getM p, ih, eagerReflBoolTrue, eagerReflBoolTrue],
+          mkApp2 (mkConst ``Nat.mul) F₂ step.toExpr)
+    let mut acc ← mkStep steps[0] none
+    for step in steps.drop 1 do
+      acc ← mkStep step (some acc)
+    return acc.1
 
 /-- Syntax for a `pock` certificate step: `(N, root, F₁)`.
 
@@ -99,7 +113,7 @@ def parsePockSpec : PrimeCertMethod ``pock_spec := fun stx dict ↦ do
       have a : Q(Nat) := mkNatLit a.getNat
       have (F₁, steps) := parseFactored F₁
       have pred := ← mkPockPred N a F₁ steps dict
-      have pf : Q(Nat.Prime $N) := ← mkAppM ``pocklington_certifyKR
+      have pf : Q(Nat.Prime $N) := mkAppN (mkConst ``pocklington_certifyKR)
         #[N, a, F₁, pred, eagerReflBoolTrue, eagerReflBoolTrue,
           eagerReflBoolTrue, eagerReflBoolTrue]
       return ⟨Nnat, N, pf⟩

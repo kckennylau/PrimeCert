@@ -114,18 +114,34 @@ def parseStepGroup (stx : TSyntax `step_group) :
     return ⟨ext, Syntax.TSepArray.getElems <| .mk (sep := ";") steps⟩
   | _ => throwUnsupportedSyntax
 
-/-- The main primality certificate elaborator.
-
-Syntax: `prime_cert% [group₁, group₂, ...]`
+/-- Run the certificate ladder `[group₁, group₂, ...]`, returning the dictionary of every
+certified prime together with its proof term, plus the last prime certified.
 
 Each group is a registered method name followed by one or more steps:
 - `small {p₁; p₂; ...}` — look up pre-proved small primes
 - `pock (N, root, F₁)` or `pock {step₁; step₂; ...}` — Pocklington certificates
 - `pock3 (N, root, m, mode, F)` — cube-root Pocklington certificates
 
-Groups are processed left-to-right. Within each group, steps are processed in order.
-Every certified prime is added to an internal `PrimeDict` so later steps can reference it.
-The last prime certified becomes the result.
+Groups are processed left-to-right, steps within a group in order. Every certified prime is
+added to the `PrimeDict` so later steps can reference it. -/
+def runPrimeCertLadder (grps : Array (TSyntax `step_group)) : MetaM (PrimeDict × Nat) := do
+  let mut dict : PrimeDict := ∅
+  let mut goal : ℕ := 0
+  for group in grps do
+    let ⟨ext, steps⟩ ← parseStepGroup group
+    let method ← ext.mkMethod
+    for step in steps do
+      let ⟨n, nE, pf⟩ ← method step dict
+      goal := n
+      let mVar ← mkFreshExprMVar q(Nat.Prime $nE) default <| .mkSimple s!"prime_{n}"
+      dict := dict.insert n mVar
+      mVar.mvarId!.assign pf
+  return (dict, goal)
+
+/-- The main primality certificate elaborator.
+
+Syntax: `prime_cert% [group₁, group₂, ...]`; see `runPrimeCertLadder` for the group syntax.
+Returns the proof of the last prime certified.
 
 ```lean
 theorem prime_60digit :
@@ -139,19 +155,48 @@ theorem prime_60digit :
 ```
 -/
 elab "prime_cert% " "[" grps:step_group,+ "]" : term => do
-  let mut dict : PrimeDict := ∅
-  let mut goal : ℕ := 0
-  for group in grps.getElems do
-    let ⟨ext, steps⟩ ← parseStepGroup group
-    let method ← ext.mkMethod
-    for step in steps do
-      let ⟨n, nE, pf⟩ ← method step dict
-      goal := n
-      let mVar ← mkFreshExprMVar q(Nat.Prime $nE) default <| .mkSimple s!"prime_{n}"
-      dict := dict.insert n mVar
-      mVar.mvarId!.assign pf
+  let (dict, goal) ← runPrimeCertLadder grps.getElems
   let .some entry := dict.get? goal
     | throwError s!"Primality not certified for {goal}"
   return entry
+
+/-- Build a proof term for the primality goal `t` from a completed `PrimeDict`. Handles a
+conjunction `A ∧ B`, a `Nat.Prime n`, or the general `Prime n` (for `n : ℕ`), recursing through
+conjunctions. Each prime must have been certified by the ladder.
+
+This is the MetaM entry point into the machinery: given a `dict` (built by `runPrimeCertLadder`)
+and a goal type, it returns the proof term, so other tactics can reuse it. -/
+partial def provePrimeGoal (dict : PrimeDict) (t : Expr) : MetaM Expr := do
+  match_expr t with
+  | And a b =>
+    return mkApp4 (mkConst ``And.intro) a b (← provePrimeGoal dict a) (← provePrimeGoal dict b)
+  | Nat.Prime nE =>
+    let some n := nE.nat?
+      | throwError "prime_cert: the goal `Nat.Prime {nE}` is not a numeral"
+    dict.getM n
+  | Prime α _ nE =>
+    unless α.isConstOf ``Nat do
+      throwError "prime_cert: the general `Prime` goal is only supported over ℕ, not {α}"
+    let some n := nE.nat?
+      | throwError "prime_cert: the goal `Prime {nE}` is not a numeral"
+    return mkAppN (mkConst ``Nat.Prime.prime) #[nE, ← dict.getM n]
+  | _ =>
+    throwError "prime_cert: unsupported goal {t}; expected `Nat.Prime _`, `Prime _`, \
+      or a conjunction of these"
+
+/-- The primality certificate tactic. Runs the ladder `[group₁, group₂, ...]` (same syntax as
+`prime_cert%`), then closes the goal, which may be `Nat.Prime n`, the general `Prime n`, or a
+conjunction of such (each prime must be certified by the ladder).
+
+```lean
+theorem prime_pair : Nat.Prime 32560621 ∧ Nat.Prime 73471 := by
+  prime_cert [small {2; 3; 7; 29; 31}, pock3 (73471, 3, 1, 7, 2 * 31),
+    pock3 (32560621, 2, 1, 7, 2 ^ 2 * 3 * 29)]
+```
+-/
+elab "prime_cert" ppSpace "[" grps:step_group,+ "]" : tactic =>
+  Lean.Elab.Tactic.liftMetaFinishingTactic fun g => do
+    let (dict, _) ← runPrimeCertLadder grps.getElems
+    g.assign (← provePrimeGoal dict (← g.getType))
 
 end PrimeCert.Meta
