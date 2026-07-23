@@ -114,6 +114,8 @@ def parsePock3Spec : PrimeCertMethod `pock3_spec := fun stx dict ↦ do
     | `(pock3_spec| ($N:num, $root:num, $mode:pock3_mode, $head:prime_pow * $F:factored)) =>
       pure (N, root, (none : Option (TSyntax `num)), mode, head, F)
     | `(pock3_spec| ($N:num, $root:num, $m:num, $mode:pock3_mode, $head:prime_pow * $F:factored)) =>
+      logWarning "pock3: the 5-field form `(N, root, m, mode, F)` is deprecated; \
+        use the 4-field form `(N, root, mode, F)` instead (m is now computed automatically)"
       pure (N, root, some m, mode, head, F)
     | _ => Elab.throwUnsupportedSyntax
   have (_, headF) := parsePrimePow head
