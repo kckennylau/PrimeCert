@@ -26,7 +26,7 @@ example : Nat.Prime 31 ∧ Nat.Prime 29 := by prime_cert [small {29; 31}]
 
 -- conjunction mixing methods: 73471 via pock3, 7 via small
 example : Nat.Prime 73471 ∧ Nat.Prime 7 := by
-  prime_cert [small {2; 7; 31}, pock3 (73471, 3, 1, 7, 2 * 31)]
+  prime_cert [small {2; 7; 31}, pock3 (73471, 3, 7, 2 * 31)]
 
 -- nested/longer conjunction
 example : Nat.Prime 2 ∧ Nat.Prime 3 ∧ Prime 31 := by prime_cert [small {2; 3; 31}]
