@@ -160,6 +160,15 @@ elab "prime_cert% " "[" grps:step_group,+ "]" : term => do
     | throwError s!"Primality not certified for {goal}"
   return entry
 
+/-- Extract the natural number from `nE` for use with `dict`. Tries `nat?` first (handles raw
+numerals and the `OfNat.ofNat` form); falls back to a `isDefEq` search over `dict` for
+expression-form goals like `2^255 - 19` or `2^252 + k`. -/
+private def resolveNatExpr (dict : PrimeDict) (nE : Expr) (ctxt : String) : MetaM Nat := do
+  if let some n := nE.nat? then return n
+  for (n, _) in dict do
+    if ← isDefEq (mkRawNatLit n) nE then return n
+  throwError "prime_cert: the goal `{ctxt} {nE}` does not match any certified prime"
+
 /-- Build a proof term for the primality goal `t` from a completed `PrimeDict`. Handles a
 conjunction `A ∧ B`, a `Nat.Prime n`, or the general `Prime n` (for `n : ℕ`), recursing through
 conjunctions. Each prime must have been certified by the ladder.
@@ -171,24 +180,12 @@ partial def provePrimeGoal (dict : PrimeDict) (t : Expr) : MetaM Expr := do
   | And a b =>
     return mkApp4 (mkConst ``And.intro) a b (← provePrimeGoal dict a) (← provePrimeGoal dict b)
   | Nat.Prime nE =>
-    let n ← match nE.nat? with
-      | some n => pure n
-      | none =>
-        -- expression-form goal (e.g. 2^255 - 19): find the dict entry that matches by defEq
-        let mut found : Option Nat := none
-        for (n, _) in dict do
-          if ← isDefEq (mkNatLit n) nE then
-            found := some n
-            break
-        let some n := found
-          | throwError "prime_cert: the goal `Nat.Prime {nE}` does not match any certified prime"
-        pure n
+    let n ← resolveNatExpr dict nE "Nat.Prime"
     dict.getM n
   | Prime α _ nE =>
     unless α.isConstOf ``Nat do
       throwError "prime_cert: the general `Prime` goal is only supported over ℕ, not {α}"
-    let some n := nE.nat?
-      | throwError "prime_cert: the goal `Prime {nE}` is not a numeral"
+    let n ← resolveNatExpr dict nE "Prime"
     return mkAppN (mkConst ``Nat.Prime.prime) #[nE, ← dict.getM n]
   | _ =>
     throwError "prime_cert: unsupported goal {t}; expected `Nat.Prime _`, `Prime _`, \
