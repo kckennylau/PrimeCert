@@ -26,17 +26,17 @@ open Lean Meta Elab Tactic
 meta partial def mkPowModAuxEq (a b c n : Nat) (aE bE cE nE : Expr) : MetaM (Nat × Expr × Expr) :=
   if b = 0 then
     let m : Nat := c % n
-    let mE : Expr := mkNatLit m
+    let mE : Expr := mkRawNatLit m
     return (m, mE, mkApp5 (mkConst ``powModAux_zero_eq) aE cE nE mE eagerReflBoolTrue)
   else if b = 1 then
     let m : Nat := (a * c) % n
-    let mE : Expr := mkNatLit m
+    let mE : Expr := mkRawNatLit m
     return (m, mE, mkApp5 (mkConst ``powModAux_one_eq) aE cE nE mE eagerReflBoolTrue)
   else if b % 2 = 0 then do
     let b' := b / 2
     let a' := a * a % n
-    let a'E := mkNatLit a'
-    let b'E := mkNatLit b'
+    let a'E := mkRawNatLit a'
+    let b'E := mkRawNatLit b'
     let (m, mE, eq) ← mkPowModAuxEq a' b' c n a'E b'E cE nE
     return (m, mE, mkApp10 (mkConst ``powModAux_even_eq) aE a'E bE b'E cE nE mE
       eagerReflBoolTrue eagerReflBoolTrue eq)
@@ -44,9 +44,9 @@ meta partial def mkPowModAuxEq (a b c n : Nat) (aE bE cE nE : Expr) : MetaM (Nat
     let a' := a * a % n
     let b' := b / 2
     let c' := a * c % n
-    let a'E := mkNatLit a'
-    let b'E := mkNatLit b'
-    let c'E := mkNatLit c'
+    let a'E := mkRawNatLit a'
+    let b'E := mkRawNatLit b'
+    let c'E := mkRawNatLit c'
     let (m, mE, eq) ← mkPowModAuxEq a' b' c' n a'E b'E c'E nE
     return (m, mE, mkApp5 (mkApp7 (mkConst ``powModAux_odd_eq) aE a'E bE b'E cE c'E nE)
       mE eagerReflBoolTrue eagerReflBoolTrue eagerReflBoolTrue eq)
@@ -54,8 +54,8 @@ meta partial def mkPowModAuxEq (a b c n : Nat) (aE bE cE nE : Expr) : MetaM (Nat
 /-- Given `a, b, n`, return `(m, ⊢ powMod a b n = m)` via approach A. -/
 meta def mkPowModEq (a b n : Nat) (aE bE nE : Expr) : MetaM (Nat × Expr × Expr) := do
   let a' := a % n
-  let a'E := mkNatLit a'
-  let (m, mE, eq) ← mkPowModAuxEq a' b 1 n a'E bE (mkNatLit 1) nE
+  let a'E := mkRawNatLit a'
+  let (m, mE, eq) ← mkPowModAuxEq a' b 1 n a'E bE (mkRawNatLit 1) nE
   return (m, mE, ← mkAppM ``powMod_eq_steps #[aE, eq, eagerReflBoolTrue])
 
 meta def prove_pow_mod_steps_tac (g : MVarId) : MetaM Unit := do
