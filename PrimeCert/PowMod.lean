@@ -127,7 +127,7 @@ public lemma powModAux_one_eq {a c n m : ℕ} (hm : Nat.beq (Nat.mod (Nat.mul a 
 
 public lemma powModAux_even_eq {a a' b b' c n m : ℕ}
     (ha' : Nat.beq (Nat.mod (Nat.mul a a) n) a' = true)
-    (hb' : Nat.beq (Nat.shiftLeft b' 1) b = true)
+    (hb' : Nat.beq (Nat.shiftLeft b' (nat_lit 1)) b = true)
     (h : powModAux a' b' c n = m) :
     powModAux a b c n = m := by
   have ha'' : a * a % n = a' := Nat.eq_of_beq_eq_true ha'
@@ -137,7 +137,7 @@ public lemma powModAux_even_eq {a a' b b' c n m : ℕ}
   rw [← hb'', powModAux, pow_mul, mul_mod, pow_two, pow_mod, h]
 
 public lemma powModAux_odd_eq {a a' b b' c c' n m : ℕ}
-    (hb' : Nat.beq (Nat.add (Nat.mul 2 b') 1) b = true)
+    (hb' : Nat.beq (Nat.add (Nat.mul (nat_lit 2) b') (nat_lit 1)) b = true)
     (ha' : Nat.beq (Nat.mod (Nat.mul a a) n) a' = true)
     (hc' : Nat.beq (Nat.mod (Nat.mul a c) n) c' = true)
     (h : powModAux a' b' c' n = m) :
