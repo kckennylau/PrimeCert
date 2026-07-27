@@ -165,8 +165,8 @@ numerals and the `OfNat.ofNat` form); falls back to a `isDefEq` search over `dic
 expression-form goals like `2^255 - 19` or `2^252 + k`. -/
 private def resolveNatExpr (dict : PrimeDict) (nE : Expr) (ctxt : String) : MetaM Nat := do
   if let some n := nE.nat? then return n
-  for (n, _) in dict do
-    if ← isDefEq (mkRawNatLit n) nE then return n
+  for (k, _) in dict do
+    if ← isDefEq (mkRawNatLit k) nE then return k
   throwError "prime_cert: the goal `{ctxt} {nE}` does not match any certified prime"
 
 /-- Build a proof term for the primality goal `t` from a completed `PrimeDict`. Handles a
