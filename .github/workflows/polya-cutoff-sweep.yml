@@ -2,6 +2,8 @@ name: Polya cutoff sweep
 
 on:
   workflow_dispatch:
+  push:
+    branches: [polya-sweep]
 
 jobs:
   sweep:
