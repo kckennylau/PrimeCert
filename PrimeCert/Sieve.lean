@@ -58,7 +58,7 @@ each index whose bit is still set, clear the bits of that number's coprime-to-6 
       (Nat.ble 1 (b.land (Nat.shiftLeft 1 (start.add i)))).rec b
         (markMaskK b (numK (start.add i)) M)
 
-/-- Coprime-to-6 candidates `0..M`, all set except bit 0 (number 1, not prime). `= 2^(M+1) − 2`. -/
+/-- Coprime-to-6 candidates `0..M`, all set except bit 0 (number 1, not prime). `= 2^(M+1) - 2`. -/
 @[expose] public def initK (M : Nat) : Nat := Nat.sub (Nat.shiftLeft 1 (Nat.succ M)) 2
 
 /-- The full sieve bitset for numbers up to `n`: bit `t` is set iff `num t` is prime, given

@@ -50,7 +50,7 @@ theorem testBit_initK (M t : Nat) :
   · simp only [Nat.succ_sub_one, Nat.testBit_two_pow_sub_one, ge_iff_le, Nat.le_add_left,
       decide_true, Bool.true_and, true_and, Nat.lt_iff_add_one_le]
 
-/-! ## Layer 2: `buildMaskK` sets two stride-`2p` progressions
+/-! ## Layer 2: `buildMaskK` sets two progressions stepping by `2*p`
 
 `dbl` generalizes `buildMaskK`'s hard-coded 32 doublings to a variable `n` so the doubling can be
 inducted on; it is defeq to `buildMaskK` at `n = 32`. -/
@@ -112,8 +112,8 @@ theorem dbl_succ (p M A B n : Nat) :
         intro hle; rw [Nat.ble_eq_true_of_le hle] at h; exact Bool.noConfusion h
       rw [if_neg hlt]
 
-/-- Splitting a stride-`s` progression of length `2q` into the low half (`j < q`) and the shifted
-high half (`q ≤ j < 2q`, reachable only when `s*q ≤ t`). -/
+/-- Splitting a progression stepping by `s` of length `2q` into the low half (`j < q`) and the
+shifted high half (`q ≤ j < 2q`, reachable when `s*q ≤ t`). -/
 theorem prog_succ (c t s q : Nat) :
     (∃ j < 2 * q, t = c + s * j) ↔
       (∃ j < q, t = c + s * j) ∨ (s * q ≤ t ∧ ∃ j < q, t - s * q = c + s * j) := by
@@ -133,8 +133,8 @@ theorem prog_succ (c t s q : Nat) :
 theorem testBit_one_shiftLeft (s t : Nat) : (1 <<< s).testBit t = decide (s = t) := by
   rw [Nat.shiftLeft_eq, Nat.one_mul, Nat.testBit_two_pow]
 
-/-- `dbl` after `n` doublings sets exactly the bits of the two stride-`2p` progressions
-`A + 2p·j` and `B + 2p·j` with `j < 2^n`. -/
+/-- `dbl` after `n` doublings sets exactly the bits at `A + 2*p*j` and `B + 2*p*j` with
+`j < 2^n`. -/
 theorem testBit_dbl (p M A B : Nat) :
     ∀ n t, t ≤ M →
       ((dbl p M A B n).testBit t ↔
@@ -180,8 +180,8 @@ theorem testBit_dbl (p M A B : Nat) :
         · exact Or.inr hQ
         · exact absurd hR hng
 
-/-- On the relevant range, membership in a stride-`2p` progression is divisibility. The count bound
-`B` is non-binding because any witness `j` satisfies `2p·j ≤ t < 2p·B`. -/
+/-- On the relevant range, membership in a progression stepping by `2*p` is divisibility. The count
+bound `B` is slack, since any witness `j` satisfies `2*p*j ≤ t < 2*p*B`. -/
 theorem prog_iff_dvd (c t p B : Nat) (hB : t < 2 * p * B) :
     (∃ j < B, t = c + 2 * p * j) ↔ (c ≤ t ∧ 2 * p ∣ (t - c)) := by
   constructor
@@ -193,7 +193,7 @@ theorem prog_iff_dvd (c t p B : Nat) (hB : t < 2 * p * B) :
     exact Nat.lt_of_mul_lt_mul_left hlt
 
 /-- `buildMaskK p M A B` has bit `t` (for `t ≤ M < 2^32`) set iff `t` lies in one of the two
-stride-`2p` progressions from `A`, `B`. -/
+progressions stepping by `2*p` from `A`, `B`. -/
 theorem testBit_buildMaskK (p M A B t : Nat) (hp : 0 < p) (hM : M < 2 ^ 32) (ht : t ≤ M) :
     (buildMaskK p M A B).testBit t ↔
       (A ≤ t ∧ 2 * p ∣ (t - A)) ∨ (B ≤ t ∧ 2 * p ∣ (t - B)) := by
@@ -222,37 +222,36 @@ theorem testBit_markMaskK (bits p M t : Nat) :
 
 /-! ## Layer 3b: the cleared bits are the coprime-to-6 multiples of `p`
 
-`num` (the number at an index) grows by `6m` when the index grows by `2m` (parity preserved), and
-the seeds `(5p−1)/3`, `(7p−1)/3` decode to `5p`, `7p` (for `p` coprime to 6). Hence the two `2p`
-progressions are exactly the coprime-to-6 multiples `p·k` with `k ≥ 5`. -/
+`num` (the number at an index) grows by `6*m` when the index grows by `2*m`, and the starting
+indices `(5*p-1)/3`, `(7*p-1)/3` hold the numbers `5*p`, `7*p` (for `p` coprime to 6). Hence the two
+progressions carry exactly the coprime-to-6 multiples `p*k` with `k ≥ 5`. -/
 
-/-- Adding an even amount `2m` to the index adds `6m` to the number. -/
+/-- Adding an even amount `2*m` to the index adds `6*m` to the number. -/
 theorem num_add_two_mul (k m : Nat) : num (k + 2 * m) = num k + 6 * m := by
   unfold num; omega
 
-theorem num_seedA (p : Nat) (hp : p % 6 = 1 ∨ p % 6 = 5) : num ((5 * p - 1) / 3) = 5 * p := by
+theorem num_startA (p : Nat) (hp : p % 6 = 1 ∨ p % 6 = 5) : num ((5 * p - 1) / 3) = 5 * p := by
   unfold num; rcases hp with h | h <;> omega
 
-theorem num_seedB (p : Nat) (hp : p % 6 = 1 ∨ p % 6 = 5) : num ((7 * p - 1) / 3) = 7 * p := by
+theorem num_startB (p : Nat) (hp : p % 6 = 1 ∨ p % 6 = 5) : num ((7 * p - 1) / 3) = 7 * p := by
   unfold num; rcases hp with h | h <;> omega
 
-/-- The `A` progression carries `num` to `p·(5 + 6j)` (numbers `≡ 5 mod 6`). -/
+/-- The `A` progression carries `num` to `p*(5 + 6*j)` (numbers `≡ 5 mod 6`). -/
 theorem numA (p t : Nat) (hp : p % 6 = 1 ∨ p % 6 = 5) (j : Nat)
     (h : t = (5 * p - 1) / 3 + 2 * (p * j)) : num t = p * (5 + 6 * j) := by
-  subst h; rw [num_add_two_mul, num_seedA p hp]; ring
+  subst h; rw [num_add_two_mul, num_startA p hp]; ring
 
-/-- The `B` progression carries `num` to `p·(7 + 6j)` (numbers `≡ 1 mod 6`). -/
+/-- The `B` progression carries `num` to `p*(7 + 6*j)` (numbers `≡ 1 mod 6`). -/
 theorem numB (p t : Nat) (hp : p % 6 = 1 ∨ p % 6 = 5) (j : Nat)
     (h : t = (7 * p - 1) / 3 + 2 * (p * j)) : num t = p * (7 + 6 * j) := by
-  subst h; rw [num_add_two_mul, num_seedB p hp]; ring
+  subst h; rw [num_add_two_mul, num_startB p hp]; ring
 
 /-- `num` is injective (strictly monotone), so the encoding can be inverted. -/
 theorem num_inj {a b : Nat} (h : num a = num b) : a = b := by
   unfold num at h; omega
 
-/-- The mask `markMaskK` uses (bits set in `buildMaskK` with seeds `(5p−1)/3`, `(7p−1)/3`) marks
-index `t` iff `num t` is a coprime-to-6 multiple `p·k` with `k ≥ 5`: exactly the composite
-multiples starting at `5p`. -/
+/-- `buildMaskK` started at indices `(5*p-1)/3`, `(7*p-1)/3`, the form `markMaskK` uses, marks
+index `t` iff `num t` is a coprime-to-6 multiple `p*k` with `k ≥ 5`. -/
 theorem mask_iff (p M t : Nat) (hp6 : p % 6 = 1 ∨ p % 6 = 5) (hp : 0 < p)
     (hM : M < 2 ^ 32) (ht : t ≤ M) :
     (buildMaskK p M ((5 * p - 1) / 3) ((7 * p - 1) / 3)).testBit t ↔
@@ -289,9 +288,9 @@ theorem mask_iff (p M t : Nat) (hp6 : p % 6 = 1 ∨ p % 6 = 5) (hp : 0 < p)
 
 /-! ## Layer 4: the surviving bits are exactly the primes (sieve of Eratosthenes)
 
-`markMaskK` only clears composite bits, so a prime bit is never cleared (completeness). For
-soundness, a composite `num t` has a smallest prime factor `q ≤ √(num t) ≤ sqrtN`; it is processed,
-own bit is still set (primes are preserved), so its `markMaskK` fires and clears `t`. -/
+`markMaskK` clears composite bits alone, so prime bits survive (completeness). For soundness, a
+composite `num t` has a smallest prime factor `q ≤ √(num t) ≤ sqrtN`; the loop reaches `q` while its
+own bit still stands, so its `markMaskK` fires and clears `t`. -/
 
 theorem num_mod6 (k : Nat) : num k % 6 = 1 ∨ num k % 6 = 5 := by unfold num; omega
 
@@ -316,8 +315,8 @@ theorem sieveLoopK_succ_if (M bits start fuel : Nat) :
   | true => rw [if_pos rfl]
   | false => rw [if_neg (by simp)]
 
-/-- `markMaskK` (sieving by a wheel candidate `p ≥ 5`) never clears a bit whose number is prime: the
-mask only marks composite `num t = p·k` with `p, k ≥ 5`. -/
+/-- `markMaskK` (sieving by a wheel candidate `p ≥ 5`) preserves every bit whose number is prime:
+the mask marks composite `num t = p * k` with `p, k ≥ 5`. -/
 theorem markMaskK_preserves_prime (b p M t : Nat) (hp6 : p % 6 = 1 ∨ p % 6 = 5) (hp5 : 5 ≤ p)
     (hM : M < 2 ^ 32) (ht : t ≤ M) (hprime : (num t).Prime) :
     (markMaskK b p M).testBit t = b.testBit t := by
@@ -355,10 +354,9 @@ theorem sieve_prime_set (n sqrtN t : Nat) (ht1 : 1 ≤ t) (htM : t ≤ (n - 1) /
   rw [sieveLoopK_preserves _ _ 1 _ t (le_refl 1) hM htM hprime, testBit_initK]
   simp [ht1, htM]
 
-/-- Soundness mechanism: if a prime index `j` in the processed range witnesses `num t = num j · m`
-(`m ≥ 5` coprime to 6), the sieve clears bit `t`. When `j` is processed its bit is still set
-(primes are preserved), so its `markMaskK` fires; earlier clears are kept because `markMaskK` only
-clears. -/
+/-- If a prime index `j` in the processed range witnesses `num t = num j * m` (`m ≥ 5` coprime to
+6), the sieve clears bit `t`. The bit at `j` still stands when the loop reaches it, so its
+`markMaskK` fires, and every later step preserves the clear. -/
 theorem sieveLoopK_clears (M start t j m : Nat) (hstart : 1 ≤ start)
     (hM : M < 2 ^ 32) (ht : t ≤ M) (hjprime : (num j).Prime) (hjt : j ≤ t)
     (hm5 : 5 ≤ m) (hm6 : m % 6 = 1 ∨ m % 6 = 5) (hnum : num t = num j * m) (hj_lo : start ≤ j) :
@@ -412,8 +410,8 @@ theorem prime_ge5_mod6 (q : Nat) (hq : q.Prime) (h5 : 5 ≤ q) : q % 6 = 1 ∨ q
     rcases hq.eq_one_or_self_of_dvd 3 (Nat.dvd_of_mod_eq_zero hh) with h' | h' <;> omega
   omega
 
-/-- **Correctness**: for `1 ≤ t ≤ (n−1)/3` with `num t ≤ n ≤ sqrtN²`, bit `t` of the sieve is set
-iff `num t` is prime. -/
+/-- For `1 ≤ t ≤ (n-1)/3` with `num t ≤ n ≤ sqrtN*sqrtN`, bit `t` of the sieve is set iff `num t`
+is prime. -/
 public theorem sieveK_testBit_iff (n sqrtN t : Nat) (ht1 : 1 ≤ t) (htM : t ≤ (n - 1) / 3)
     (hM : (n - 1) / 3 < 2 ^ 32) (hbound : num t ≤ n) (hsqrt : n ≤ sqrtN * sqrtN) :
     (sieveK n sqrtN).testBit t ↔ (num t).Prime := by
