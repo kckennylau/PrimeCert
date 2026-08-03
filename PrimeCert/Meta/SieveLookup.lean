@@ -16,7 +16,7 @@ that a caller adds one with `run_sieve`.
 
 namespace PrimeCert.Sieve
 
-open Lean Lean.Elab Lean.Elab.Tactic Lean.Meta
+open Lean Elab Tactic Meta
 
 /-- A proof of `Nat.Prime p`, read off the sieve cache in the environment; `2` and `3` come from
 `Nat.prime_two` and `Nat.prime_three`, which the sieve's numbers skip. Fails if `p` shares a factor
