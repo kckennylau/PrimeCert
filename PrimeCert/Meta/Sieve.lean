@@ -36,7 +36,7 @@ private def emitChain (n M fuel len : Nat) : MetaM (Nat × Expr) := do
   let initE := mkApp (mkConst ``initK) mE
   -- the fixed left-hand side of the chain: the full loop on the kernel-side initial bitset
   let lhsLoop := mkSieveLoopK mE initE 1 fuel
-  let mut bits := init M
+  let mut bits := initK M
   let mut bitsE := mkRawNatLit bits
   -- enter the chain by replacing `initK M` with its literal: initK M = b_0
   let initName := Name.mkSimple s!"chain_init_{n}"

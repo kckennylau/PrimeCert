@@ -59,7 +59,7 @@ each index whose bit is still set, clear the bits of that number's coprime-to-6 
         (markMaskK b (numK (start.add i)) M)
 
 /-- Coprime-to-6 candidates `0..M`, all set except bit 0 (number 1, not prime). `= 2^(M+1) − 2`. -/
-@[expose] public noncomputable def initK (M : Nat) : Nat := Nat.sub (Nat.shiftLeft 1 (Nat.succ M)) 2
+@[expose] public def initK (M : Nat) : Nat := Nat.sub (Nat.shiftLeft 1 (Nat.succ M)) 2
 
 /-- The full sieve bitset for numbers up to `n`: bit `t` is set iff `num t` is prime, given
 `n ≤ sqrtN * sqrtN` (`sieveK_testBit_iff` in `SieveCorrect`). -/
@@ -97,8 +97,6 @@ public def sieveLoop (M bits start fuel : Nat) : Nat := Id.run do
     if b &&& (1 <<< j) ≠ 0 then
       b := markMask b (num j) M
   return b
-
-public def init (M : Nat) : Nat := (1 <<< (M + 1)) - 2
 
 /-- Fuel additivity: running `a + b` steps is running `a` steps, then `b` steps from where the
 first run stopped. This is the glue that joins consecutive batches. -/
