@@ -123,10 +123,10 @@ private def emitOnesChain (n fuel len w lam : Nat) : MetaM (Nat × Expr) := do
     remaining := rest
   return (tbl, ← mkExpectedTypeHint proof (mkNatEqual lhsLoop tblE))
 
-/-- Build the parity table for numbers up to `n`. The prime powers are split into batches of
-`defaultBatchLen`, or into `K` batches when `K?` is given, and each batch is kernel-checked
-separately. The table and its equation are held by generated declarations. -/
-def runLam (n : Nat) (K? : Option Nat := none) : MetaM Unit := do
+/-- Build the parity table and the running counts for numbers up to `n`, in batches of `len` steps,
+each kernel-checked separately. The tables and their equations are held by generated declarations;
+the two literals and the field width are returned. -/
+def buildTables (n len : Nat) : MetaM (Nat × Nat × Nat) := do
   let qsName := `PrimeCert.Polya.lamQs
   let litName := `PrimeCert.Polya.lamLit
   let dataName := `PrimeCert.Polya.lamData
@@ -136,9 +136,6 @@ def runLam (n : Nat) (K? : Option Nat := none) : MetaM Unit := do
   let w := Nat.log2 n + 1
   let qs := packFields powers w
   let fuel := powers.size
-  let len := match K? with
-    | some K => Nat.max 1 ((fuel + K - 1) / K)
-    | none => defaultBatchLen
   addDecl <| Declaration.defnDecl
     { name := qsName, levelParams := [], type := mkConst ``Nat,
       value := mkRawNatLit qs, hints := .regular 0, safety := .safe }
@@ -161,10 +158,100 @@ def runLam (n : Nat) (K? : Option Nat := none) : MetaM Unit := do
     #[mkRawNatLit lit, mkRawNatLit w, mkRawNatLit chunks]
   addThm `PrimeCert.Polya.onesData
     (mkNatEqual onesLhs (mkConst `PrimeCert.Polya.onesLit)) onesProof
+  return (lit, ones, w)
+
+/-- Build the tables for numbers up to `n`, in batches of `defaultBatchLen` steps, or in `K`
+batches when `K?` is given. -/
+def runLam (n : Nat) (K? : Option Nat := none) : MetaM Unit := do
+  let len := match K? with
+    | some K => Nat.max 1 ((primePowers n).size + K - 1) / K
+    | none => defaultBatchLen
+  discard <| buildTables n len
 
 /-- Command wrapper for `runLam`: `run_lam n` builds the certified parity table for numbers up to
 `n`, and `run_lam n K` forces `K` batches. -/
 elab "run_lam" nStx:num kStx:(num)? : command =>
   liftTermElabM <| runLam nStx.getNat (kStx.map (·.getNat))
+
+/-- Width of a field of the certificate, and the offset that keeps each field positive. -/
+def bigWidth : Nat := 21
+def bigOffset : Nat := 1 <<< 20
+
+private def mkBlockLoopK (xE vE cE lamE onesE wcE bigE stE : Expr) (len : Nat) : Expr :=
+  mkAppN (mkConst ``blockLoopK)
+    #[xE, vE, cE, lamE, onesE, wcE, bigE, mkRawNatLit bigWidth, mkRawNatLit bigOffset, stE,
+      mkRawNatLit len]
+
+/-- The number of runs of equal quotients in the recurrence for `L v`. -/
+def blockCount (v : Nat) : Nat := Id.run do
+  let mut fuel := 0
+  let mut k := 2
+  while k ≤ v do
+    k := v / (v / k) + 1
+    fuel := fuel + 1
+  return fuel
+
+/-- Returns the final state and a proof of `blockLoopK … 2 fuel = st`, split into batches of at most
+`len` blocks; `v` distinguishes the names of the emitted batch lemmas. -/
+private def emitBlockChain (x v cutoff lam ones wc big fuel len : Nat) : MetaM (Nat × Expr) := do
+  let xE := mkRawNatLit x
+  let vE := mkRawNatLit v
+  let cE := mkRawNatLit cutoff
+  let lamE := mkRawNatLit lam
+  let onesE := mkRawNatLit ones
+  let wcE := mkRawNatLit wc
+  let bigE := mkRawNatLit big
+  -- the loop starts at index 2 with both halves of the sum empty
+  let lhsLoop := mkBlockLoopK xE vE cE lamE onesE wcE bigE (mkRawNatLit 2) fuel
+  let mut st := 2
+  let mut stE := mkRawNatLit 2
+  let mut proof := mkApp2 (mkConst ``Eq.refl [Level.succ Level.zero]) (mkConst ``Nat) lhsLoop
+  let mut remaining := fuel
+  for i in [0:(fuel + len - 1) / len] do
+    let step := Nat.min len remaining
+    let rest := remaining - step
+    let next := blockLoop x v cutoff lam ones wc big bigWidth bigOffset st step
+    let nextE := mkRawNatLit next
+    let stepName := Name.mkSimple s!"block_step_{v}_{i}"
+    addThm stepName (mkBeqTrue (mkBlockLoopK xE vE cE lamE onesE wcE bigE stE step) nextE)
+      Lean.reflBoolTrue
+    proof := mkAppN (mkConst ``blockLoopK_chain)
+      #[lhsLoop, xE, vE, cE, lamE, onesE, wcE, bigE, mkRawNatLit bigWidth,
+        mkRawNatLit bigOffset, stE, nextE, mkRawNatLit step, mkRawNatLit rest, proof,
+        mkConst stepName]
+    st := next
+    stE := nextE
+    remaining := rest
+  return (st, ← mkExpectedTypeHint proof (mkNatEqual lhsLoop stE))
+
+/-- Compute the running total of the Liouville values at `x`, from the tables below `cutoff` and
+the recurrence at each larger argument `x / j`, taken in increasing order. -/
+def runPolya (x cutoff : Nat) (K? : Option Nat := none) : MetaM Unit := do
+  let len := match K? with
+    | some K => Nat.max 1 K
+    | none => defaultBatchLen
+  let (lam, ones, w) ← buildTables cutoff len
+  let top := x / cutoff
+  let mut big := 0
+  let mut last : Int := 0
+  for jj in [0:top] do
+    let j := top - jj
+    let v := x / j
+    let fuel := blockCount v
+    let (st, proof) ← emitBlockChain x v cutoff lam ones w big fuel len
+    let dataName := Name.mkSimple s!"block_data_{v}"
+    addThm dataName
+      (mkNatEqual (mkBlockLoopK (mkRawNatLit x) (mkRawNatLit v) (mkRawNatLit cutoff)
+        (mkRawNatLit lam) (mkRawNatLit ones) (mkRawNatLit w) (mkRawNatLit big)
+        (mkRawNatLit 2) fuel) (mkRawNatLit st)) proof
+    -- L v is the whole part of the square root of v, minus the two halves of the sum
+    last := (Nat.sqrt v : Int) - (stFieldC st 1 : Int) + (stFieldC st 2 : Int)
+    big := big ||| ((last + bigOffset).toNat <<< (bigWidth * j))
+  logInfo m!"L({x}) = {last}"
+
+/-- Command wrapper for `runPolya`: `run_polya x c` computes the running total at `x` with cutoff
+`c`, and `run_polya x c K` sets the batch length. -/
+elab "run_polya" xStx:num cStx:num kStx:(num)? : command =>
+  liftTermElabM <| runPolya xStx.getNat cStx.getNat (kStx.map (·.getNat))
 
 end PrimeCert.Polya

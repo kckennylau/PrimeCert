@@ -56,8 +56,10 @@ factors counted with multiplicity, given that the `cnt` fields of `qs` are exact
 @[expose] public noncomputable def lamK (qs w M cnt : Nat) : Nat :=
   lamLoopK qs w M 0 0 cnt
 
-/-- The number of set bits of `v`, for `v < 2 ^ 32`: five straight-line stages summing bit counts
-within fields of 2, 4, 8 and then 32 bits (`popc32K_eq_count` in `PolyaCorrect`). -/
+/-- The number of set bits of `v`, for `v < 2 ^ 32`, summing bit counts within fields of 2, 4, 8 and
+then 32 bits (`popc32K_eq_count` in `PolyaCorrect`). The constants are the repeating masks `0101…`,
+`00110011…` and `00001111…`, and `0x01010101`, whose product with a byte-per-field value places the
+sum of the four bytes in the top byte. -/
 @[expose] public def popc32K (v : Nat) : Nat :=
   let a := v.sub ((v.shiftRight 1).land 1431655765)
   let b := (a.land 858993459).add ((a.shiftRight 2).land 858993459)
@@ -72,7 +74,7 @@ holding the single field `0`. -/
     t.lor
       (Nat.shiftLeft
         ((fieldK t w (start.add i)).add
-          (popc32K ((lam.shiftRight (Nat.mul 32 (start.add i))).land 4294967295)))
+          (popc32K ((lam.shiftRight (Nat.mul 32 (start.add i))).land ((Nat.shiftLeft 1 32).sub 1))))
         (w.mul (Nat.succ (start.add i))))
 
 /-- Running counts of the set bits of `lam` at every multiple of 32, covering positions below
@@ -86,13 +88,57 @@ public theorem onesLoopK_succ (lam w tbl start fuel : Nat) :
       = (onesLoopK lam w tbl start fuel).lor
           (Nat.shiftLeft
             ((fieldK (onesLoopK lam w tbl start fuel) w (start + fuel)).add
-              (popc32K ((lam.shiftRight (32 * (start + fuel))).land 4294967295)))
+              (popc32K ((lam.shiftRight (32 * (start + fuel))).land ((Nat.shiftLeft 1 32).sub 1))))
             (w * Nat.succ (start + fuel))) := rfl
 
 /-- Loop recurrence: peel the top field `start+fuel`, in the exact form the def uses. -/
 public theorem lamLoopK_succ (qs w M lam start fuel : Nat) :
     lamLoopK qs w M lam start (fuel + 1)
       = markStrideK (lamLoopK qs w M lam start fuel) (fieldK qs w (start + fuel)) M := rfl
+
+/-- Field `i` of `st`, reading 64 bits from position `64 * i`. The loop state below holds the next
+index in field 0 and the two halves of the running sum in fields 1 and 2. -/
+@[expose] public def stField (st i : Nat) : Nat :=
+  (st.shiftRight (Nat.mul 64 i)).land ((Nat.shiftLeft 1 64).sub 1)
+
+/-- Set bits of `lam` below position `p`, from the recorded count at the nearest lower multiple of
+32 plus the bits of the partial chunk. -/
+@[expose] public noncomputable def onesBelowK (lam ones wc p : Nat) : Nat :=
+  (fieldK ones wc (p.div 32)).add
+    (popc32K
+      (((lam.shiftRight ((p.div 32).mul 32)).land ((Nat.shiftLeft 1 32).sub 1)).land
+        ((Nat.shiftLeft 1 (p.mod 32)).sub 1)))
+
+/-- One block of the recurrence for `L v`. The index `k` in field 0 gives the quotient `q = v / k`,
+which repeats for every index up to `v / q`; the run length times `L q` is added to the running sum,
+held as the pair of fields 1 and 2 standing for their difference. Values of `q` up to `cutoff` come
+from the parity and count tables, larger ones from field `x / q` of `big`, which holds `L` offset by
+`off`. -/
+@[expose] public noncomputable def blockAddK (v k st a b : Nat) : Nat :=
+  let k2 := v.div (v.div k)
+  let run := (k2.sub k).succ
+  (k2.succ.add (Nat.shiftLeft ((stField st 1).add (run.mul a)) 64)).add
+    (Nat.shiftLeft ((stField st 2).add (run.mul b)) 128)
+
+@[expose] public noncomputable def blockStepK
+    (x v cutoff lam ones wc big wb off st : Nat) : Nat :=
+  (Nat.ble (stField st 0) v).rec st
+    (let k := stField st 0
+     let q := v.div k
+     (Nat.ble q cutoff).rec
+       (blockAddK v k st (fieldK big wb (x.div q)) off)
+       (blockAddK v k st q ((onesBelowK lam ones wc q.succ).mul 2)))
+
+/-- Perform `fuel` blocks of the recurrence for `L v`. -/
+@[expose] public noncomputable def blockLoopK
+    (x v cutoff lam ones wc big wb off st fuel : Nat) : Nat :=
+  fuel.rec st fun _ s => blockStepK x v cutoff lam ones wc big wb off s
+
+/-- Loop recurrence: peel the top block, in the exact form the def uses. -/
+public theorem blockLoopK_succ (x v cutoff lam ones wc big wb off st fuel : Nat) :
+    blockLoopK x v cutoff lam ones wc big wb off st (fuel + 1)
+      = blockStepK x v cutoff lam ones wc big wb off
+          (blockLoopK x v cutoff lam ones wc big wb off st fuel) := rfl
 
 /-! ### Compiled twins
 
@@ -124,11 +170,36 @@ public def popc32 (v : Nat) : Nat :=
   let c := (b + (b >>> 4)) &&& 252645135
   ((c * 16843009) >>> 24) &&& 255
 
+public def stFieldC (st i : Nat) : Nat := (st >>> (64 * i)) &&& ((1 <<< 64) - 1)
+
+public def onesBelow (lam ones wc p : Nat) : Nat :=
+  field ones wc (p / 32)
+    + popc32 (((lam >>> ((p / 32) * 32)) &&& ((1 <<< 32) - 1)) &&& ((1 <<< (p % 32)) - 1))
+
+public def blockAdd (v k st a b : Nat) : Nat :=
+  let k2 := v / (v / k)
+  let run := k2 - k + 1
+  (k2 + 1) + ((stFieldC st 1 + run * a) <<< 64) + ((stFieldC st 2 + run * b) <<< 128)
+
+public def blockStep (x v cutoff lam ones wc big wb off st : Nat) : Nat :=
+  let k := stFieldC st 0
+  if k ≤ v then
+    let q := v / k
+    if q ≤ cutoff then blockAdd v k st q (2 * onesBelow lam ones wc (q + 1))
+    else blockAdd v k st (field big wb (x / q)) off
+  else st
+
+public def blockLoop (x v cutoff lam ones wc big wb off st fuel : Nat) : Nat := Id.run do
+  let mut s := st
+  for _ in [0:fuel] do
+    s := blockStep x v cutoff lam ones wc big wb off s
+  return s
+
 public def onesLoop (lam w tbl start fuel : Nat) : Nat := Id.run do
   let mut t := tbl
   for i in [0:fuel] do
     let j := start + i
-    t := t ||| (((field t w j) + popc32 ((lam >>> (32 * j)) &&& 4294967295)) <<< (w * (j + 1)))
+    t := t ||| (((field t w j) + popc32 ((lam >>> (32 * j)) &&& ((1 <<< 32) - 1))) <<< (w * (j + 1)))
   return t
 
 /-- Fuel additivity: running `a + b` steps is running `a` steps, then `b` steps from where the
@@ -148,6 +219,22 @@ public theorem lamLoopK_chain (L qs w M lam lam' start len rest : Nat)
     (h : (lamLoopK qs w M lam start len).beq lam') :
     L = lamLoopK qs w M lam' (start.add len) rest := by
   grind [lamLoopK_add, Nat.beq_eq]
+
+/-- Fuel additivity for the blocks, the glue joining consecutive batches. -/
+public theorem blockLoopK_add (x v cutoff lam ones wc big wb off st a b : Nat) :
+    blockLoopK x v cutoff lam ones wc big wb off st (a + b)
+      = blockLoopK x v cutoff lam ones wc big wb off
+          (blockLoopK x v cutoff lam ones wc big wb off st a) b := by
+  induction b with
+  | zero => rfl
+  | succ b ih => grind [blockLoopK_succ]
+
+/-- One chain step for the blocks, matching `lamLoopK_chain`. -/
+public theorem blockLoopK_chain (L x v cutoff lam ones wc big wb off st st' len rest : Nat)
+    (hP : L = blockLoopK x v cutoff lam ones wc big wb off st (len.add rest))
+    (h : (blockLoopK x v cutoff lam ones wc big wb off st len).beq st') :
+    L = blockLoopK x v cutoff lam ones wc big wb off st' rest := by
+  grind [blockLoopK_add, Nat.beq_eq]
 
 /-- Fuel additivity for the running counts, the glue joining consecutive batches. -/
 public theorem onesLoopK_add (lam w tbl start a b : Nat) :
