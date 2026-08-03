@@ -1,0 +1,32 @@
+name: Polya batch length sweep
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [polya-batch]
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v7
+      - uses: leanprover/lean-action@v1
+        with:
+          build: false
+      - name: build the polya command
+        run: lake build PrimeCert.Meta.Polya
+      - name: run the target at every batch length
+        run: |
+          mkdir -p bench
+          echo "batch,seconds,peak_rss_kb,exit,value"
+          for b in 16 64 256 1024 4096; do
+            printf 'import PrimeCert.Meta.Polya\nset_option maxRecDepth 4000000\nopen PrimeCert.Polya\nrun_polya 906150257 1000000 %d\n' \
+              "$b" > bench/Sweep.lean
+            ex=0
+            /usr/bin/time -f "%e %M" -o bench/t.txt lake env lean bench/Sweep.lean > bench/out.log 2>&1 || ex=$?
+            read -r secs rss < bench/t.txt
+            val=$(grep -ho "L(906150257) = -\?[0-9]*" bench/out.log | head -1)
+            echo "$b,$secs,$rss,$ex,$val"
+            if [ "$ex" -ne 0 ]; then tail -3 bench/out.log; fi
+          done
