@@ -27,19 +27,16 @@ example : Nat.Prime 1993 := by prime_cert [sieve {1009; 1993}]
 
 example : Nat.Prime 1997 := by prime_cert [small {2; 3}, sieve {1993; 1997}]
 
-/-! The kernel and compiled forms of the index-to-number map agree. -/
+/-! The primes the sieve's numbers skip. -/
 
-example : numK 7 = num 7 := numK_eq_num 7
+example : Nat.Prime 2 := by sieve_lookup
+example : Nat.Prime 3 := by sieve_lookup
 
 /-! Rejected inputs. -/
 
-/-- error: sieve lookup: 8 must be ≥ 5 and coprime to 6 (handle 2, 3 separately) -/
+/-- error: sieve lookup: 8 must be 2, 3, or coprime to 6 -/
 #guard_msgs in
 example : Nat.Prime 8 := by sieve_lookup
-
-/-- error: sieve lookup: 3 must be ≥ 5 and coprime to 6 (handle 2, 3 separately) -/
-#guard_msgs in
-example : Nat.Prime 3 := by sieve_lookup
 
 /-- error: sieve lookup: bit 333 of the sieve is clear, so 1001 is not prime -/
 #guard_msgs in

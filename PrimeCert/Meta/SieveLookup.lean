@@ -20,11 +20,14 @@ namespace PrimeCert.Sieve
 
 open Lean Lean.Elab Lean.Elab.Tactic Lean.Meta
 
-/-- A proof of `Nat.Prime p`, read off the sieve cache in the environment. Fails if `p` is below 5,
-shares a factor with 6, lies outside the cache, or has its bit clear (i.e. is composite). -/
+/-- A proof of `Nat.Prime p`, read off the sieve cache in the environment; `2` and `3` come from
+`Nat.prime_two` and `Nat.prime_three`, which the sieve's numbers skip. Fails if `p` shares a factor
+with 6, lies outside the cache, or has its bit clear (i.e. is composite). -/
 def mkSieveLookup (p : Nat) : MetaM Expr := do
+  if p == 2 then return mkConst ``Nat.prime_two
+  if p == 3 then return mkConst ``Nat.prime_three
   if p < 5 ∨ (p % 6 != 1 && p % 6 != 5) then
-    throwError "sieve lookup: {p} must be ≥ 5 and coprime to 6 (handle 2, 3 separately)"
+    throwError "sieve lookup: {p} must be 2, 3, or coprime to 6"
   let t := (p - 1) / 3
   let some cache ← findSieveCache p
     | throwError "sieve lookup: no sieve cache covers {p}; the caches in scope are {
