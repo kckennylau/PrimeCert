@@ -18,8 +18,8 @@ Widths up to `2^32` are supported (32 doubling rounds in `buildMaskK`, matching 
 
 The `run_sieve n` command in `Meta/Sieve` computes the bitset natively in batches, has the kernel
 check each, and glues them into an equation `sieveK n sq = <literal>`. Correctness is
-`sieveK_testBit_iff` in `SieveCorrect`; the `sieve_lookup` tactic in `Meta/SieveLookup` reads
-single bits of the certified table.
+`sieveK_testBit_iff` in `SieveCorrect`, which also turns one bit of the certified table into
+`Nat.Prime`; the `sieve_lookup` tactic in `Meta/SieveLookup` applies it.
 -/
 
 namespace PrimeCert.Sieve
