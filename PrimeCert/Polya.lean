@@ -29,20 +29,20 @@ namespace PrimeCert.Polya
 cleared by `markStrideK`. -/
 @[expose] public noncomputable def strideMaskK (q M : Nat) : Nat :=
   Nat.rec
-    (Nat.shiftLeft 1 q)
+    (Nat.shiftLeft (nat_lit 1) q)
     (fun i mk =>
       ((q.shiftLeft i).ble M).rec mk
         (mk.lor (mk.shiftLeft (q.shiftLeft i))))
-    32
+    (nat_lit 32)
 
 /-- One step: flip the parity bit of every multiple of `q` up to `M`, and clear everything above
 `M`, so the table stays `M + 1` bits wide. -/
 @[expose] public noncomputable def markStrideK (lam q M : Nat) : Nat :=
-  (lam.xor (strideMaskK q M)).land ((Nat.shiftLeft 1 (Nat.succ M)).sub 1)
+  (lam.xor (strideMaskK q M)).land ((Nat.shiftLeft (nat_lit 1) (Nat.succ M)).sub (nat_lit 1))
 
 /-- Field `i` of `qs`, reading `w` bits from position `w * i`. -/
 @[expose] public def fieldK (qs w i : Nat) : Nat :=
-  (qs.shiftRight (w.mul i)).land ((Nat.shiftLeft 1 w).sub 1)
+  (qs.shiftRight (w.mul i)).land ((Nat.shiftLeft (nat_lit 1) w).sub (nat_lit 1))
 
 /-- Perform `fuel` steps on the table `lam`, taking the strides from fields `start, start+1, …` of
 `qs` and flipping the parity bit of each stride's multiples. `lamK` runs this from an empty
@@ -54,17 +54,17 @@ table. -/
 factors counted with multiplicity, given that the `cnt` fields of `qs` are exactly the prime powers
 `q ≤ M` (`lamK_testBit_iff` in `PolyaCorrect`). -/
 @[expose] public noncomputable def lamK (qs w M cnt : Nat) : Nat :=
-  lamLoopK qs w M 0 0 cnt
+  lamLoopK qs w M (nat_lit 0) (nat_lit 0) cnt
 
 /-- The number of set bits of `v`, for `v < 2 ^ 32`, summing bit counts within fields of 2, 4, 8 and
 then 32 bits (`popc32K_eq_count` in `PolyaCorrect`). The constants are the repeating masks `0101…`,
 `00110011…` and `00001111…`, and `0x01010101`, whose product with a byte-per-field value places the
 sum of the four bytes in the top byte. -/
 @[expose] public def popc32K (v : Nat) : Nat :=
-  let a := v.sub ((v.shiftRight 1).land 1431655765)
-  let b := (a.land 858993459).add ((a.shiftRight 2).land 858993459)
-  let c := (b.add (b.shiftRight 4)).land 252645135
-  ((c.mul 16843009).shiftRight 24).land 255
+  let a := v.sub ((v.shiftRight (nat_lit 1)).land (nat_lit 1431655765))
+  let b := (a.land (nat_lit 858993459)).add ((a.shiftRight (nat_lit 2)).land (nat_lit 858993459))
+  let c := (b.add (b.shiftRight (nat_lit 4))).land (nat_lit 252645135)
+  ((c.mul (nat_lit 16843009)).shiftRight (nat_lit 24)).land (nat_lit 255)
 
 /-- Perform `fuel` steps, appending to `tbl` the running count of set bits of `lam`: field `i` holds
 the number of set bits below position `32 * i`, in `w`-bit fields. `onesK` runs this from a table
@@ -74,13 +74,14 @@ holding the single field `0`. -/
     t.lor
       (Nat.shiftLeft
         ((fieldK t w (start.add i)).add
-          (popc32K ((lam.shiftRight (Nat.mul 32 (start.add i))).land ((Nat.shiftLeft 1 32).sub 1))))
+          (popc32K ((lam.shiftRight (Nat.mul (nat_lit 32) (start.add i))).land
+            ((Nat.shiftLeft (nat_lit 1) (nat_lit 32)).sub (nat_lit 1)))))
         (w.mul (Nat.succ (start.add i))))
 
 /-- Running counts of the set bits of `lam` at every multiple of 32, covering positions below
 `32 * cnt` (`onesK_field_eq` in `PolyaCorrect`). -/
 @[expose] public noncomputable def onesK (lam w cnt : Nat) : Nat :=
-  onesLoopK lam w 0 0 cnt
+  onesLoopK lam w (nat_lit 0) (nat_lit 0) cnt
 
 /-- Loop recurrence: peel the top step, in the exact form the def uses. -/
 public theorem onesLoopK_succ (lam w tbl start fuel : Nat) :
@@ -98,16 +99,17 @@ public theorem lamLoopK_succ (qs w M lam start fuel : Nat) :
 
 /-- Field `i` of `st`, reading 64 bits from position `64 * i`. The loop state below holds the next
 index in field 0 and the two halves of the running sum in fields 1 and 2. -/
-@[expose] public def stField (st i : Nat) : Nat :=
-  (st.shiftRight (Nat.mul 64 i)).land ((Nat.shiftLeft 1 64).sub 1)
+@[expose] public def stFieldK (st i : Nat) : Nat :=
+  (st.shiftRight (Nat.mul (nat_lit 64) i)).land ((Nat.shiftLeft (nat_lit 1) (nat_lit 64)).sub 1)
 
 /-- Set bits of `lam` below position `p`, from the recorded count at the nearest lower multiple of
 32 plus the bits of the partial chunk. -/
 @[expose] public noncomputable def onesBelowK (lam ones wc p : Nat) : Nat :=
-  (fieldK ones wc (p.div 32)).add
+  (fieldK ones wc (p.div (nat_lit 32))).add
     (popc32K
-      (((lam.shiftRight ((p.div 32).mul 32)).land ((Nat.shiftLeft 1 32).sub 1)).land
-        ((Nat.shiftLeft 1 (p.mod 32)).sub 1)))
+      (((lam.shiftRight ((p.div (nat_lit 32)).mul (nat_lit 32))).land
+          ((Nat.shiftLeft (nat_lit 1) (nat_lit 32)).sub (nat_lit 1))).land
+        ((Nat.shiftLeft (nat_lit 1) (p.mod (nat_lit 32))).sub (nat_lit 1))))
 
 /-- One block of the recurrence for `L v`. The index `k` in field 0 gives the quotient `q = v / k`,
 which repeats for every index up to `v / q`; the run length times `L q` is added to the running sum,
@@ -117,17 +119,17 @@ from the parity and count tables, larger ones from field `x / q` of `big`, which
 @[expose] public noncomputable def blockAddK (v k st a b : Nat) : Nat :=
   let k2 := v.div (v.div k)
   let run := (k2.sub k).succ
-  (k2.succ.add (Nat.shiftLeft ((stField st 1).add (run.mul a)) 64)).add
-    (Nat.shiftLeft ((stField st 2).add (run.mul b)) 128)
+  (k2.succ.add (Nat.shiftLeft ((stFieldK st (nat_lit 1)).add (run.mul a)) (nat_lit 64))).add
+    (Nat.shiftLeft ((stFieldK st (nat_lit 2)).add (run.mul b)) (nat_lit 128))
 
 @[expose] public noncomputable def blockStepK
     (x v cutoff lam ones wc big wb off st : Nat) : Nat :=
-  (Nat.ble (stField st 0) v).rec st
-    (let k := stField st 0
+  (Nat.ble (stFieldK st (nat_lit 0)) v).rec st
+    (let k := stFieldK st (nat_lit 0)
      let q := v.div k
      (Nat.ble q cutoff).rec
        (blockAddK v k st (fieldK big wb (x.div q)) off)
-       (blockAddK v k st q ((onesBelowK lam ones wc q.succ).mul 2)))
+       (blockAddK v k st q ((onesBelowK lam ones wc q.succ).mul (nat_lit 2))))
 
 /-- Perform `fuel` blocks of the recurrence for `L v`. -/
 @[expose] public noncomputable def blockLoopK
@@ -170,7 +172,7 @@ public def popc32 (v : Nat) : Nat :=
   let c := (b + (b >>> 4)) &&& 252645135
   ((c * 16843009) >>> 24) &&& 255
 
-public def stFieldC (st i : Nat) : Nat := (st >>> (64 * i)) &&& ((1 <<< 64) - 1)
+public def stField (st i : Nat) : Nat := (st >>> (64 * i)) &&& ((1 <<< 64) - 1)
 
 public def onesBelow (lam ones wc p : Nat) : Nat :=
   field ones wc (p / 32)
@@ -179,10 +181,10 @@ public def onesBelow (lam ones wc p : Nat) : Nat :=
 public def blockAdd (v k st a b : Nat) : Nat :=
   let k2 := v / (v / k)
   let run := k2 - k + 1
-  (k2 + 1) + ((stFieldC st 1 + run * a) <<< 64) + ((stFieldC st 2 + run * b) <<< 128)
+  (k2 + 1) + ((stField st 1 + run * a) <<< 64) + ((stField st 2 + run * b) <<< 128)
 
 public def blockStep (x v cutoff lam ones wc big wb off st : Nat) : Nat :=
-  let k := stFieldC st 0
+  let k := stField st 0
   if k ≤ v then
     let q := v / k
     if q ≤ cutoff then blockAdd v k st q (2 * onesBelow lam ones wc (q + 1))

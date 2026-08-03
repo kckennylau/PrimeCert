@@ -260,7 +260,7 @@ def runPolya (x cutoff : Nat) (K? : Option Nat := none) : MetaM Unit := do
         (mkRawNatLit lam) (mkRawNatLit ones) (mkRawNatLit w) (mkRawNatLit big)
         (mkRawNatLit 2) fuel) (mkRawNatLit st)) proof
     -- L v is the whole part of the square root of v, minus the two halves of the sum
-    last := (Nat.sqrt v : Int) - (stFieldC st 1 : Int) + (stFieldC st 2 : Int)
+    last := (Nat.sqrt v : Int) - (stField st 1 : Int) + (stField st 2 : Int)
     big := big ||| ((last + bigOffset).toNat <<< (bigWidth * j))
   logInfo m!"L({x}) = {last}"
 
