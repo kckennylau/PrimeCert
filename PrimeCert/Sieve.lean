@@ -8,13 +8,13 @@ module
 /-!
 # A kernel-checked Sieve of Eratosthenes
 
-A Sieve of Eratosthenes over the numbers coprime to 6, written so that the Lean kernel can
-evaluate it by reduction. The sieve state is one natural number used as a bitset, with one bit
-per coprime-to-6 number. Throughout, `M` is the top index of that bitset, so it holds bits
-`0 … M` and a bound of `n` gives `M = (n - 1) / 3`.
+A Sieve of Eratosthenes over the numbers coprime to 6, in a form the Lean kernel evaluates by
+reduction. The sieve state is one natural number used as a bitset, with one bit per coprime-to-6
+number. Throughout, `M` is the top index of that bitset, so it holds bits `0 … M`, and a bound of
+`n` gives `M = (n - 1) / 3`.
 
-Widths up to `2^32` are supported (32 doubling rounds in `buildMaskK`, matching the hypothesis
-`M < 2^32` in `SieveCorrect`), capping the sieve bound at `n ≈ 3 * 2^32`.
+`markMaskK` runs `buildMaskK` for 32 doubling rounds, which covers `M < 2^32`, the hypothesis
+`SieveCorrect` carries, and caps the sieve bound at `n ≈ 3 * 2^32`.
 
 The `run_sieve n` command in `Meta/Sieve` computes the bitset natively in batches, has the kernel
 check each, and glues them into an equation `sieveK n sq = <literal>`. Correctness is
@@ -27,9 +27,8 @@ namespace PrimeCert.Sieve
 /-- Bit `i` of `b`, as `0` or `1`. `sieve_lookup` reads one entry of the sieve with this. -/
 @[expose] public def bitVal (b i : Nat) : Nat := (b.shiftRight i).land 1
 
-/-- The natural number whose binary digits below position `M` are set exactly at positions
-`A, A + 2*p, A + 4*p, …` and `B, B + 2*p, B + 4*p, …`, over `n` doubling rounds, so that `2^n`
-positions of each are covered. -/
+/-- The natural number whose binary digits below position `M` are set at the first `2^n` positions
+of each of `A, A + 2*p, A + 4*p, …` and `B, B + 2*p, B + 4*p, …`; `n` counts doubling rounds. -/
 @[expose] public noncomputable def buildMaskK (p M A B n : Nat) : Nat :=
   Nat.rec
     ((Nat.shiftLeft 1 A).lor (Nat.shiftLeft 1 B))
