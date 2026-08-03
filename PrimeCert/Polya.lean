@@ -56,6 +56,39 @@ factors counted with multiplicity, given that the `cnt` fields of `qs` are exact
 @[expose] public noncomputable def lamK (qs w M cnt : Nat) : Nat :=
   lamLoopK qs w M 0 0 cnt
 
+/-- The number of set bits of `v`, for `v < 2 ^ 32`: five straight-line stages summing bit counts
+within fields of 2, 4, 8 and then 32 bits (`popc32K_eq_count` in `PolyaCorrect`). -/
+@[expose] public def popc32K (v : Nat) : Nat :=
+  let a := v.sub ((v.shiftRight 1).land 1431655765)
+  let b := (a.land 858993459).add ((a.shiftRight 2).land 858993459)
+  let c := (b.add (b.shiftRight 4)).land 252645135
+  ((c.mul 16843009).shiftRight 24).land 255
+
+/-- Perform `fuel` steps, appending to `tbl` the running count of set bits of `lam`: field `i` holds
+the number of set bits below position `32 * i`, in `w`-bit fields. `onesK` runs this from a table
+holding the single field `0`. -/
+@[expose] public noncomputable def onesLoopK (lam w tbl start fuel : Nat) : Nat :=
+  fuel.rec tbl fun i t =>
+    t.lor
+      (Nat.shiftLeft
+        ((fieldK t w (start.add i)).add
+          (popc32K ((lam.shiftRight (Nat.mul 32 (start.add i))).land 4294967295)))
+        (w.mul (Nat.succ (start.add i))))
+
+/-- Running counts of the set bits of `lam` at every multiple of 32, covering positions below
+`32 * cnt` (`onesK_field_eq` in `PolyaCorrect`). -/
+@[expose] public noncomputable def onesK (lam w cnt : Nat) : Nat :=
+  onesLoopK lam w 0 0 cnt
+
+/-- Loop recurrence: peel the top step, in the exact form the def uses. -/
+public theorem onesLoopK_succ (lam w tbl start fuel : Nat) :
+    onesLoopK lam w tbl start (fuel + 1)
+      = (onesLoopK lam w tbl start fuel).lor
+          (Nat.shiftLeft
+            ((fieldK (onesLoopK lam w tbl start fuel) w (start + fuel)).add
+              (popc32K ((lam.shiftRight (32 * (start + fuel))).land 4294967295)))
+            (w * Nat.succ (start + fuel))) := rfl
+
 /-- Loop recurrence: peel the top field `start+fuel`, in the exact form the def uses. -/
 public theorem lamLoopK_succ (qs w M lam start fuel : Nat) :
     lamLoopK qs w M lam start (fuel + 1)
@@ -85,6 +118,19 @@ public def lamLoop (qs w M lam start fuel : Nat) : Nat := Id.run do
     l := markStride l (field qs w (start + i)) M
   return l
 
+public def popc32 (v : Nat) : Nat :=
+  let a := v - ((v >>> 1) &&& 1431655765)
+  let b := (a &&& 858993459) + ((a >>> 2) &&& 858993459)
+  let c := (b + (b >>> 4)) &&& 252645135
+  ((c * 16843009) >>> 24) &&& 255
+
+public def onesLoop (lam w tbl start fuel : Nat) : Nat := Id.run do
+  let mut t := tbl
+  for i in [0:fuel] do
+    let j := start + i
+    t := t ||| (((field t w j) + popc32 ((lam >>> (32 * j)) &&& 4294967295)) <<< (w * (j + 1)))
+  return t
+
 /-- Fuel additivity: running `a + b` steps is running `a` steps, then `b` steps from where the
 first run stopped. This is the glue that joins consecutive batches. -/
 public theorem lamLoopK_add (qs w M lam start a b : Nat) :
@@ -102,5 +148,20 @@ public theorem lamLoopK_chain (L qs w M lam lam' start len rest : Nat)
     (h : (lamLoopK qs w M lam start len).beq lam') :
     L = lamLoopK qs w M lam' (start.add len) rest := by
   grind [lamLoopK_add, Nat.beq_eq]
+
+/-- Fuel additivity for the running counts, the glue joining consecutive batches. -/
+public theorem onesLoopK_add (lam w tbl start a b : Nat) :
+    onesLoopK lam w tbl start (a + b)
+      = onesLoopK lam w (onesLoopK lam w tbl start a) (start + a) b := by
+  induction b with
+  | zero => rfl
+  | succ b ih => grind [onesLoopK_succ]
+
+/-- One chain step for the running counts, matching `lamLoopK_chain`. -/
+public theorem onesLoopK_chain (L lam w tbl tbl' start len rest : Nat)
+    (hP : L = onesLoopK lam w tbl start (len.add rest))
+    (h : (onesLoopK lam w tbl start len).beq tbl') :
+    L = onesLoopK lam w tbl' (start.add len) rest := by
+  grind [onesLoopK_add, Nat.beq_eq]
 
 end PrimeCert.Polya
