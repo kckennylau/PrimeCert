@@ -15,16 +15,9 @@ import Mathlib.Tactic.IntervalCases
 /-!
 # Correctness of the mod-6 wheel sieve
 
-Relates the bitset computed by `PrimeCert.Sieve.sieveK` to a `testBit`-level specification.
-The optimized kernel defs use raw `Nat.rec`/`Nat.*` operations; the Mathlib bit lemmas are phrased
-with `<<<`/`|||`/`&&&` notation (definitionally equal), so the proofs relate the two forms.
-
-Layered:
-* **Layer 1** – `bitVal` equals `testBit`, the index↔number encoding `num`, the bits of `initK`.
-* **Layer 2** – `buildMaskK` sets exactly the two stride-`2p` progressions (`testBit_buildMaskK`).
-* **Layer 3a** – `markMaskK` clears exactly the bits set in `buildMaskK` (`testBit_markMaskK`).
-* **Layer 3b** – those bits are the coprime-to-6 multiples of `p` from `5p` on (`mask_iff`).
-* **Layer 4** – the surviving bits are exactly the primes (`sieveK_testBit_iff`).
+Bit `t` of `PrimeCert.Sieve.sieveK n sqrtN` is set exactly when the number at index `t` is prime
+(`sieveK_testBit_iff`), and `prime_of_sieve_eq` turns one bit of a cached sieve literal into
+`Nat.Prime`. The section headers below mark the four steps of the argument.
 -/
 
 namespace PrimeCert.Sieve
