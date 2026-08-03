@@ -224,6 +224,21 @@ private def emitBlockChain (x v cutoff lam ones wc big fuel len : Nat) : MetaM (
     remaining := rest
   return (st, ← mkExpectedTypeHint proof (mkNatEqual lhsLoop stE))
 
+/-- The largest `r` with `r ^ 3 ≤ n`, by bisection. -/
+def cbrt (n : Nat) : Nat := Id.run do
+  let mut hi := 1
+  while hi * hi * hi ≤ n do
+    hi := hi * 2
+  let mut lo := 0
+  while lo + 1 < hi do
+    let mid := (lo + hi) / 2
+    if mid * mid * mid ≤ n then lo := mid else hi := mid
+  return lo
+
+/-- Where to stop recursing and read from the table, when no cutoff is given: `x ^ (2/3)`, which at
+`x = 906150257` is 943436, inside the band that measured fastest. -/
+def defaultCutoff (x : Nat) : Nat := cbrt (x * x)
+
 /-- Compute the running total of the Liouville values at `x`, from the tables below `cutoff` and
 the recurrence at each larger argument `x / j`, taken in increasing order. -/
 def runPolya (x cutoff : Nat) (K? : Option Nat := none) : MetaM Unit := do
@@ -249,9 +264,10 @@ def runPolya (x cutoff : Nat) (K? : Option Nat := none) : MetaM Unit := do
     big := big ||| ((last + bigOffset).toNat <<< (bigWidth * j))
   logInfo m!"L({x}) = {last}"
 
-/-- Command wrapper for `runPolya`: `run_polya x c` computes the running total at `x` with cutoff
-`c`, and `run_polya x c K` sets the batch length. -/
-elab "run_polya" xStx:num cStx:num kStx:(num)? : command =>
-  liftTermElabM <| runPolya xStx.getNat cStx.getNat (kStx.map (·.getNat))
+/-- Command wrapper for `runPolya`: `run_polya x` computes the running total at `x`, `run_polya x c`
+sets the cutoff, and `run_polya x c K` also sets the batch length. -/
+elab "run_polya" xStx:num cStx:(num)? kStx:(num)? : command => do
+  let x := xStx.getNat
+  liftTermElabM <| runPolya x ((cStx.map (·.getNat)).getD (defaultCutoff x)) (kStx.map (·.getNat))
 
 end PrimeCert.Polya
