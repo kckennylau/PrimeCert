@@ -93,6 +93,36 @@ private def emitChain (n M fuel len w qs : Nat) : MetaM (Nat × Expr) := do
   -- the chain ends at a zero-step loop on `lam`, which is definitionally `lam` itself
   return (lam, ← mkExpectedTypeHint proof (mkNatEqual lhsLoop lamE))
 
+private def mkOnesLoopK (lamE wE tblE : Expr) (start len : Nat) : Expr :=
+  mkAppN (mkConst ``onesLoopK) #[lamE, wE, tblE, mkRawNatLit start, mkRawNatLit len]
+
+/-- Returns the running counts `tbl` and a proof of `onesLoopK lam w 0 0 fuel = tbl`, split into
+batches of at most `len` steps. -/
+private def emitOnesChain (n fuel len w lam : Nat) : MetaM (Nat × Expr) := do
+  let lamE := mkRawNatLit lam
+  let wE := mkRawNatLit w
+  let lhsLoop := mkOnesLoopK lamE wE (mkRawNatLit 0) 0 fuel
+  let mut tbl := 0
+  let mut tblE := mkRawNatLit 0
+  let mut proof := mkApp2 (mkConst ``Eq.refl [Level.succ Level.zero]) (mkConst ``Nat) lhsLoop
+  let mut start := 0
+  let mut remaining := fuel
+  for i in [0:(fuel + len - 1) / len] do
+    let step := Nat.min len remaining
+    let rest := remaining - step
+    let next := onesLoop lam w tbl start step
+    let nextE := mkRawNatLit next
+    let stepName := Name.mkSimple s!"ones_step_{n}_{i}"
+    addThm stepName (mkBeqTrue (mkOnesLoopK lamE wE tblE start step) nextE) Lean.reflBoolTrue
+    proof := mkAppN (mkConst ``onesLoopK_chain)
+      #[lhsLoop, lamE, wE, tblE, nextE, mkRawNatLit start, mkRawNatLit step, mkRawNatLit rest,
+        proof, mkConst stepName]
+    tbl := next
+    tblE := nextE
+    start := start + step
+    remaining := rest
+  return (tbl, ← mkExpectedTypeHint proof (mkNatEqual lhsLoop tblE))
+
 /-- Build the parity table for numbers up to `n`. The prime powers are split into batches of
 `defaultBatchLen`, or into `K` batches when `K?` is given, and each batch is kernel-checked
 separately. The table and its equation are held by generated declarations. -/
@@ -121,6 +151,16 @@ def runLam (n : Nat) (K? : Option Nat := none) : MetaM Unit := do
   let lhs := mkAppN (mkConst ``lamK)
     #[mkRawNatLit qs, mkRawNatLit w, mkRawNatLit n, mkRawNatLit fuel]
   addThm dataName (mkNatEqual lhs (mkConst litName)) proof
+  -- the running counts of set bits, one field per 32 positions
+  let chunks := n / 32 + 1
+  let (ones, onesProof) ← emitOnesChain n chunks len w lit
+  addDecl <| Declaration.defnDecl
+    { name := `PrimeCert.Polya.onesLit, levelParams := [], type := mkConst ``Nat,
+      value := mkRawNatLit ones, hints := .regular 0, safety := .safe }
+  let onesLhs := mkAppN (mkConst ``onesK)
+    #[mkRawNatLit lit, mkRawNatLit w, mkRawNatLit chunks]
+  addThm `PrimeCert.Polya.onesData
+    (mkNatEqual onesLhs (mkConst `PrimeCert.Polya.onesLit)) onesProof
 
 /-- Command wrapper for `runLam`: `run_lam n` builds the certified parity table for numbers up to
 `n`, and `run_lam n K` forces `K` batches. -/
