@@ -20,7 +20,7 @@ jobs:
         run: |
           mkdir -p bench
           echo "cutoff,seconds,peak_rss_kb,exit,value"
-          for c in 1000000 2000000 4000000 6000000 10000000 20000000; do
+          for c in 200000 300000 500000 700000 1000000 2000000; do
             printf 'import PrimeCert.Meta.Polya\nset_option maxRecDepth 4000000\nopen PrimeCert.Polya\nrun_polya 906150257 %d\n' \
               "$c" > bench/Sweep.lean
             ex=0
