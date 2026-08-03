@@ -7,8 +7,7 @@ import PrimeCert.Meta.SieveCache
 
 /-! # The `run_sieve` command
 
-Builds a certified sieve cache and registers it in `sieveCacheExt`. Split out from
-`PrimeCert.Sieve` so the computational core stays free of metaprogramming.
+Builds a certified sieve cache and registers it in `sieveCacheExt`.
 -/
 
 namespace PrimeCert.Sieve

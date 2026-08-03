@@ -76,8 +76,8 @@ public theorem sieveLoopK_succ (M bits start fuel : Nat) :
 /-! ### Compiled twins
 
 Executable copies of the definitions above, used by `run_sieve` to compute the batch literals.
-They appear in no proof: a twin that disagreed with its kernel definition would produce a batch
-equation that fails its kernel check. -/
+The kernel checks each batch equation, so a twin that disagreed with its kernel definition would
+make `run_sieve` fail. -/
 
 public def buildMask (p M A B : Nat) : Nat := Id.run do
   let mut mask := (1 <<< A) ||| (1 <<< B)

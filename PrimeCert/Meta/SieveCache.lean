@@ -9,8 +9,7 @@ import PrimeCert.Sieve
 /-! # The registry of sieve caches
 
 Each `run_sieve` records the range it covers and the declarations holding the bitset and its
-equation. `sieve_lookup` reads the registry, so several caches coexist and the declaration names
-are never written by hand.
+equation. `sieve_lookup` picks the tightest cache covering the number it is asked about.
 -/
 
 open Lean

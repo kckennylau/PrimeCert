@@ -11,9 +11,7 @@ import PrimeCert.Meta.PrimeCert
 
 `mkSieveLookup` builds the proof term; the `sieve_lookup` tactic and the `sieve` certificate
 method both call it. The cache from `PrimeCert.SieveBase` covers numbers up to `100000`; beyond
-that a caller adds one with `run_sieve`. (No smoke tests here: the module environment is inherited
-by importers, so a cache built in this file would block theirs; see
-`PrimeCertTest/SieveLookupTest.lean` and `PrimeCertTest/SieveVerify1e8.lean`.)
+that a caller adds one with `run_sieve`.
 -/
 
 namespace PrimeCert.Sieve
