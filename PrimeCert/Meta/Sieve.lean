@@ -64,10 +64,10 @@ private def emitChain (n M fuel len : Nat) : MetaM (Nat × Expr) := do
   return (bits, ← mkExpectedTypeHint proof (mkNatEq lhsLoop bitsE))
 
 /-- Build the cache for numbers up to `n` and register it. The sieving is split into batches of
-`defaultBatchLen` steps, or into `K` batches when `K?` is given, and each batch is kernel-checked
-separately. The bitset and its equation are held by generated declarations; `sieve_lookup` finds
-them through the registry. -/
-def runSieve (n : Nat) (K? : Option Nat := none) : MetaM Unit := do
+`len?` steps, defaulting to `defaultBatchLen`, and each batch is kernel-checked separately. The
+bitset and its equation are held by generated declarations; `sieve_lookup` finds them through the
+registry. -/
+def runSieve (n : Nat) (len? : Option Nat := none) : MetaM Unit := do
   if (← sieveCaches).any (·.hi == n) then
     throwError "run_sieve: a sieve cache up to {n} already exists"
   let idx := (← sieveCaches).size
@@ -75,9 +75,7 @@ def runSieve (n : Nat) (K? : Option Nat := none) : MetaM Unit := do
   let dataName := Name.mkNum `PrimeCert.Sieve.sieveData idx
   let sq := Nat.sqrt n + 1
   let fuel := (sq - 1) / 3
-  let len := match K? with
-    | some K => Nat.max 1 ((fuel + K - 1) / K)
-    | none => defaultBatchLen
+  let len := Nat.max 1 (len?.getD defaultBatchLen)
   let (lit, proof) ← emitChain n ((n - 1) / 3) fuel len
   addDecl <| Declaration.defnDecl
     { name := litName, levelParams := [], type := Nat.mkType,
@@ -89,8 +87,8 @@ def runSieve (n : Nat) (K? : Option Nat := none) : MetaM Unit := do
   sieveCacheExt.add { lo := 5, hi := n, litName, dataName }
 
 /-- Command wrapper for `runSieve`: `run_sieve n` builds the certified cache for numbers up to
-`n`, and `run_sieve n K` forces `K` batches. -/
-elab "run_sieve" nStx:num kStx:(num)? : command =>
-  liftTermElabM <| runSieve nStx.getNat (kStx.map (·.getNat))
+`n`, and `run_sieve n len` sets the batch length to `len` sieving steps. -/
+elab "run_sieve" nStx:num lenStx:(num)? : command =>
+  liftTermElabM <| runSieve nStx.getNat (lenStx.map (·.getNat))
 
 end PrimeCert.Sieve
