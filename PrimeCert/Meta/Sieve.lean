@@ -68,8 +68,8 @@ private def emitChain (n M fuel len : Nat) : MetaM (Nat × Expr) := do
 bitset and its equation are held by generated declarations; `sieve_lookup` finds them through the
 registry. -/
 def runSieve (n : Nat) (len? : Option Nat := none) : MetaM Unit := do
-  if (← sieveCaches).any (·.hi == n) then
-    throwError "run_sieve: a sieve cache up to {n} already exists"
+  if let some c := (← sieveCaches).find? (n ≤ ·.hi) then
+    throwError "run_sieve: a sieve cache up to {c.hi} already covers {n}"
   let idx := (← sieveCaches).size
   let litName := Name.mkNum `PrimeCert.Sieve.sieveLit idx
   let dataName := Name.mkNum `PrimeCert.Sieve.sieveData idx

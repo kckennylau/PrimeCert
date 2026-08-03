@@ -53,7 +53,7 @@ example : Nat.Prime 100003 := by sieve_lookup
 #guard_msgs in
 example : 2 + 2 = 4 := by sieve_lookup
 
-/-- error: run_sieve: a sieve cache up to 100000 already exists -/
+/-- error: run_sieve: a sieve cache up to 100000 already covers 100000 -/
 #guard_msgs in
 run_sieve 100000
 
