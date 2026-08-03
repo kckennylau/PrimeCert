@@ -1,0 +1,32 @@
+name: Polya cutoff sweep, one runner
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [polya-sweep-serial]
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v7
+      - uses: leanprover/lean-action@v1
+        with:
+          build: false
+      - name: build the polya command
+        run: lake build PrimeCert.Meta.Polya
+      - name: run the target at every cutoff
+        run: |
+          mkdir -p bench
+          echo "cutoff,seconds,peak_rss_kb,exit,value"
+          for c in 1000000 2000000 4000000 6000000 10000000 20000000; do
+            printf 'import PrimeCert.Meta.Polya\nset_option maxRecDepth 4000000\nopen PrimeCert.Polya\nrun_polya 906150257 %d\n' \
+              "$c" > bench/Sweep.lean
+            ex=0
+            /usr/bin/time -f "%e %M" -o bench/t.txt lake env lean bench/Sweep.lean > bench/out.log 2>&1 || ex=$?
+            read -r secs rss < bench/t.txt
+            val=$(grep -ho "L(906150257) = -\?[0-9]*" bench/out.log | head -1)
+            echo "$c,$secs,$rss,$ex,$val"
+            if [ "$ex" -ne 0 ]; then tail -3 bench/out.log; fi
+          done
