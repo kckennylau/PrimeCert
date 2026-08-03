@@ -1,0 +1,31 @@
+name: Polya cutoff sweep
+
+on:
+  workflow_dispatch:
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      matrix:
+        cutoff: [1000000, 2000000, 4000000, 6000000, 10000000, 20000000]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: leanprover/lean-action@v1
+        with:
+          build: false
+      - name: build the polya command
+        run: lake build PrimeCert.Meta.Polya
+      - name: run the target at one cutoff
+        run: |
+          mkdir -p bench
+          printf 'import PrimeCert.Meta.Polya\nset_option maxRecDepth 4000000\nopen PrimeCert.Polya\nrun_polya 906150257 %d\n' \
+            "${{ matrix.cutoff }}" > bench/Sweep.lean
+          ex=0
+          /usr/bin/time -f "%e %M" -o bench/t.txt lake env lean bench/Sweep.lean > bench/out.log 2>&1 || ex=$?
+          read -r secs rss < bench/t.txt
+          echo "cutoff,seconds,peak_rss_kb,exit"
+          echo "${{ matrix.cutoff }},$secs,$rss,$ex"
+          grep -h "L(" bench/out.log || tail -3 bench/out.log
