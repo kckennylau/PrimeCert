@@ -4,134 +4,135 @@
 
 Pólya (1919) conjectured that L(n) ≤ 0 for all n ≥ 2, where
 
-    L(n) = Σ_{k=1}^{n} λ(k),    λ = the Liouville function, λ(k) = (−1)^Ω(k),
+    L(v) = Σ_{n=1}^{v} λ(n),    λ = the Liouville function, λ(n) = (−1)^Ω(n),
 
-with Ω(k) the number of prime factors of k counted with multiplicity. The conjecture is false; the
-smallest counterexample is N = 906,150,257, where L(N) = 1 (Tanaka 1980).
+with Ω(n) the number of prime factors of n counted with multiplicity. The conjecture is false; the
+smallest counterexample is x = 906,150,257, where L(x) = 1 (Tanaka 1980).
 
 Target theorems, with L defined over mathlib's `ArithmeticFunction.liouville`:
 
-    def L (n : ℕ) : ℤ := ∑ k ∈ Finset.Icc 1 n, ArithmeticFunction.liouville k
+    def L (v : ℕ) : ℤ := ∑ n ∈ Finset.Icc 1 v, ArithmeticFunction.liouville n
     theorem polya_witness    : L 906150257 = 1
     theorem polya_disproof   : ∃ n, 2 ≤ n ∧ 0 < L n
     theorem polya_conjecture_false : ¬ ∀ n, 2 ≤ n → L n ≤ 0
 
-Everything is checked by the Lean kernel: no `decide`, no `native_decide`, no trusted evaluation.
-Proof terms are built explicitly (`mkAppN`, one `reflBoolTrue` per boolean hypothesis), following
-the house style established by the sieve work in this repo.
+Everything is checked by the Lean kernel: `decide`, `native_decide` and trusted evaluation are all
+excluded. Proof terms are built explicitly (`mkAppN`, one `reflBoolTrue` per boolean hypothesis),
+following the house style established by the sieve work in this repo.
 
-## Method: Möbius/Mertens
+## The identity
 
-Decided against alternatives (brute λ-sieving to N, and a Legendre-style decomposition through the
-prime-counting function, whose smooth-sum recursion costs ~30× more operations). The chosen route
-is self-contained: **no sieve, no primality testing, and no λ values appear in the computation.**
-It reuses the sieve project's *techniques* (checkpointed kernel chains, native twins, packed-Nat
-encodings) but none of its objects; deleting every sieve file would not break the mathematics here.
+Σ_{d ∣ n} λ(d) is 1 when n is a perfect square and 0 otherwise. Summing that over n ≤ v and
+exchanging the order of summation gives
 
-Two identities reduce L(N) to Mertens values M(x) = Σ_{k≤x} μ(k):
+    Σ_{k=1}^{v} L(⌊v/k⌋) = ⌊√v⌋
 
-1. **λ from μ over squares.** λ(k) = Σ_{d : d²∣k} μ(k/d²). (Both sides multiplicative; check on
-   prime powers.) Summing over k ≤ N and exchanging sums:
+and isolating k = 1,
 
-       L(N) = Σ_{d=1}^{B} M(⌊N/d²⌋),        B = 30102,
+    L(v) = ⌊√v⌋ − Σ_{k=2}^{v} L(⌊v/k⌋).
 
-   the range ending at B because d² ≤ N exactly when d ≤ B (30102² < N < 30103²).
+This is proved once as a theorem and then evaluated, so no instance of the recurrence is
+reconstructed as a proof term.
 
-2. **The Mertens recursion.** Σ_{k=1}^{x} M(⌊x/k⌋) = 1 for x ≥ 1 (count pairs (k, m) with k·m ≤ x
-   via Σ_{d∣n} μ(d) = [n = 1], mathlib's `moebius_mul_coe_zeta`). Rearranged:
+## The quotient set
 
-       M(x) = 1 − Σ_{k=2}^{x} M(⌊x/k⌋),
+Write x = 906150257 and Q = {⌊x/k⌋ : 1 ≤ k ≤ x}. Then |Q| ≈ 2√x ≈ 60,200, and Q is closed under
+v ↦ ⌊v/j⌋ because ⌊⌊x/k⌋/j⌋ = ⌊x/(kj)⌋ (`Nat.div_div_eq_div_mul`), so the recurrence never leaves
+Q.
 
-   which determines M everywhere from M(1) = 1.
+The certificate is the vector of L values on Q. Every entry satisfies |L| < 10⁵.
 
-### The quotient set, and why it has ~60k elements
+## Choosing the split
 
-Every argument the recursion ever touches has the form ⌊N/j⌋. These take at most 2√N ≈ 60,204
-distinct values: for j ≤ √N ≈ 30102 there are at most 30102 values, and for j > √N the quotient
-itself is < √N, giving at most 30102 more. The set is closed under the recursion because
-⌊⌊N/j⌋/k⌋ = ⌊N/(j·k)⌋ (`Nat.div_div_eq_div_mul`). So one table over these ~60k points suffices.
+Take K = (x/c₁)^{2/3}, where c₁ is the measured cost of one table element relative to one
+recurrence block. The cost is
 
-In the recursion for one entry M(x), equal quotients ⌊x/k⌋ are grouped: quotient value v occurs for
-exactly ⌊x/v⌋ − ⌊x/(v+1)⌋ consecutive k, so the sum has ~2√x block terms. Filling the whole table
-costs on the order of 10⁷ block terms (Σ_j 2√(N/j) ≈ 2·N^{3/4} plus the small half). That count is
-arithmetic; what the kernel makes of it is a measurement question (see gates below).
+    c₁·K + Σ_{k ≤ x/K} √(x/k) ≈ c₁·K + 2x/√K
 
-## Kernel artifacts
+which lands at 3–4·10⁶ blocks. Beyond that K the first term grows linearly while the second falls
+as K^{−1/2}.
 
-- **Packed signed table.** M values at the 60k quotient points, one 32-bit field per entry, offset
-  encoding: store M(x) + 2³¹ as a natural number. Since |M(x)| ≤ x < 2³⁰, the offset keeps every
-  field positive and every subtraction in the update non-truncating; the required inequality is
-  carried inside the loop invariant, not assumed. Two halves, ~120KB each: `small[v]` = M(v) for
-  v ≤ B, and `big[j]` = M(⌊N/j⌋) for j ≤ B. Every read happens at a *known divisor index* d
-  (read `big[d]` if d ≤ B, else `small[⌊N/d⌋]`), so no inverse-quotient reasoning is ever needed.
-- **Field access.** `getF`/`setF` by shift-and-mask, with spec lemmas (`getF_setF_self`,
-  `getF_setF_ne`) proved once via `Nat.testBit` decomposition.
-- **The M-loop.** Fills the table smallest-point-first; raw `Nat.rec` definition plus a compiled
-  twin with identical batch structure; run in batches, each batch a `reflBoolTrue` equation between
-  loop-state literals, glued by a fuel-additivity lemma — exactly the `run_sieve_chain` pattern.
-- **Assembly fold.** Reads the ~30k entries at square indices d² and accumulates
-  Σ_d M(⌊N/d²⌋) as an add-only pair of naturals (positive part, negative part), the signed-value
-  idiom ported from ECCompute's `SignedNat`. A final small computation closes `L N = 1`.
+## Building the table below K
 
-## Proof obligations
+Ω(n) counts the prime powers dividing n, so the parity bit of Ω is the exclusive-or over prime
+powers q ≤ K of the mask with bits set at q, 2q, 3q, …. One exclusive-or per prime power fixes the
+sign of λ for every n ≤ K at once: 74,164 of them at K = 936,411, against 862,477 composites had
+each been given a factorization witness instead. Running totals over the bits then give L, one step
+per n, retaining values only at indices lying in Q.
 
-| Piece | Effort |
-|---|---|
-| identity 1 (λ = Σ μ(k/d²)) and the sum exchange | medium, mathlib multiplicativity machinery |
-| identity 2 (Mertens recursion) | medium, divisor-pair double count |
-| `getF`/`setF` spec lemmas | small |
-| loop invariant: every filled field decodes to M at its point | **the hardest proof**; structured around a generic "packed table represents g : ℕ → ℤ" predicate |
-| assembly: table + identities ⇒ `polya_witness` | small once the above exist |
+The construction is sound only if the supplied list of prime powers is exactly the prime powers
+≤ K, so it rests on the kernel sieve on branch `sieve-variants` (bit t of a certified bitset is set
+exactly when the corresponding number is prime, with a lookup lemma and caches built to a chosen
+bound). K is around 10⁶, inside the range that branch already runs. Landing it is a prerequisite
+for this step.
+
+## Evaluating above K
+
+Apply the recurrence to each v = ⌊x/k⌋ with k ≤ x/K, in increasing order of v.
+
+Within one instance k ↦ ⌊v/k⌋ takes O(√v) distinct values, and the k producing quotient q form the
+contiguous run ending at ⌊v/q⌋. Walking those runs replaces v terms with O(√v) blocks, each
+contributing (run length)·L(q). The value ⌊√v⌋ = a is checked by a² ≤ v < (a+1)².
+
+Each v ∈ Q is one independent obligation: given the certificate, verify that instance. Sixty
+thousand checks of a few hundred blocks each, with no single large reduction.
 
 ## Files
 
 ```
-PrimeCert/Polya/Kernel.lean       -- mathlib-free: SN pair core, getF/setF, M-loop + assembly defs,
-                                     peel/additivity lemmas, native twins (imports Lean only)
-PrimeCert/Polya/ChainRunner.lean  -- mathlib-free meta: generic chain builder + run_mertens_chain
+PrimeCert/Polya/Kernel.lean       -- mathlib-free: signed pair core, field get/set, the block walk,
+                                     the table builder, compiled twins
+PrimeCert/Polya/ChainRunner.lean  -- mathlib-free meta: per-obligation declaration builder
 PrimeCert/Polya/Summatory.lean    -- def L, basic lemmas
-PrimeCert/Polya/Identity.lean     -- the two identities
-PrimeCert/Polya/TableCorrect.lean -- decode predicate + the loop invariant
+PrimeCert/Polya/Identity.lean     -- Σ_{k≤v} L(⌊v/k⌋) = ⌊√v⌋ and the recurrence
+PrimeCert/Polya/TableCorrect.lean -- the witness check gives λ below K, the prefix sum gives L
+PrimeCert/Polya/BlockCorrect.lean -- the run decomposition of Σ_{k=2}^{v} L(⌊v/k⌋)
 PrimeCert/Polya/Main.lean         -- assembly, polya_witness, polya_disproof
-PrimeCertTest/PolyaSmall.lean     -- end-to-end at N = 1e5..1e7 against a dev oracle
-PrimeCertTest/PolyaDev.lean       -- #eval oracles (dev only, outside the proof import graph)
-PrimeCertTest/PolyaFull.lean      -- the N = 906150257 run; CI workflow polya.yml (dispatch-only)
+PrimeCertTest/PolyaSmall.lean     -- end to end at x = 10⁵…10⁷ against a compiled oracle
+PrimeCertTest/PolyaDev.lean       -- #eval oracles, outside the proof import graph
+PrimeCertTest/PolyaFull.lean      -- the x = 906150257 run, dispatch-only CI workflow
 ```
 
-## Milestones and measurement gates
+## Probes
 
-- **M0** [metaprogramming, small]: `getF`/`setF` + specs; SN core; calibration probes (single ops
-  and mini-loops against 120KB-scale operands, named declarations, `trace.profiler` kernel lines)
-  → raw numbers, judged by Bhavik, before anything is committed to.
-- **M1** [math, medium — parallel with M2]: `Summatory.lean`, `Identity.lean`.
-- **M2** [metaprogramming, medium]: M-loop + twin + chain command. First an **unverified** value at
-  N = 1e5..1e7, cross-checked against a compiled oracle — design bugs caught before the hard proof
-  is attempted. Then gate **G3**: measured per-batch kernel lines at 1e6/1e7 for the monolithic
-  table vs a 32-chunk variant; layout picked from data. Then the full-N table in CI (gate **G4a**).
-- **M3** [math, hardest]: the loop invariant; assembly; `polya_witness` at small N first, then at
-  N = 906150257 (gate **G4b**).
+Each probe times a marginal operation by differencing two declarations that hold everything fixed
+except the number of repetitions, so operand construction cancels. Rules: state the operand sizes,
+run each declaration at least twice, report every raw `[Kernel]` line and the variance, record peak
+resident memory with `/usr/bin/time -v`, and re-run any close call on CI, because the host is
+shared.
 
-## Verification protocol
+| probe | declarations | decides |
+|---|---|---|
+| A. table element | m and 2m exclusive-ors of a stride mask into a K-bit operand, then m and 2m running-total steps | the first half of c₁ |
+| B. recurrence block | a fold of m and 2m blocks, each one division, one table read, one multiply-add | the second half of c₁, hence K |
+| C. one obligation | a single v ∈ Q verified as one declaration, at v near x and near K | the per-declaration cost and the memory held per obligation |
+| D. end to end | the whole certificate at x = 10⁵, 10⁶, 10⁷, value compared against a compiled oracle, no proof attached | feasibility, and the obligation count |
 
-- Dev oracle (compiled trial-division fold for λ, direct summation) vs pipeline output at
-  N = 1e5, 1e6, 1e7; one tiny hand-checked value (e.g. L(100)) proved by direct unfolding,
-  independent of all machinery.
-- Differential micro-tests for `getF`/`setF` and for block boundaries at small x.
-- `Nat.sub` audit of `Kernel.lean`: every occurrence needs a named non-truncation lemma.
-- Every kernel run recorded with per-declaration `[Kernel]` profiler lines and peak-RSS
-  (`/usr/bin/time -v`); the full-N run in a dispatch-only CI workflow on the 16GB runner.
+## Milestones
+
+- **P** [probes]: A and B fix c₁ and K; C fixes the declaration granularity; D at 10⁵ and 10⁶.
+  Raw numbers, judged by Bhavik, before anything downstream is written.
+- **M1** [math, parallel with M2]: `Summatory.lean`, `Identity.lean`.
+- **M2** [metaprogramming]: the block walk, the table builder, twins, the per-obligation builder.
+  Ends with a correct unverified value at 10⁷ and then at x.
+- **M3** [math]: the table correctness chain (witness check, prefix sum), the run decomposition,
+  assembly, `polya_witness` at 10⁵ first and then at x.
 
 ## Risks
 
-1. **Kernel cost of ~10⁷ ops against a ~120KB table** — the one real gamble; measured in week one
-   (M0 probes, M2 small-N gates) with the chunked layout as fallback. No timing predictions made.
-2. Loop-invariant proof size — mitigated by the M2 unverified-value milestone (definitions known
-   correct before proving) and the generic decode predicate.
-3. Off-by-ones in block grouping and the Icc 1 n summation convention — differential tests, and
-   the convention fixed once in `Summatory.lean`.
+1. The sieve dependency: the prime case of the table check rests on branch `sieve-variants`
+   landing. Until then the table is verified only below the built-in cache bound.
+2. Sixty thousand declarations, each cheap, against one process. Probe C measures whether the
+   per-declaration overhead or the block count governs, and the obligations split across files or
+   CI jobs if it is the former.
+3. Off-by-ones in the run boundaries and in the Icc 1 v summation convention. Met by differential
+   tests at small x against the oracle, and by fixing the convention once in `Summatory.lean`.
 
-## Parked (out of scope for now)
+## Parked
 
 A certified prime-counting table via the `lehmer` branch's φ machinery (its identity layer is
 complete there, zero sorries; for x < (B+1)², π(x) = φ(x,B) + π(B) − 1 by `P_eq_zero_of_lt` +
 `lehmer_identity`). Revisit after Pólya.
+
+Also parked: carrying the whole computation modulo one word-size prime p > 2x with a final lift
+using |L(x)| ≤ x.
