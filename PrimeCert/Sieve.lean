@@ -48,7 +48,7 @@ namespace PrimeCert.Sieve
 /-- `num` in the raw `Nat` operations the kernel-side defs use. -/
 @[expose] public def numK (k : Nat) : Nat := (k.mul 3).succ.add (k.mod 2)
 
-public theorem numK_eq_num (k : Nat) : numK k = num k := rfl
+@[simp, grind =] public theorem numK_eq_num (k : Nat) : numK k = num k := rfl
 
 /-- Perform `fuel` sieving steps on the bitset `bits`, scanning indices `start, start+1, …`: at
 each index whose bit is still set, clear the bits of that number's coprime-to-6 multiples.
