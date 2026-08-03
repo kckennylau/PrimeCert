@@ -11,8 +11,9 @@ import PrimeCert.Polya
 Builds a certified parity table for the Liouville function up to `n`. Split out from
 `PrimeCert.Polya` so the computational core stays free of metaprogramming.
 
-The prime powers are supplied to the table builder as a bitset computed here. The emitted equation
-holds for that bitset whatever it contains; tying it to the prime powers is `PolyaCorrect`.
+The prime powers are packed here into `w`-bit fields and handed to the table builder. The emitted
+equation holds for that packing whatever it contains; tying its fields to the prime powers is
+`PolyaCorrect`.
 -/
 
 namespace PrimeCert.Polya
@@ -28,54 +29,62 @@ private def mkBeqTrue (a b : Expr) : Expr :=
 private def mkNatEqual (a b : Expr) : Expr :=
   mkApp3 (mkConst ``Eq [Level.succ Level.zero]) (mkConst ``Nat) a b
 
-private def mkLamLoopK (ppE mE lamE : Expr) (start len : Nat) : Expr :=
-  mkAppN (mkConst ``lamLoopK) #[ppE, mE, lamE, mkRawNatLit start, mkRawNatLit len]
+private def mkLamLoopK (qsE wE mE lamE : Expr) (start len : Nat) : Expr :=
+  mkAppN (mkConst ``lamLoopK) #[qsE, wE, mE, lamE, mkRawNatLit start, mkRawNatLit len]
 
 private def addThm (name : Name) (type value : Expr) : MetaM Unit :=
   addDecl <| Declaration.thmDecl { name, levelParams := [], type, value }
 
-/-- Strides per batch, used when `run_lam` is given no batch count. -/
-def defaultBatchLen : Nat := 16
+/-- Prime powers per batch, used when `run_lam` is given no batch count. -/
+def defaultBatchLen : Nat := 256
 
-/-- Bit `q` set exactly for the prime powers `q ≤ M`, computed natively. -/
-def primePowerBits (M : Nat) : Nat := Id.run do
+/-- The prime powers `q ≤ M` in increasing order, computed natively. -/
+def primePowers (M : Nat) : Array Nat := Id.run do
   let mut composite : Array Bool := Array.replicate (M + 1) false
-  let mut bits := 0
+  let mut out : Array Nat := #[]
   for p in [2:M + 1] do
     if !composite[p]! then
       let mut q := p
       while q ≤ M do
-        bits := bits ||| (1 <<< q)
+        out := out.push q
         q := q * p
       let mut j := p * p
       while j ≤ M do
         composite := composite.set! j true
         j := j + p
-  return bits
+  return out.qsort (· < ·)
 
-/-- Returns a table `lam` and a proof of `lamLoopK pp M 0 2 fuel = lam`, split into batches of at
-most `len` strides; `n` only distinguishes the names of the emitted batch lemmas. -/
-private def emitChain (n M fuel len : Nat) (pp : Nat) : MetaM (Nat × Expr) := do
-  let ppE := mkRawNatLit pp
+/-- Pack `qs` into one natural number as `w`-bit fields, lowest first. -/
+def packFields (qs : Array Nat) (w : Nat) : Nat := Id.run do
+  let mut out := 0
+  for h : i in [0:qs.size] do
+    out := out ||| (qs[i] <<< (w * i))
+  return out
+
+/-- Returns a table `lam` and a proof of `lamLoopK qs w M 0 0 fuel = lam`, split into batches of at
+most `len` steps; `n` only distinguishes the names of the emitted batch lemmas. -/
+private def emitChain (n M fuel len w qs : Nat) : MetaM (Nat × Expr) := do
+  let qsE := mkRawNatLit qs
+  let wE := mkRawNatLit w
   let mE := mkRawNatLit M
   -- the fixed left-hand side of the chain: the full loop on the empty table
-  let lhsLoop := mkLamLoopK ppE mE (mkRawNatLit 0) 2 fuel
+  let lhsLoop := mkLamLoopK qsE wE mE (mkRawNatLit 0) 0 fuel
   let mut lam := 0
   let mut lamE := mkRawNatLit 0
-  -- invariant: proof : lhsLoop = lamLoopK pp M lam start remaining, and the empty table needs no
+  -- invariant: proof : lhsLoop = lamLoopK qs w M lam start remaining, and the empty table needs no
   -- step to enter the chain
   let mut proof := mkApp2 (mkConst ``Eq.refl [Level.succ Level.zero]) (mkConst ``Nat) lhsLoop
-  let mut start := 2
+  let mut start := 0
   let mut remaining := fuel
   for i in [0:(fuel + len - 1) / len] do
     let step := Nat.min len remaining
     let rest := remaining - step
-    let next := lamLoop pp M lam start step
+    let next := lamLoop qs w M lam start step
     let nextE := mkRawNatLit next
     let stepName := Name.mkSimple s!"lam_step_{n}_{i}"
-    addThm stepName (mkBeqTrue (mkLamLoopK ppE mE lamE start step) nextE) Lean.reflBoolTrue
+    addThm stepName (mkBeqTrue (mkLamLoopK qsE wE mE lamE start step) nextE) Lean.reflBoolTrue
     proof := mkAppN (mkConst ``lamLoopK_chain)
-      #[lhsLoop, ppE, mE, lamE, nextE, mkRawNatLit start, mkRawNatLit step, mkRawNatLit rest,
+      #[lhsLoop, qsE, wE, mE, lamE, nextE, mkRawNatLit start, mkRawNatLit step, mkRawNatLit rest,
         proof, mkConst stepName]
     lam := next
     lamE := nextE
@@ -84,30 +93,33 @@ private def emitChain (n M fuel len : Nat) (pp : Nat) : MetaM (Nat × Expr) := d
   -- the chain ends at a zero-step loop on `lam`, which is definitionally `lam` itself
   return (lam, ← mkExpectedTypeHint proof (mkNatEqual lhsLoop lamE))
 
-/-- Build the parity table for numbers up to `n`. The strides are split into batches of
+/-- Build the parity table for numbers up to `n`. The prime powers are split into batches of
 `defaultBatchLen`, or into `K` batches when `K?` is given, and each batch is kernel-checked
 separately. The table and its equation are held by generated declarations. -/
 def runLam (n : Nat) (K? : Option Nat := none) : MetaM Unit := do
-  let ppName := `PrimeCert.Polya.lamPP
+  let qsName := `PrimeCert.Polya.lamQs
   let litName := `PrimeCert.Polya.lamLit
   let dataName := `PrimeCert.Polya.lamData
   if (← getEnv).contains litName then
     throwError "run_lam: a parity table already exists"
-  let pp := primePowerBits n
-  let fuel := n - 1
+  let powers := primePowers n
+  let w := Nat.log2 n + 1
+  let qs := packFields powers w
+  let fuel := powers.size
   let len := match K? with
     | some K => Nat.max 1 ((fuel + K - 1) / K)
     | none => defaultBatchLen
   addDecl <| Declaration.defnDecl
-    { name := ppName, levelParams := [], type := mkConst ``Nat,
-      value := mkRawNatLit pp, hints := .regular 0, safety := .safe }
-  let (lit, proof) ← emitChain n n fuel len pp
+    { name := qsName, levelParams := [], type := mkConst ``Nat,
+      value := mkRawNatLit qs, hints := .regular 0, safety := .safe }
+  let (lit, proof) ← emitChain n n fuel len w qs
   addDecl <| Declaration.defnDecl
     { name := litName, levelParams := [], type := mkConst ``Nat,
       value := mkRawNatLit lit, hints := .regular 0, safety := .safe }
   -- `proof` ends at a zero-step loop on the final table, which is definitionally both the literal
-  -- and, on the other side, `lamK pp n`
-  let lhs := mkAppN (mkConst ``lamK) #[mkRawNatLit pp, mkRawNatLit n]
+  -- and, on the other side, `lamK qs w n fuel`
+  let lhs := mkAppN (mkConst ``lamK)
+    #[mkRawNatLit qs, mkRawNatLit w, mkRawNatLit n, mkRawNatLit fuel]
   addThm dataName (mkNatEqual lhs (mkConst litName)) proof
 
 /-- Command wrapper for `runLam`: `run_lam n` builds the certified parity table for numbers up to

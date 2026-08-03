@@ -13,13 +13,13 @@ dividing `n`, so the parity of that count is the exclusive-or over prime powers 
 This file builds the whole table by one exclusive-or per prime power: the state is a natural
 number used as a bitset holding bits `0 … M`, and bit `n` records the parity for `n`.
 
-The prime powers arrive as a bitset `pp`, whose bit `q` is set exactly for the prime powers
-`q ≤ M`; `PolyaCorrect` derives that from the certified sieve.
+The prime powers arrive packed into one natural number as `w`-bit fields, lowest first, one field
+per step of the loop; `PolyaCorrect` derives that packing from the certified sieve.
 
 Strides up to `2 ^ 32` times the table width are supported (32 doubling rounds in `strideMaskK`).
 
 The `run_lam` command in `Meta/Polya` computes the table natively in batches, has the kernel check
-each, and glues them into an equation `lamK pp M = <literal>`.
+each, and glues them into an equation `lamK qs w M cnt = <literal>`.
 -/
 
 namespace PrimeCert.Polya
@@ -40,26 +40,26 @@ cleared by `markStrideK`. -/
 @[expose] public noncomputable def markStrideK (lam q M : Nat) : Nat :=
   (lam.xor (strideMaskK q M)).land ((Nat.shiftLeft 1 (Nat.succ M)).sub 1)
 
-/-- Perform `fuel` steps on the table `lam`, scanning strides `start, start+1, …`: at each stride
-whose bit in `pp` is set, flip the parity bit of its multiples. `lamK` runs this from an empty
+/-- Field `i` of `qs`, reading `w` bits from position `w * i`. -/
+@[expose] public def fieldK (qs w i : Nat) : Nat :=
+  (qs.shiftRight (w.mul i)).land ((Nat.shiftLeft 1 w).sub 1)
+
+/-- Perform `fuel` steps on the table `lam`, taking the strides from fields `start, start+1, …` of
+`qs` and flipping the parity bit of each stride's multiples. `lamK` runs this from an empty
 table. -/
-@[expose] public noncomputable def lamLoopK (pp M lam start fuel : Nat) : Nat :=
-  fuel.rec lam fun i l =>
-      (Nat.ble 1 (pp.land (Nat.shiftLeft 1 (start.add i)))).rec l
-        (markStrideK l (start.add i) M)
+@[expose] public noncomputable def lamLoopK (qs w M lam start fuel : Nat) : Nat :=
+  fuel.rec lam fun i l => markStrideK l (fieldK qs w (start.add i)) M
 
 /-- The full parity table for numbers up to `M`: bit `n` is set iff `n` has an odd number of prime
-factors counted with multiplicity, given that bit `q` of `pp` is set exactly for the prime powers
+factors counted with multiplicity, given that the `cnt` fields of `qs` are exactly the prime powers
 `q ≤ M` (`lamK_testBit_iff` in `PolyaCorrect`). -/
-@[expose] public noncomputable def lamK (pp M : Nat) : Nat :=
-  lamLoopK pp M 0 2 (M.sub 1)
+@[expose] public noncomputable def lamK (qs w M cnt : Nat) : Nat :=
+  lamLoopK qs w M 0 0 cnt
 
-/-- Loop recurrence: peel the top stride `start+fuel`, in the exact `Bool.rec` form the def uses. -/
-public theorem lamLoopK_succ (pp M lam start fuel : Nat) :
-    lamLoopK pp M lam start (fuel + 1)
-      = Bool.rec (lamLoopK pp M lam start fuel)
-          (markStrideK (lamLoopK pp M lam start fuel) (start + fuel) M)
-          (Nat.ble 1 (pp &&& (1 <<< (start + fuel)))) := rfl
+/-- Loop recurrence: peel the top field `start+fuel`, in the exact form the def uses. -/
+public theorem lamLoopK_succ (qs w M lam start fuel : Nat) :
+    lamLoopK qs w M lam start (fuel + 1)
+      = markStrideK (lamLoopK qs w M lam start fuel) (fieldK qs w (start + fuel)) M := rfl
 
 /-! ### Compiled twins
 
@@ -77,30 +77,30 @@ public def strideMask (q M : Nat) : Nat := Id.run do
 
 public def markStride (lam q M : Nat) : Nat := (lam ^^^ strideMask q M) &&& ((1 <<< (M + 1)) - 1)
 
-public def lamLoop (pp M lam start fuel : Nat) : Nat := Id.run do
+public def field (qs w i : Nat) : Nat := (qs >>> (w * i)) &&& ((1 <<< w) - 1)
+
+public def lamLoop (qs w M lam start fuel : Nat) : Nat := Id.run do
   let mut l := lam
   for i in [0:fuel] do
-    let j := start + i
-    if pp &&& (1 <<< j) ≠ 0 then
-      l := markStride l j M
+    l := markStride l (field qs w (start + i)) M
   return l
 
 /-- Fuel additivity: running `a + b` steps is running `a` steps, then `b` steps from where the
 first run stopped. This is the glue that joins consecutive batches. -/
-public theorem lamLoopK_add (pp M lam start a b : Nat) :
-    lamLoopK pp M lam start (a + b)
-      = lamLoopK pp M (lamLoopK pp M lam start a) (start + a) b := by
+public theorem lamLoopK_add (qs w M lam start a b : Nat) :
+    lamLoopK qs w M lam start (a + b)
+      = lamLoopK qs w M (lamLoopK qs w M lam start a) (start + a) b := by
   induction b with
   | zero => rfl
   | succ b ih => grind [lamLoopK_succ]
 
-/-- One chain step: given `L = lamLoopK pp M lam start (len + rest)` and a kernel-checked batch
-equation saying `len` steps from `lam` reach `lam'`, restate `L` as a loop from `lam'` at stride
+/-- One chain step: given `L = lamLoopK qs w M lam start (len + rest)` and a kernel-checked batch
+equation saying `len` steps from `lam` reach `lam'`, restate `L` as a loop from `lam'` at field
 `start + len` with `rest` steps left. -/
-public theorem lamLoopK_chain (L pp M lam lam' start len rest : Nat)
-    (hP : L = lamLoopK pp M lam start (len.add rest))
-    (h : (lamLoopK pp M lam start len).beq lam') :
-    L = lamLoopK pp M lam' (start.add len) rest := by
+public theorem lamLoopK_chain (L qs w M lam lam' start len rest : Nat)
+    (hP : L = lamLoopK qs w M lam start (len.add rest))
+    (h : (lamLoopK qs w M lam start len).beq lam') :
+    L = lamLoopK qs w M lam' (start.add len) rest := by
   grind [lamLoopK_add, Nat.beq_eq]
 
 end PrimeCert.Polya
