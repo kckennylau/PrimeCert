@@ -9,6 +9,7 @@ import PrimeCert.Meta.PrimeCert
 import PrimeCert.Meta.SmallPrime
 import PrimeCert.Pocklington
 import PrimeCert.Pocklington3
+import PrimeCert.Polya
 import PrimeCert.PowMod
 import PrimeCert.PredMod
 import PrimeCert.SmallPrimes
