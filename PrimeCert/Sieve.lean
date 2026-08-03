@@ -28,19 +28,20 @@ namespace PrimeCert.Sieve
 @[expose] public def bitVal (b i : Nat) : Nat := (b.shiftRight i).land 1
 
 /-- The natural number whose binary digits below position `M` are set exactly at positions
-`A, A + 2*p, A + 4*p, …` and `B, B + 2*p, B + 4*p, …`. -/
-@[expose] public noncomputable def buildMaskK (p M A B : Nat) : Nat :=
+`A, A + 2*p, A + 4*p, …` and `B, B + 2*p, B + 4*p, …`, over `n` doubling rounds, so that `2^n`
+positions of each are covered. -/
+@[expose] public noncomputable def buildMaskK (p M A B n : Nat) : Nat :=
   Nat.rec
     ((Nat.shiftLeft 1 A).lor (Nat.shiftLeft 1 B))
     (fun i Mk =>
       ((p.shiftLeft i.succ).ble M).rec Mk
         (Mk.lor (Mk.shiftLeft (p.shiftLeft i.succ))))
-    32
+    n
 
 /-- One sieving step: clear from `bits` the bits at indices of coprime-to-6 multiples of `p`
 (the multiples `5*p, 7*p, 11*p, …`). -/
 @[expose] public noncomputable def markMaskK (bits p M : Nat) : Nat :=
-  bits.sub (bits.land (buildMaskK p M (((p.mul 5).sub 1).div 3) (((p.mul 7).sub 1).div 3)))
+  bits.sub (bits.land (buildMaskK p M (((p.mul 5).sub 1).div 3) (((p.mul 7).sub 1).div 3) 32))
 
 /-- The number sitting at coprime-to-6 index `k`: `0↦1, 1↦5, 2↦7, 3↦11, 4↦13, …`. -/
 @[expose] public def num (k : Nat) : Nat := (k * 3 + 1) + k % 2
@@ -79,16 +80,16 @@ Executable copies of the definitions above, used by `run_sieve` to compute the b
 The kernel checks each batch equation, so a twin that disagreed with its kernel definition would
 make `run_sieve` fail. -/
 
-public def buildMask (p M A B : Nat) : Nat := Id.run do
+public def buildMask (p M A B n : Nat) : Nat := Id.run do
   let mut mask := (1 <<< A) ||| (1 <<< B)
-  for i in [0:32] do
+  for i in [0:n] do
     let s := p <<< (i + 1)
     if s ≤ M then
       mask := mask ||| (mask <<< s)
   return mask
 
 public def markMask (bits p M : Nat) : Nat :=
-  bits - (bits &&& buildMask p M ((p * 5 - 1) / 3) ((p * 7 - 1) / 3))
+  bits - (bits &&& buildMask p M ((p * 5 - 1) / 3) ((p * 7 - 1) / 3) 32)
 
 public def sieveLoop (M bits start fuel : Nat) : Nat := Id.run do
   let mut b := bits

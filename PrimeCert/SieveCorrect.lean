@@ -28,81 +28,58 @@ open Nat
 
 /-- `bitVal` reads bit `i` as a `Nat` (`0` or `1`); it agrees with `Nat.testBit`. -/
 theorem bitVal_eq_testBit (b i : Nat) : bitVal b i = if b.testBit i then 1 else 0 := by
-  change (b >>> i) &&& 1 = _
-  rw [Nat.land_comm, Nat.one_and_eq_mod_two, Nat.testBit_eq_decide_div_mod_eq,
-    Nat.shiftRight_eq_div_pow]
-  rcases Nat.mod_two_eq_zero_or_one (b / 2 ^ i) with h | h <;> simp [h]
+  simp [bitVal, Nat.shiftRight_eq_div_pow]
+  grind
 
 public theorem bitVal_eq_one_iff {b i : Nat} : bitVal b i = 1 ↔ b.testBit i := by
-  rw [bitVal_eq_testBit]; cases b.testBit i <;> simp
+  grind [bitVal_eq_testBit]
+
+lemma initK_eq {M : Nat} : initK M = (2 ^ M - 1) <<< 1 := by
+  simp [initK, Nat.shiftLeft_eq]
+  grind
 
 /-- `initK M = 2^(M+1) - 2` has bits `1 … M` set and bit `0` clear. -/
 theorem testBit_initK (M t : Nat) :
-    (initK M).testBit t = decide (1 ≤ t ∧ t ≤ M) := by
-  have h : initK M = (2 ^ M - 1) <<< 1 := by
-    change (1 <<< (M + 1)) - 2 = (2 ^ M - 1) <<< 1
-    rw [Nat.shiftLeft_eq, Nat.shiftLeft_eq, Nat.one_mul, pow_one, Nat.pow_succ]
-    have : 1 ≤ 2 ^ M := Nat.one_le_two_pow
-    omega
-  rw [h, Nat.testBit_shiftLeft]
-  rcases t with _ | t
-  · simp
-  · simp only [Nat.succ_sub_one, Nat.testBit_two_pow_sub_one, ge_iff_le, Nat.le_add_left,
-      decide_true, Bool.true_and, true_and, Nat.lt_iff_add_one_le]
+    (initK M).testBit t ↔ 1 ≤ t ∧ t ≤ M := by
+  grind [initK_eq]
 
-/-! ## Layer 2: `buildMaskK` sets two progressions stepping by `2*p`
+/-! ## Layer 2: `buildMaskK` sets two progressions stepping by `2*p` -/
 
-`dbl` generalizes `buildMaskK`'s hard-coded 32 doublings to a variable `n` so the doubling can be
-inducted on; it is defeq to `buildMaskK` at `n = 32`. -/
+@[simp] lemma Nat.ldiff_zero_left {b : Nat} : Nat.ldiff 0 b = 0 :=
+  Nat.eq_of_testBit_eq (by simp)
+
+@[simp] lemma Nat.ldiff_zero_right {b : Nat} : Nat.ldiff b 0 = b :=
+  Nat.eq_of_testBit_eq (by simp)
 
 /-- Disjoint OR equals ADD, for `Nat`; hence subtracting a submask acts as bitwise `ldiff`. -/
-theorem and_add_ldiff (a b : Nat) : (a &&& b) + Nat.ldiff a b = a := by
+theorem and_add_ldiff (a b : Nat) : (a &&& b) + a.ldiff b = a := by
   induction a using Nat.binaryRec generalizing b with
-  | zero =>
-    have : Nat.ldiff 0 b = 0 := Nat.eq_of_testBit_eq (fun k => by simp [Nat.testBit_ldiff])
-    simp [this]
+  | zero => simp
   | bit ba a' ih =>
     induction b using Nat.binaryRec with
-    | zero =>
-      have : Nat.ldiff (bit ba a') 0 = bit ba a' :=
-        Nat.eq_of_testBit_eq (fun k => by simp [Nat.testBit_ldiff])
-      simp [this]
-    | bit bb b' _ =>
-      rw [Nat.land_bit, Nat.ldiff_bit, Nat.bit_val, Nat.bit_val, Nat.bit_val]
-      have h := ih b'
-      cases ba <;> cases bb <;> simp [Bool.toNat] at h ⊢ <;> omega
+    | zero => simp
+    | bit bb b' _ => grind [Nat.land_bit, Nat.ldiff_bit, Nat.bit_val, cases Bool]
 
 theorem sub_and_eq_ldiff (a b : Nat) : a - (a &&& b) = Nat.ldiff a b := by
-  have := and_add_ldiff a b; omega
+  grind [and_add_ldiff]
 
-/-- `buildMaskK` with the doubling count generalized from the literal 32 to a variable `n`. -/
-def dbl (p M A B n : Nat) : Nat :=
-  Nat.rec (motive := fun _ => Nat)
-    ((Nat.shiftLeft 1 A).lor (Nat.shiftLeft 1 B))
-    (fun i Mk =>
-      ((p.shiftLeft i.succ).ble M).rec Mk
-        (Mk.lor (Mk.shiftLeft (p.shiftLeft i.succ))))
-    n
+theorem buildMaskK_zero (p M A B : Nat) : buildMaskK p M A B 0 = (1 <<< A) ||| (1 <<< B) := rfl
 
-theorem buildMaskK_eq (p M A B : Nat) : buildMaskK p M A B = dbl p M A B 32 := rfl
-
-theorem dbl_zero (p M A B : Nat) : dbl p M A B 0 = (1 <<< A) ||| (1 <<< B) := rfl
-
-theorem dbl_succ_raw (p M A B n : Nat) :
-    dbl p M A B (n + 1)
-      = Bool.rec (dbl p M A B n)
-          (Nat.lor (dbl p M A B n)
-            (Nat.shiftLeft (dbl p M A B n) (Nat.shiftLeft p (Nat.succ n))))
+theorem buildMaskK_succ_raw (p M A B n : Nat) :
+    buildMaskK p M A B (n + 1)
+      = Bool.rec (buildMaskK p M A B n)
+          (Nat.lor (buildMaskK p M A B n)
+            (Nat.shiftLeft (buildMaskK p M A B n) (Nat.shiftLeft p (Nat.succ n))))
           (Nat.ble (Nat.shiftLeft p (Nat.succ n)) M) := rfl
 
-theorem dbl_succ (p M A B n : Nat) :
-    dbl p M A B (n + 1)
+theorem buildMaskK_succ (p M A B n : Nat) :
+    buildMaskK p M A B (n + 1)
       = if 2 * p * 2 ^ n ≤ M
-        then dbl p M A B n ||| (dbl p M A B n) <<< (2 * p * 2 ^ n)
-        else dbl p M A B n := by
+        then buildMaskK p M A B n ||| (buildMaskK p M A B n) <<< (2 * p * 2 ^ n)
+        else buildMaskK p M A B n := by
   have hs : Nat.shiftLeft p (Nat.succ n) = 2 * p * 2 ^ n :=
     (Nat.shiftLeft_eq p (n + 1)).trans (by ring)
-  rw [dbl_succ_raw, hs]
+  rw [buildMaskK_succ_raw, hs]
   cases h : Nat.ble (2 * p * 2 ^ n) M with
   | true =>
       rw [if_pos (Nat.le_of_ble_eq_true h)]
@@ -133,23 +110,23 @@ theorem prog_succ (c t s q : Nat) :
 theorem testBit_one_shiftLeft (s t : Nat) : (1 <<< s).testBit t = decide (s = t) := by
   rw [Nat.shiftLeft_eq, Nat.one_mul, Nat.testBit_two_pow]
 
-/-- `dbl` after `n` doublings sets exactly the bits at `A + 2*p*j` and `B + 2*p*j` with
+/-- After `n` doublings, `buildMaskK` sets exactly the bits at `A + 2*p*j` and `B + 2*p*j` with
 `j < 2^n`. -/
-theorem testBit_dbl (p M A B : Nat) :
+theorem testBit_buildMaskK_pow (p M A B : Nat) :
     ∀ n t, t ≤ M →
-      ((dbl p M A B n).testBit t ↔
+      ((buildMaskK p M A B n).testBit t ↔
         (∃ j < 2 ^ n, t = A + 2 * p * j) ∨ (∃ j < 2 ^ n, t = B + 2 * p * j)) := by
   intro n
   induction n with
   | zero =>
     intro t _
-    rw [dbl_zero, Nat.testBit_or, testBit_one_shiftLeft, testBit_one_shiftLeft]
+    rw [buildMaskK_zero, Nat.testBit_or, testBit_one_shiftLeft, testBit_one_shiftLeft]
     simp only [pow_zero, Nat.lt_one_iff, exists_eq_left, Nat.mul_zero, Nat.add_zero,
       Bool.or_eq_true, decide_eq_true_eq]
     omega
   | succ n ih =>
     intro t ht
-    rw [dbl_succ]
+    rw [buildMaskK_succ]
     have h2 : (2 : Nat) ^ (n + 1) = 2 * 2 ^ n := by rw [pow_succ, Nat.mul_comm]
     by_cases hg : 2 * p * 2 ^ n ≤ M
     · rw [if_pos hg, Nat.testBit_or, Nat.testBit_shiftLeft]
@@ -192,15 +169,15 @@ theorem prog_iff_dvd (c t p B : Nat) (hB : t < 2 * p * B) :
     have hlt : 2 * p * k < 2 * p * B := by omega
     exact Nat.lt_of_mul_lt_mul_left hlt
 
-/-- `buildMaskK p M A B` has bit `t` (for `t ≤ M < 2^32`) set iff `t` lies in one of the two
+/-- `buildMaskK p M A B 32` has bit `t` (for `t ≤ M < 2^32`) set iff `t` lies in one of the two
 progressions stepping by `2*p` from `A`, `B`. -/
 theorem testBit_buildMaskK (p M A B t : Nat) (hp : 0 < p) (hM : M < 2 ^ 32) (ht : t ≤ M) :
-    (buildMaskK p M A B).testBit t ↔
+    (buildMaskK p M A B 32).testBit t ↔
       (A ≤ t ∧ 2 * p ∣ (t - A)) ∨ (B ≤ t ∧ 2 * p ∣ (t - B)) := by
   have hB : t < 2 * p * 2 ^ 32 := by
     have h1 : (2 : Nat) ^ 32 ≤ 2 * p * 2 ^ 32 := Nat.le_mul_of_pos_left _ (by omega)
     omega
-  rw [buildMaskK_eq, testBit_dbl p M A B 32 t ht, prog_iff_dvd A t p (2 ^ 32) hB,
+  rw [testBit_buildMaskK_pow p M A B 32 t ht, prog_iff_dvd A t p (2 ^ 32) hB,
     prog_iff_dvd B t p (2 ^ 32) hB]
 
 /-! ## Layer 3a: `markMaskK` clears exactly the mask bits -/
@@ -209,7 +186,7 @@ theorem testBit_buildMaskK (p M A B t : Nat) (hp : 0 < p) (hM : M < 2 ^ 32) (ht 
 submask). -/
 theorem markMaskK_eq_ldiff (bits p M : Nat) :
     markMaskK bits p M
-      = Nat.ldiff bits (buildMaskK p M ((5 * p - 1) / 3) ((7 * p - 1) / 3)) := by
+      = Nat.ldiff bits (buildMaskK p M ((5 * p - 1) / 3) ((7 * p - 1) / 3) 32) := by
   unfold markMaskK
   rw [Nat.mul_comm 5 p, Nat.mul_comm 7 p]
   exact sub_and_eq_ldiff _ _
@@ -217,7 +194,7 @@ theorem markMaskK_eq_ldiff (bits p M : Nat) :
 /-- `markMaskK` clears exactly the bits set in `buildMaskK`, keeping the rest of `bits`. -/
 theorem testBit_markMaskK (bits p M t : Nat) :
     (markMaskK bits p M).testBit t
-      = (bits.testBit t && ! (buildMaskK p M ((5 * p - 1) / 3) ((7 * p - 1) / 3)).testBit t) := by
+      = (bits.testBit t && ! (buildMaskK p M ((5 * p - 1) / 3) ((7 * p - 1) / 3) 32).testBit t) := by
   rw [markMaskK_eq_ldiff, Nat.testBit_ldiff]
 
 /-! ## Layer 3b: the cleared bits are the coprime-to-6 multiples of `p`
@@ -254,7 +231,7 @@ theorem num_inj {a b : Nat} (h : num a = num b) : a = b := by
 index `t` iff `num t` is a coprime-to-6 multiple `p*k` with `k ≥ 5`. -/
 theorem mask_iff (p M t : Nat) (hp6 : p % 6 = 1 ∨ p % 6 = 5) (hp : 0 < p)
     (hM : M < 2 ^ 32) (ht : t ≤ M) :
-    (buildMaskK p M ((5 * p - 1) / 3) ((7 * p - 1) / 3)).testBit t ↔
+    (buildMaskK p M ((5 * p - 1) / 3) ((7 * p - 1) / 3) 32).testBit t ↔
       ∃ k, 5 ≤ k ∧ (k % 6 = 1 ∨ k % 6 = 5) ∧ num t = p * k := by
   rw [testBit_buildMaskK p M _ _ t hp hM ht]
   constructor
@@ -321,7 +298,7 @@ theorem markMaskK_preserves_prime (b p M t : Nat) (hp6 : p % 6 = 1 ∨ p % 6 = 5
     (hM : M < 2 ^ 32) (ht : t ≤ M) (hprime : (num t).Prime) :
     (markMaskK b p M).testBit t = b.testBit t := by
   rw [testBit_markMaskK]
-  suffices h : (buildMaskK p M ((5 * p - 1) / 3) ((7 * p - 1) / 3)).testBit t = false by
+  suffices h : (buildMaskK p M ((5 * p - 1) / 3) ((7 * p - 1) / 3) 32).testBit t = false by
     rw [h]; simp
   by_contra hc
   rw [Bool.not_eq_false, mask_iff p M t hp6 (by omega) hM ht] at hc
@@ -376,10 +353,10 @@ theorem sieveLoopK_clears (M start t j m : Nat) (hstart : 1 ≤ start)
       have hset : (sieveLoopK M (initK M) start f).testBit (start + f) = true := by
         rw [sieveLoopK_preserves M (initK M) start f (start + f) hstart hM (by omega)
           (hje ▸ hjprime), testBit_initK]
-        simp only [decide_eq_true_eq]; omega
+        omega
       rw [if_pos hset, testBit_markMaskK]
       have hmask : (buildMaskK (num (start + f)) M ((5 * num (start + f) - 1) / 3)
-          ((7 * num (start + f) - 1) / 3)).testBit t = true := by
+          ((7 * num (start + f) - 1) / 3) 32).testBit t = true := by
         rw [mask_iff (num (start + f)) M t (num_mod6 _)
           (by have := five_le_num (start + f) (by omega); omega) hM ht]
         exact ⟨m, hm5, hm6, by rw [← hje]; exact hnum⟩
