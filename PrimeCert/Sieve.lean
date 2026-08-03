@@ -28,8 +28,7 @@ namespace PrimeCert.Sieve
 @[expose] public def bitVal (b i : Nat) : Nat := (b.shiftRight i).land 1
 
 /-- The natural number whose binary digits below position `M` are set exactly at positions
-`A, A + 2*p, A + 4*p, …` and `B, B + 2*p, B + 4*p, …`; see `testBit_buildMaskK` in
-`SieveCorrect`. -/
+`A, A + 2*p, A + 4*p, …` and `B, B + 2*p, B + 4*p, …`. -/
 @[expose] public noncomputable def buildMaskK (p M A B : Nat) : Nat :=
   Nat.rec
     ((Nat.shiftLeft 1 A).lor (Nat.shiftLeft 1 B))
@@ -39,7 +38,7 @@ namespace PrimeCert.Sieve
     32
 
 /-- One sieving step: clear from `bits` the bits at indices of coprime-to-6 multiples of `p`
-(the multiples `5*p, 7*p, 11*p, …`); see `testBit_markMaskK` and `mask_iff` in `SieveCorrect`. -/
+(the multiples `5*p, 7*p, 11*p, …`). -/
 @[expose] public noncomputable def markMaskK (bits p M : Nat) : Nat :=
   bits.sub (bits.land (buildMaskK p M (((p.mul 5).sub 1).div 3) (((p.mul 7).sub 1).div 3)))
 
