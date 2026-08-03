@@ -5,6 +5,7 @@ Authors: Bhavik Mehta
 -/
 import PrimeCert.Meta.SieveLookup
 import PrimeCert.Meta.SmallPrime
+import PrimeCert.Meta.Pocklington3
 
 /-! # Tests for `sieve_lookup` and the `sieve` certificate method
 
@@ -26,6 +27,13 @@ example : Nat.Prime 1993 := by prime_cert [sieve {1009; 1993}]
 /-! Mixing the sieve with another method in one ladder. -/
 
 example : Nat.Prime 1997 := by prime_cert [small {2; 3}, sieve {1993; 1997}]
+
+/-! Feeding sieve lookups to a Pocklington step. -/
+
+example : Nat.Prime 16290860017 := by
+  prime_cert [sieve {3; 29},
+    pock3 (339392917, 2, 3, 2 ^ 2 * 3 ^ 4 * 29),
+    pock3 (16290860017, 5, 0, 2 ^ 4 * 3 * 339392917)]
 
 /-! The primes the sieve's numbers skip. -/
 
