@@ -40,6 +40,9 @@ example : Nat.Prime 16290860017 := by
 example : Nat.Prime 2 := by sieve_lookup
 example : Nat.Prime 3 := by sieve_lookup
 
+example : Nat.Prime 2 := by prime_cert [sieve {2}]
+example : Nat.Prime 5 := by prime_cert [sieve {2; 3; 5}]
+
 /-! Rejected inputs. -/
 
 /-- error: sieve lookup: 8 must be 2, 3, or coprime to 6 -/
