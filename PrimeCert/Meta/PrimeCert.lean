@@ -39,7 +39,7 @@ public structure PrimeCertExt where
   methodName : Name
   deriving Inhabited
 
-public meta initialize primeCertExt : SimpleScopedEnvExtension
+meta initialize primeCertExt : SimpleScopedEnvExtension
     (String × PrimeCertExt) (Std.HashMap String PrimeCertExt) ←
   registerSimpleScopedEnvExtension {
     addEntry dict entry := dict.insert entry.1 entry.2
@@ -55,12 +55,12 @@ This registers the method under `key`, generating syntax rules so it can be used
 syntax (name := prime_cert) "prime_cert " ident : attr
 
 /-- Read a `prime_cert` extension from a declaration of the right type. -/
-public meta def mkPrimeCertExt (n : Name) : ImportM PrimeCertExt := do
+meta def mkPrimeCertExt (n : Name) : ImportM PrimeCertExt := do
   let { env, opts, .. } ← read
   IO.ofExcept <| unsafe env.evalConstCheck PrimeCertExt opts ``PrimeCertExt n
 
 /-- Read a prime certifying method from a declaration of the right type. -/
-public meta def PrimeCertExt.mkMethod (ext : PrimeCertExt) :
+meta def PrimeCertExt.mkMethod (ext : PrimeCertExt) :
     ImportM (PrimeCertMethod ext.syntaxName) := do
   let { env, opts, .. } ← read
   IO.ofExcept <| unsafe env.evalConst (PrimeCertMethod ext.syntaxName) opts ext.methodName
@@ -69,7 +69,7 @@ public meta def PrimeCertExt.mkMethod (ext : PrimeCertExt) :
 declare_syntax_cat step_group
 
 /-- Convert a syntax category name to a ``TSyntax `stx`` dynamically. -/
-public meta def _root_.Lean.Name.toSyntaxCat (cat : Name) : TSyntax `stx :=
+meta def _root_.Lean.Name.toSyntaxCat (cat : Name) : TSyntax `stx :=
   .mk <| mkNode `Lean.Parser.Syntax.cat #[mkIdent cat, mkNullNode]
 
 /-- If we're given a syntax `pock_spec` for a step in `pock`, we do the following:
@@ -78,7 +78,7 @@ syntax "pock" pock_spec : step_spec
 syntax "pock" "{" pock_spec;+ "}" : step_spec
 ```
 -/
-public meta def mkSyntax (key : String) (spec : Name) : CommandElabM Unit := do
+meta def mkSyntax (key : String) (spec : Name) : CommandElabM Unit := do
   have spec := spec.toSyntaxCat
   elabCommand =<< `(command| syntax $(quote key):str $spec : step_group)
   elabCommand =<< `(command| syntax $(quote key):str "{" sepBy1($spec,"; ") "}" : step_group)
@@ -104,7 +104,7 @@ meta initialize registerBuiltinAttribute {
 -- #eval `(step_group| pock {3; 4})
 -- end
 
-public meta def parseStepGroup (stx : TSyntax `step_group) :
+meta def parseStepGroup (stx : TSyntax `step_group) :
     CoreM ((e : PrimeCertExt) × Array (TSyntax e.syntaxName)) := do
   match stx.raw with
   | .node _ _ #[.atom _ key, step] => do
