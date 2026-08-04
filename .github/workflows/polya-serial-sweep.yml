@@ -1,0 +1,39 @@
+name: Polya sweeps, theorems added one at a time
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [polya-serial]
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v7
+      - uses: leanprover/lean-action@v1
+        with:
+          build: false
+      - name: build the polya command
+        run: lake build PrimeCert.Meta.Polya
+      - name: sweep the batch length and the split point, two rounds
+        run: |
+          mkdir -p bench
+          echo "round,setting,value,seconds,peak_rss_kb,exit,answer"
+          run_one () {
+            printf 'import PrimeCert.Meta.Polya\nset_option maxRecDepth 4000000\nset_option Elab.async false\nopen PrimeCert.Polya\nrun_polya 906150257 %s %s\n' \
+              "$1" "$2" > bench/Sweep.lean
+            ex=0
+            /usr/bin/time -f "%e %M" -o bench/t.txt lake env lean bench/Sweep.lean > bench/out.log 2>&1 || ex=$?
+            read -r secs rss < bench/t.txt
+            ans=$(grep -ho "L(906150257) = -\?[0-9]*" bench/out.log | head -1)
+            echo "$secs,$rss,$ex,$ans"
+          }
+          for round in 1 2; do
+            for b in 64 256 1024; do
+              echo "$round,batch,$b,$(run_one 1000000 $b)"
+            done
+            for c in 300000 1000000 3000000; do
+              echo "$round,split,$c,$(run_one $c 256)"
+            done
+          done
