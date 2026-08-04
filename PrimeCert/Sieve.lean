@@ -89,4 +89,28 @@ public def sieveLoop (M bits start fuel : Nat) : Nat := Id.run do
       b := markMask b (num j) M
   return b
 
+/-- Fuel additivity: running `a + b` steps is running `a` steps, then `b` steps from where the
+first run stopped. This is the glue that joins consecutive batches. -/
+public theorem sieveLoopK_add (M bits start a b : Nat) :
+    sieveLoopK M bits start (a + b)
+      = sieveLoopK M (sieveLoopK M bits start a) (start + a) b := by
+  induction b with
+  | zero => rfl
+  | succ b ih => grind [sieveLoopK_succ]
+
+/-- Replace the loop's starting bitset by a kernel-checked equal literal. `run_sieve` uses this to
+enter the chain at `sieveLoopK M (initK M) 1 fuel = sieveLoopK M b₀ 1 fuel`. -/
+public theorem sieveLoopK_congr (M b b' start fuel : Nat) (h : b.beq b') :
+    sieveLoopK M b start fuel = sieveLoopK M b' start fuel := by
+  rw [Nat.eq_of_beq_eq_true h]
+
+/-- One chain step: given `L = sieveLoopK M b start (len + rest)` and a kernel-checked batch
+equation saying `len` steps from `b` reach `b'`, restate `L` as a loop from `b'` at index
+`start + len` with `rest` steps left. -/
+public theorem sieveLoopK_chain (L M b b' start len rest : Nat)
+    (hP : L = sieveLoopK M b start (len.add rest))
+    (h : (sieveLoopK M b start len).beq b') :
+    L = sieveLoopK M b' (start.add len) rest := by
+  grind [sieveLoopK_add, Nat.beq_eq]
+
 end PrimeCert.Sieve
