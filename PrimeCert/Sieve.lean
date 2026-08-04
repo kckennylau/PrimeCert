@@ -9,22 +9,13 @@ module
 # A kernel-checked Sieve of Eratosthenes
 
 A Sieve of Eratosthenes over the numbers coprime to 6, in a form the Lean kernel evaluates by
-reduction. The sieve state is one natural number used as a bitset, with one bit per coprime-to-6
-number. Throughout, `M` is the top index of that bitset, so it holds bits `0 … M`, and a bound of
-`n` gives `M = (n - 1) / 3`.
-
-`markMaskK` runs `buildMaskK` for 32 doubling rounds, which covers `M < 2^32`, the hypothesis
-`SieveCorrect` carries, and caps the sieve bound at `n ≈ 3 * 2^32`.
-
-The `run_sieve n` command in `Meta/Sieve` computes the bitset natively in batches, has the kernel
-check each, and glues them into an equation `sieveK n sq = <literal>`. Correctness is
-`sieveK_testBit_iff` in `SieveCorrect`, which also turns one bit of the certified table into
-`Nat.Prime`; the `sieve_lookup` tactic in `Meta/SieveLookup` applies it.
+reduction. The state is one natural number used as a bitset, `M` is its top index, and a bound of
+`n` gives `M = (n - 1) / 3`. `markMaskK` runs 32 doubling rounds, covering `M < 2^32`.
 -/
 
 namespace PrimeCert.Sieve
 
-/-- Bit `i` of `b`, as `0` or `1`. `sieve_lookup` reads one entry of the sieve with this. -/
+/-- Bit `i` of `b`, as `0` or `1`. -/
 @[expose] public def bitVal (b i : Nat) : Nat := (b.shiftRight i).land 1
 
 /-- The natural number whose binary digits below position `M` are set at the first `2^n` positions
