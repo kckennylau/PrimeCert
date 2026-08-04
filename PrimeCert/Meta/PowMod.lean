@@ -6,13 +6,12 @@ Authors: Bhavik Mehta
 module
 
 public meta import PrimeCert.PowMod
-public meta import Lean.Elab.Tactic
+public import Lean.Elab.Tactic
 
 /-! # The `prove_pow_mod` tactic
 
 Elaboration-time evaluation of `a ^ b % n`, producing a kernel proof via `powModTR` and
-`eagerReduce`. Split out from `PrimeCert.PowMod` so the computational core stays free of
-metaprogramming.
+`eagerReduce`.
 -/
 
 namespace Tactic.powMod
