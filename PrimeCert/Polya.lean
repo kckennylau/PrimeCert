@@ -149,24 +149,18 @@ public theorem hiLoopK_succ (x lam ones wc off wb tbl start fuel : Nat) :
             (wb * (start + fuel))) := rfl
 
 /-- One block of the recurrence for `L v`. The index `k` in field 0 gives the quotient `q = v / k`,
-which repeats for every index up to `v / q`; the run length times `L q` is added to the running sum,
-held as the pair of fields 1 and 2 standing for their difference. Values of `q` up to `cutoff` come
-from the parity and count tables, larger ones from field `x / q` of `big`, which holds `L` offset by
-`off`. -/
-@[expose] public noncomputable def blockAddK (v k st a b : Nat) : Nat :=
-  let k2 := v.div (v.div k)
-  let run := (k2.sub k).succ
-  (k2.succ.add (Nat.shiftLeft ((stFieldK st (nat_lit 1)).add (run.mul a)) (nat_lit 64))).add
-    (Nat.shiftLeft ((stFieldK st (nat_lit 2)).add (run.mul b)) (nat_lit 128))
-
+which repeats for every index up to `v / q`; the run length times `L q` is added into the running
+sum, held as fields 1 and 2 standing for their difference. `L q` comes from field `q` of `low` when
+`q` is at most `rootx`, and from field `x / q` of `hi` otherwise, both holding `L` offset by `off`.
+The step count is exact, so the index stays at or below `v` throughout. -/
 @[expose] public noncomputable def blockStepK
     (x v rootx low hi wb off st : Nat) : Nat :=
-  (Nat.ble (stFieldK st (nat_lit 0)) v).rec st
-    (let k := stFieldK st (nat_lit 0)
-     let q := v.div k
-     (Nat.ble q rootx).rec
-       (blockAddK v k st (fieldK hi wb (x.div q)) off)
-       (blockAddK v k st (fieldK low wb q) off))
+  let k := st.land ((Nat.shiftLeft (nat_lit 1) (nat_lit 64)).sub (nat_lit 1))
+  let q := v.div k
+  let run := ((v.div q).sub k).succ
+  let val := (Nat.ble q rootx).rec (fieldK hi wb (x.div q)) (fieldK low wb q)
+  ((st.sub k).add (v.div q).succ).add
+    (((run.mul val).shiftLeft (nat_lit 64)).add ((run.mul off).shiftLeft (nat_lit 128)))
 
 /-- Perform `fuel` blocks of the recurrence for `L v`. -/
 @[expose] public noncomputable def blockLoopK
@@ -215,18 +209,13 @@ public def onesBelow (lam ones wc p : Nat) : Nat :=
   field ones wc (p / 32)
     + popc32 (((lam >>> ((p / 32) * 32)) &&& ((1 <<< 32) - 1)) &&& ((1 <<< (p % 32)) - 1))
 
-public def blockAdd (v k st a b : Nat) : Nat :=
-  let k2 := v / (v / k)
-  let run := k2 - k + 1
-  (k2 + 1) + ((stField st 1 + run * a) <<< 64) + ((stField st 2 + run * b) <<< 128)
-
 public def blockStep (x v rootx low hi wb off st : Nat) : Nat :=
-  let k := stField st 0
-  if k ≤ v then
-    let q := v / k
-    if q ≤ rootx then blockAdd v k st (field low wb q) off
-    else blockAdd v k st (field hi wb (x / q)) off
-  else st
+  let k := st &&& ((1 <<< 64) - 1)
+  let q := v / k
+  let k2 := v / q
+  let run := k2 - k + 1
+  let val := if q ≤ rootx then field low wb q else field hi wb (x / q)
+  ((st - k) + (k2 + 1)) + ((run * val) <<< 64) + ((run * off) <<< 128)
 
 public def blockLoop (x v rootx low hi wb off st fuel : Nat) : Nat := Id.run do
   let mut s := st
