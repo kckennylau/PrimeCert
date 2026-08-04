@@ -20,19 +20,23 @@ jobs:
         run: |
           mkdir -p bench
           printf 'import PrimeCert.Meta.Polya\nset_option maxRecDepth 4000000\nopen PrimeCert.Polya\nrun_polya 10000000\n' \
-            > /tmp/Bench.lean
-          echo "round,variant,seconds,peak_rss_kb,exit,value"
+            > /tmp/queued.lean
+          printf 'import PrimeCert.Meta.Polya\nset_option maxRecDepth 4000000\nset_option Elab.async false\nopen PrimeCert.Polya\nrun_polya 10000000\n' \
+            > /tmp/serial.lean
+          echo "round,variant,declarations,seconds,peak_rss_kb,exit,value"
           for round in 1 2 3; do
-            for b in polya opt1-blockstep opt2-landfirst opt3-qsslice opt4-maskfuel opt5-ltable opt6-stage1batch; do
-              git checkout -q -f "origin/$b" 2>/dev/null || { echo "$round,$b,,,checkout-failed,"; continue; }
-              cp /tmp/Bench.lean PrimeCertTest/Bench.lean
-              lake build PrimeCert.Meta.Polya > bench/build.log 2>&1 || { echo "$round,$b,,,build-failed,"; continue; }
-              ex=0
-              /usr/bin/time -f "%e %M" -o bench/t.txt lake env lean PrimeCertTest/Bench.lean \
-                > bench/out.log 2>&1 || ex=$?
-              read -r secs rss < bench/t.txt
-              val=$(grep -ho "L(10000000) = -\?[0-9]*" bench/out.log | head -1)
-              echo "$round,$b,$secs,$rss,$ex,$val"
-              rm -f PrimeCertTest/Bench.lean
+            for b in polya opt1-blockstep opt2-landfirst opt3-qsslice opt4-maskfuel opt6-stage1batch; do
+              git checkout -q -f "origin/$b" 2>/dev/null || { echo "$round,$b,,,,checkout-failed,"; continue; }
+              lake build PrimeCert.Meta.Polya > bench/build.log 2>&1 || { echo "$round,$b,,,,build-failed,"; continue; }
+              for mode in queued serial; do
+                cp /tmp/$mode.lean PrimeCertTest/Bench.lean
+                ex=0
+                /usr/bin/time -f "%e %M" -o bench/t.txt lake env lean PrimeCertTest/Bench.lean \
+                  > bench/out.log 2>&1 || ex=$?
+                read -r secs rss < bench/t.txt
+                val=$(grep -ho "L(10000000) = -\?[0-9]*" bench/out.log | head -1)
+                echo "$round,$b,$mode,$secs,$rss,$ex,$val"
+                rm -f PrimeCertTest/Bench.lean
+              done
             done
           done
