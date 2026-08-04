@@ -111,6 +111,43 @@ index in field 0 and the two halves of the running sum in fields 1 and 2. -/
           ((Nat.shiftLeft (nat_lit 1) (nat_lit 32)).sub (nat_lit 1))).land
         ((Nat.shiftLeft (nat_lit 1) (p.mod (nat_lit 32))).sub (nat_lit 1))))
 
+/-- Perform `fuel` steps, appending to `tbl` the value `L i + off` for `i = start, start+1, …`,
+each read off the parity table and the running counts. -/
+@[expose] public noncomputable def lowLoopK (lam ones wc off wb tbl start fuel : Nat) : Nat :=
+  fuel.rec tbl fun i t =>
+    t.lor
+      (Nat.shiftLeft
+        (((start.add i).add off).sub
+          ((onesBelowK lam ones wc (start.add i).succ).mul (nat_lit 2)))
+        (wb.mul (start.add i)))
+
+/-- Perform `fuel` steps, appending to `tbl` the value `L (x / i) + off` for `i = start, start+1,
+…`, each read off the parity table and the running counts. -/
+@[expose] public noncomputable def hiLoopK (x lam ones wc off wb tbl start fuel : Nat) : Nat :=
+  fuel.rec tbl fun i t =>
+    t.lor
+      (Nat.shiftLeft
+        (((x.div (start.add i)).add off).sub
+          ((onesBelowK lam ones wc (x.div (start.add i)).succ).mul (nat_lit 2)))
+        (wb.mul (start.add i)))
+
+/-- Loop recurrence for the low table: peel the top step. -/
+public theorem lowLoopK_succ (lam ones wc off wb tbl start fuel : Nat) :
+    lowLoopK lam ones wc off wb tbl start (fuel + 1)
+      = (lowLoopK lam ones wc off wb tbl start fuel).lor
+          (Nat.shiftLeft
+            (((start + fuel) + off).sub ((onesBelowK lam ones wc (start + fuel).succ).mul 2))
+            (wb * (start + fuel))) := rfl
+
+/-- Loop recurrence for the high table: peel the top step. -/
+public theorem hiLoopK_succ (x lam ones wc off wb tbl start fuel : Nat) :
+    hiLoopK x lam ones wc off wb tbl start (fuel + 1)
+      = (hiLoopK x lam ones wc off wb tbl start fuel).lor
+          (Nat.shiftLeft
+            (((x / (start + fuel)) + off).sub
+              ((onesBelowK lam ones wc (x / (start + fuel)).succ).mul 2))
+            (wb * (start + fuel))) := rfl
+
 /-- One block of the recurrence for `L v`. The index `k` in field 0 gives the quotient `q = v / k`,
 which repeats for every index up to `v / q`; the run length times `L q` is added to the running sum,
 held as the pair of fields 1 and 2 standing for their difference. Values of `q` up to `cutoff` come
@@ -123,24 +160,24 @@ from the parity and count tables, larger ones from field `x / q` of `big`, which
     (Nat.shiftLeft ((stFieldK st (nat_lit 2)).add (run.mul b)) (nat_lit 128))
 
 @[expose] public noncomputable def blockStepK
-    (x v cutoff lam ones wc big wb off st : Nat) : Nat :=
+    (x v rootx low hi wb off st : Nat) : Nat :=
   (Nat.ble (stFieldK st (nat_lit 0)) v).rec st
     (let k := stFieldK st (nat_lit 0)
      let q := v.div k
-     (Nat.ble q cutoff).rec
-       (blockAddK v k st (fieldK big wb (x.div q)) off)
-       (blockAddK v k st q ((onesBelowK lam ones wc q.succ).mul (nat_lit 2))))
+     (Nat.ble q rootx).rec
+       (blockAddK v k st (fieldK hi wb (x.div q)) off)
+       (blockAddK v k st (fieldK low wb q) off))
 
 /-- Perform `fuel` blocks of the recurrence for `L v`. -/
 @[expose] public noncomputable def blockLoopK
-    (x v cutoff lam ones wc big wb off st fuel : Nat) : Nat :=
-  fuel.rec st fun _ s => blockStepK x v cutoff lam ones wc big wb off s
+    (x v rootx low hi wb off st fuel : Nat) : Nat :=
+  fuel.rec st fun _ s => blockStepK x v rootx low hi wb off s
 
 /-- Loop recurrence: peel the top block, in the exact form the def uses. -/
-public theorem blockLoopK_succ (x v cutoff lam ones wc big wb off st fuel : Nat) :
-    blockLoopK x v cutoff lam ones wc big wb off st (fuel + 1)
-      = blockStepK x v cutoff lam ones wc big wb off
-          (blockLoopK x v cutoff lam ones wc big wb off st fuel) := rfl
+public theorem blockLoopK_succ (x v rootx low hi wb off st fuel : Nat) :
+    blockLoopK x v rootx low hi wb off st (fuel + 1)
+      = blockStepK x v rootx low hi wb off
+          (blockLoopK x v rootx low hi wb off st fuel) := rfl
 
 /-! ### Compiled twins
 
@@ -183,19 +220,33 @@ public def blockAdd (v k st a b : Nat) : Nat :=
   let run := k2 - k + 1
   (k2 + 1) + ((stField st 1 + run * a) <<< 64) + ((stField st 2 + run * b) <<< 128)
 
-public def blockStep (x v cutoff lam ones wc big wb off st : Nat) : Nat :=
+public def blockStep (x v rootx low hi wb off st : Nat) : Nat :=
   let k := stField st 0
   if k ≤ v then
     let q := v / k
-    if q ≤ cutoff then blockAdd v k st q (2 * onesBelow lam ones wc (q + 1))
-    else blockAdd v k st (field big wb (x / q)) off
+    if q ≤ rootx then blockAdd v k st (field low wb q) off
+    else blockAdd v k st (field hi wb (x / q)) off
   else st
 
-public def blockLoop (x v cutoff lam ones wc big wb off st fuel : Nat) : Nat := Id.run do
+public def blockLoop (x v rootx low hi wb off st fuel : Nat) : Nat := Id.run do
   let mut s := st
   for _ in [0:fuel] do
-    s := blockStep x v cutoff lam ones wc big wb off s
+    s := blockStep x v rootx low hi wb off s
   return s
+
+public def lowLoop (lam ones wc off wb tbl start fuel : Nat) : Nat := Id.run do
+  let mut t := tbl
+  for i in [0:fuel] do
+    let j := start + i
+    t := t ||| ((j + off - 2 * onesBelow lam ones wc (j + 1)) <<< (wb * j))
+  return t
+
+public def hiLoop (x lam ones wc off wb tbl start fuel : Nat) : Nat := Id.run do
+  let mut t := tbl
+  for i in [0:fuel] do
+    let j := start + i
+    t := t ||| ((x / j + off - 2 * onesBelow lam ones wc (x / j + 1)) <<< (wb * j))
+  return t
 
 public def onesLoop (lam w tbl start fuel : Nat) : Nat := Id.run do
   let mut t := tbl
@@ -223,20 +274,49 @@ public theorem lamLoopK_chain (L qs w M lam lam' start len rest : Nat)
   grind [lamLoopK_add, Nat.beq_eq]
 
 /-- Fuel additivity for the blocks, the glue joining consecutive batches. -/
-public theorem blockLoopK_add (x v cutoff lam ones wc big wb off st a b : Nat) :
-    blockLoopK x v cutoff lam ones wc big wb off st (a + b)
-      = blockLoopK x v cutoff lam ones wc big wb off
-          (blockLoopK x v cutoff lam ones wc big wb off st a) b := by
+public theorem blockLoopK_add (x v rootx low hi wb off st a b : Nat) :
+    blockLoopK x v rootx low hi wb off st (a + b)
+      = blockLoopK x v rootx low hi wb off (blockLoopK x v rootx low hi wb off st a) b := by
   induction b with
   | zero => rfl
   | succ b ih => grind [blockLoopK_succ]
 
 /-- One chain step for the blocks, matching `lamLoopK_chain`. -/
-public theorem blockLoopK_chain (L x v cutoff lam ones wc big wb off st st' len rest : Nat)
-    (hP : L = blockLoopK x v cutoff lam ones wc big wb off st (len.add rest))
-    (h : (blockLoopK x v cutoff lam ones wc big wb off st len).beq st') :
-    L = blockLoopK x v cutoff lam ones wc big wb off st' rest := by
+public theorem blockLoopK_chain (L x v rootx low hi wb off st st' len rest : Nat)
+    (hP : L = blockLoopK x v rootx low hi wb off st (len.add rest))
+    (h : (blockLoopK x v rootx low hi wb off st len).beq st') :
+    L = blockLoopK x v rootx low hi wb off st' rest := by
   grind [blockLoopK_add, Nat.beq_eq]
+
+/-- Fuel additivity for the low table, the glue joining consecutive batches. -/
+public theorem lowLoopK_add (lam ones wc off wb tbl start a b : Nat) :
+    lowLoopK lam ones wc off wb tbl start (a + b)
+      = lowLoopK lam ones wc off wb (lowLoopK lam ones wc off wb tbl start a) (start + a) b := by
+  induction b with
+  | zero => rfl
+  | succ b ih => grind [lowLoopK_succ]
+
+/-- One chain step for the low table, matching `lamLoopK_chain`. -/
+public theorem lowLoopK_chain (L lam ones wc off wb tbl tbl' start len rest : Nat)
+    (hP : L = lowLoopK lam ones wc off wb tbl start (len.add rest))
+    (h : (lowLoopK lam ones wc off wb tbl start len).beq tbl') :
+    L = lowLoopK lam ones wc off wb tbl' (start.add len) rest := by
+  grind [lowLoopK_add, Nat.beq_eq]
+
+/-- Fuel additivity for the high table, the glue joining consecutive batches. -/
+public theorem hiLoopK_add (x lam ones wc off wb tbl start a b : Nat) :
+    hiLoopK x lam ones wc off wb tbl start (a + b)
+      = hiLoopK x lam ones wc off wb (hiLoopK x lam ones wc off wb tbl start a) (start + a) b := by
+  induction b with
+  | zero => rfl
+  | succ b ih => grind [hiLoopK_succ]
+
+/-- One chain step for the high table, matching `lamLoopK_chain`. -/
+public theorem hiLoopK_chain (L x lam ones wc off wb tbl tbl' start len rest : Nat)
+    (hP : L = hiLoopK x lam ones wc off wb tbl start (len.add rest))
+    (h : (hiLoopK x lam ones wc off wb tbl start len).beq tbl') :
+    L = hiLoopK x lam ones wc off wb tbl' (start.add len) rest := by
+  grind [hiLoopK_add, Nat.beq_eq]
 
 /-- Fuel additivity for the running counts, the glue joining consecutive batches. -/
 public theorem onesLoopK_add (lam w tbl start a b : Nat) :

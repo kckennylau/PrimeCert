@@ -177,10 +177,79 @@ elab "run_lam" nStx:num kStx:(num)? : command =>
 def bigWidth : Nat := 21
 def bigOffset : Nat := 1 <<< 20
 
-private def mkBlockLoopK (xE vE cE lamE onesE wcE bigE stE : Expr) (len : Nat) : Expr :=
+private def mkBlockLoopK (xE vE rE lowE hiE stE : Expr) (len : Nat) : Expr :=
   mkAppN (mkConst ``blockLoopK)
-    #[xE, vE, cE, lamE, onesE, wcE, bigE, mkRawNatLit bigWidth, mkRawNatLit bigOffset, stE,
+    #[xE, vE, rE, lowE, hiE, mkRawNatLit bigWidth, mkRawNatLit bigOffset, stE, mkRawNatLit len]
+
+private def mkLowLoopK (lamE onesE wcE tblE : Expr) (start len : Nat) : Expr :=
+  mkAppN (mkConst ``lowLoopK)
+    #[lamE, onesE, wcE, mkRawNatLit bigOffset, mkRawNatLit bigWidth, tblE, mkRawNatLit start,
       mkRawNatLit len]
+
+private def mkHiLoopK (xE lamE onesE wcE tblE : Expr) (start len : Nat) : Expr :=
+  mkAppN (mkConst ``hiLoopK)
+    #[xE, lamE, onesE, wcE, mkRawNatLit bigOffset, mkRawNatLit bigWidth, tblE,
+      mkRawNatLit start, mkRawNatLit len]
+
+/-- Builds the table of `L q + bigOffset` for `q = 0 … stop`, in batches of `len`, each
+kernel-checked, and returns it with a proof. -/
+private def emitLowChain (lam ones wc stop len : Nat) : MetaM (Nat × Expr) := do
+  let lamE := mkRawNatLit lam
+  let onesE := mkRawNatLit ones
+  let wcE := mkRawNatLit wc
+  let fuel := stop + 1
+  let lhsLoop := mkLowLoopK lamE onesE wcE (mkRawNatLit 0) 0 fuel
+  let mut tbl := 0
+  let mut tblE := mkRawNatLit 0
+  let mut proof := mkApp2 (mkConst ``Eq.refl [Level.succ Level.zero]) (mkConst ``Nat) lhsLoop
+  let mut start := 0
+  let mut remaining := fuel
+  for i in [0:(fuel + len - 1) / len] do
+    let step := Nat.min len remaining
+    let rest := remaining - step
+    let next := lowLoop lam ones wc bigOffset bigWidth tbl start step
+    let nextE := mkRawNatLit next
+    let stepName := Name.mkSimple s!"low_step_{i}"
+    addThm stepName (mkBeqTrue (mkLowLoopK lamE onesE wcE tblE start step) nextE) Lean.reflBoolTrue
+    proof := mkAppN (mkConst ``lowLoopK_chain)
+      #[lhsLoop, lamE, onesE, wcE, mkRawNatLit bigOffset, mkRawNatLit bigWidth, tblE, nextE,
+        mkRawNatLit start, mkRawNatLit step, mkRawNatLit rest, proof, mkConst stepName]
+    tbl := next
+    tblE := nextE
+    start := start + step
+    remaining := rest
+  return (tbl, ← mkExpectedTypeHint proof (mkNatEqual lhsLoop tblE))
+
+/-- Builds the table of `L (x / m) + bigOffset` for `m = from … stop`, in batches of `len`, each
+kernel-checked, and returns it with a proof. -/
+private def emitHiChain (x lam ones wc from_ stop len : Nat) : MetaM (Nat × Expr) := do
+  let xE := mkRawNatLit x
+  let lamE := mkRawNatLit lam
+  let onesE := mkRawNatLit ones
+  let wcE := mkRawNatLit wc
+  let fuel := stop + 1 - from_
+  let lhsLoop := mkHiLoopK xE lamE onesE wcE (mkRawNatLit 0) from_ fuel
+  let mut tbl := 0
+  let mut tblE := mkRawNatLit 0
+  let mut proof := mkApp2 (mkConst ``Eq.refl [Level.succ Level.zero]) (mkConst ``Nat) lhsLoop
+  let mut start := from_
+  let mut remaining := fuel
+  for i in [0:(fuel + len - 1) / len] do
+    let step := Nat.min len remaining
+    let rest := remaining - step
+    let next := hiLoop x lam ones wc bigOffset bigWidth tbl start step
+    let nextE := mkRawNatLit next
+    let stepName := Name.mkSimple s!"hi_step_{i}"
+    addThm stepName (mkBeqTrue (mkHiLoopK xE lamE onesE wcE tblE start step) nextE)
+      Lean.reflBoolTrue
+    proof := mkAppN (mkConst ``hiLoopK_chain)
+      #[lhsLoop, xE, lamE, onesE, wcE, mkRawNatLit bigOffset, mkRawNatLit bigWidth, tblE, nextE,
+        mkRawNatLit start, mkRawNatLit step, mkRawNatLit rest, proof, mkConst stepName]
+    tbl := next
+    tblE := nextE
+    start := start + step
+    remaining := rest
+  return (tbl, ← mkExpectedTypeHint proof (mkNatEqual lhsLoop tblE))
 
 /-- The number of runs of equal quotients in the recurrence for `L v`. -/
 def blockCount (v : Nat) : Nat := Id.run do
@@ -193,16 +262,14 @@ def blockCount (v : Nat) : Nat := Id.run do
 
 /-- Returns the final state and a proof of `blockLoopK … 2 fuel = st`, split into batches of at most
 `len` blocks; `v` distinguishes the names of the emitted batch lemmas. -/
-private def emitBlockChain (x v cutoff lam ones wc big fuel len : Nat) : MetaM (Nat × Expr) := do
+private def emitBlockChain (x v rootx low hi fuel len : Nat) : MetaM (Nat × Expr) := do
   let xE := mkRawNatLit x
   let vE := mkRawNatLit v
-  let cE := mkRawNatLit cutoff
-  let lamE := mkRawNatLit lam
-  let onesE := mkRawNatLit ones
-  let wcE := mkRawNatLit wc
-  let bigE := mkRawNatLit big
+  let rE := mkRawNatLit rootx
+  let lowE := mkRawNatLit low
+  let hiE := mkRawNatLit hi
   -- the loop starts at index 2 with both halves of the sum empty
-  let lhsLoop := mkBlockLoopK xE vE cE lamE onesE wcE bigE (mkRawNatLit 2) fuel
+  let lhsLoop := mkBlockLoopK xE vE rE lowE hiE (mkRawNatLit 2) fuel
   let mut st := 2
   let mut stE := mkRawNatLit 2
   let mut proof := mkApp2 (mkConst ``Eq.refl [Level.succ Level.zero]) (mkConst ``Nat) lhsLoop
@@ -210,15 +277,13 @@ private def emitBlockChain (x v cutoff lam ones wc big fuel len : Nat) : MetaM (
   for i in [0:(fuel + len - 1) / len] do
     let step := Nat.min len remaining
     let rest := remaining - step
-    let next := blockLoop x v cutoff lam ones wc big bigWidth bigOffset st step
+    let next := blockLoop x v rootx low hi bigWidth bigOffset st step
     let nextE := mkRawNatLit next
     let stepName := Name.mkSimple s!"block_step_{v}_{i}"
-    addThm stepName (mkBeqTrue (mkBlockLoopK xE vE cE lamE onesE wcE bigE stE step) nextE)
-      Lean.reflBoolTrue
+    addThm stepName (mkBeqTrue (mkBlockLoopK xE vE rE lowE hiE stE step) nextE) Lean.reflBoolTrue
     proof := mkAppN (mkConst ``blockLoopK_chain)
-      #[lhsLoop, xE, vE, cE, lamE, onesE, wcE, bigE, mkRawNatLit bigWidth,
-        mkRawNatLit bigOffset, stE, nextE, mkRawNatLit step, mkRawNatLit rest, proof,
-        mkConst stepName]
+      #[lhsLoop, xE, vE, rE, lowE, hiE, mkRawNatLit bigWidth, mkRawNatLit bigOffset, stE, nextE,
+        mkRawNatLit step, mkRawNatLit rest, proof, mkConst stepName]
     st := next
     stE := nextE
     remaining := rest
@@ -247,21 +312,34 @@ def runPolya (x cutoff : Nat) (K? : Option Nat := none) : MetaM Unit := do
     | none => defaultBatchLen
   let (lam, ones, w) ← buildTables cutoff len
   let top := x / cutoff
-  let mut big := 0
+  let rootx := Nat.sqrt x
+  -- `L q` for every `q ≤ √x`, and `L (x / m)` for the `m ≤ √x` whose quotient is below the cutoff:
+  -- together these cover every argument the recurrence reads other than the ones it computes itself
+  let (low, lowProof) ← emitLowChain lam ones w rootx len
+  addDecl <| Declaration.defnDecl
+    { name := `PrimeCert.Polya.lowLit, levelParams := [], type := mkConst ``Nat,
+      value := mkRawNatLit low, hints := .regular 0, safety := .safe }
+  addThm `PrimeCert.Polya.lowData
+    (mkNatEqual (mkLowLoopK (mkRawNatLit lam) (mkRawNatLit ones) (mkRawNatLit w)
+      (mkRawNatLit 0) 0 (rootx + 1)) (mkConst `PrimeCert.Polya.lowLit)) lowProof
+  let (hi0, hiProof) ← emitHiChain x lam ones w (top + 1) rootx len
+  addThm `PrimeCert.Polya.hiData
+    (mkNatEqual (mkHiLoopK (mkRawNatLit x) (mkRawNatLit lam) (mkRawNatLit ones) (mkRawNatLit w)
+      (mkRawNatLit 0) (top + 1) (rootx - top)) (mkRawNatLit hi0)) hiProof
+  let mut hi := hi0
   let mut last : Int := 0
   for jj in [0:top] do
     let j := top - jj
     let v := x / j
     let fuel := blockCount v
-    let (st, proof) ← emitBlockChain x v cutoff lam ones w big fuel len
+    let (st, proof) ← emitBlockChain x v rootx low hi fuel len
     let dataName := Name.mkSimple s!"block_data_{v}"
     addThm dataName
-      (mkNatEqual (mkBlockLoopK (mkRawNatLit x) (mkRawNatLit v) (mkRawNatLit cutoff)
-        (mkRawNatLit lam) (mkRawNatLit ones) (mkRawNatLit w) (mkRawNatLit big)
-        (mkRawNatLit 2) fuel) (mkRawNatLit st)) proof
+      (mkNatEqual (mkBlockLoopK (mkRawNatLit x) (mkRawNatLit v) (mkRawNatLit rootx)
+        (mkRawNatLit low) (mkRawNatLit hi) (mkRawNatLit 2) fuel) (mkRawNatLit st)) proof
     -- L v is the whole part of the square root of v, minus the two halves of the sum
     last := (Nat.sqrt v : Int) - (stField st 1 : Int) + (stField st 2 : Int)
-    big := big ||| ((last + bigOffset).toNat <<< (bigWidth * j))
+    hi := hi ||| ((last + bigOffset).toNat <<< (bigWidth * j))
   logInfo m!"L({x}) = {last}"
 
 /-- Command wrapper for `runPolya`: `run_polya x` computes the running total at `x`, `run_polya x c`
