@@ -29,8 +29,8 @@ private def mkBeqTrue (a b : Expr) : Expr :=
 private def mkNatEqual (a b : Expr) : Expr :=
   mkApp3 (mkConst ``Eq [Level.succ Level.zero]) (mkConst ``Nat) a b
 
-private def mkLamLoopK (qsE wE mE lamE : Expr) (start len : Nat) : Expr :=
-  mkAppN (mkConst ``lamLoopK) #[qsE, wE, mE, lamE, mkRawNatLit start, mkRawNatLit len]
+private def mkLamLoopK (qsE wE mE rE lamE : Expr) (start len : Nat) : Expr :=
+  mkAppN (mkConst ``lamLoopK) #[qsE, wE, mE, rE, lamE, mkRawNatLit start, mkRawNatLit len]
 
 private def addThm (name : Name) (type value : Expr) : MetaM Unit :=
   addDecl <| Declaration.thmDecl { name, levelParams := [], type, value }
@@ -63,12 +63,13 @@ def packFields (qs : Array Nat) (w : Nat) : Nat := Id.run do
 
 /-- Returns a table `lam` and a proof of `lamLoopK qs w M 0 0 fuel = lam`, split into batches of at
 most `len` steps; `n` only distinguishes the names of the emitted batch lemmas. -/
-private def emitChain (n M fuel len w qs : Nat) : MetaM (Nat × Expr) := do
+private def emitChain (n M fuel len w rounds qs : Nat) : MetaM (Nat × Expr) := do
   let qsE := mkRawNatLit qs
   let wE := mkRawNatLit w
   let mE := mkRawNatLit M
+  let rE := mkRawNatLit rounds
   -- the fixed left-hand side of the chain: the full loop on the empty table
-  let lhsLoop := mkLamLoopK qsE wE mE (mkRawNatLit 0) 0 fuel
+  let lhsLoop := mkLamLoopK qsE wE mE rE (mkRawNatLit 0) 0 fuel
   let mut lam := 0
   let mut lamE := mkRawNatLit 0
   -- invariant: proof : lhsLoop = lamLoopK qs w M lam start remaining, and the empty table needs no
@@ -79,13 +80,13 @@ private def emitChain (n M fuel len w qs : Nat) : MetaM (Nat × Expr) := do
   for i in [0:(fuel + len - 1) / len] do
     let step := Nat.min len remaining
     let rest := remaining - step
-    let next := lamLoop qs w M lam start step
+    let next := lamLoop qs w M rounds lam start step
     let nextE := mkRawNatLit next
     let stepName := Name.mkSimple s!"lam_step_{n}_{i}"
-    addThm stepName (mkBeqTrue (mkLamLoopK qsE wE mE lamE start step) nextE) Lean.reflBoolTrue
+    addThm stepName (mkBeqTrue (mkLamLoopK qsE wE mE rE lamE start step) nextE) Lean.reflBoolTrue
     proof := mkAppN (mkConst ``lamLoopK_chain)
-      #[lhsLoop, qsE, wE, mE, lamE, nextE, mkRawNatLit start, mkRawNatLit step, mkRawNatLit rest,
-        proof, mkConst stepName]
+      #[lhsLoop, qsE, wE, mE, rE, lamE, nextE, mkRawNatLit start, mkRawNatLit step,
+        mkRawNatLit rest, proof, mkConst stepName]
     lam := next
     lamE := nextE
     start := start + step
@@ -139,14 +140,16 @@ def buildTables (n len : Nat) : MetaM (Nat × Nat × Nat) := do
   addDecl <| Declaration.defnDecl
     { name := qsName, levelParams := [], type := mkConst ``Nat,
       value := mkRawNatLit qs, hints := .regular 0, safety := .safe }
-  let (lit, proof) ← emitChain n n fuel len w qs
+  -- doubling rounds needed for a stride mask to cover the table: `2 ^ rounds > n`
+  let rounds := Nat.log2 n + 1
+  let (lit, proof) ← emitChain n n fuel len w rounds qs
   addDecl <| Declaration.defnDecl
     { name := litName, levelParams := [], type := mkConst ``Nat,
       value := mkRawNatLit lit, hints := .regular 0, safety := .safe }
   -- `proof` ends at a zero-step loop on the final table, which is definitionally both the literal
-  -- and, on the other side, `lamK qs w n fuel`
+  -- and, on the other side, `lamK qs w n rounds fuel`
   let lhs := mkAppN (mkConst ``lamK)
-    #[mkRawNatLit qs, mkRawNatLit w, mkRawNatLit n, mkRawNatLit fuel]
+    #[mkRawNatLit qs, mkRawNatLit w, mkRawNatLit n, mkRawNatLit rounds, mkRawNatLit fuel]
   addThm dataName (mkNatEqual lhs (mkConst litName)) proof
   -- the running counts of set bits, one field per 32 positions
   let chunks := n / 32 + 1
