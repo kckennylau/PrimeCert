@@ -52,19 +52,25 @@ recurrence block. The cost is
 which lands at 3–4·10⁶ blocks. Beyond that K the first term grows linearly while the second falls
 as K^{−1/2}.
 
+Settled by measurement: `defaultCutoff x = cbrt (x * x)`, giving K = 943436 at x, and the swept
+neighbours 3·10⁵ and 3·10⁶ each cost half again as much. Steps per emitted theorem is 256, and 64
+measured slightly faster once theorems are added one at a time, which is unsettled. Every run
+generating more than a few thousand theorems wants `set_option Elab.async false`, worth several
+times the peak memory at the full target. Numbers in project memory `project_polya_measurements`.
+
 ## Building the table below K
 
 Ω(n) counts the prime powers dividing n, so the parity bit of Ω is the exclusive-or over prime
 powers q ≤ K of the mask with bits set at q, 2q, 3q, …. One exclusive-or per prime power fixes the
-sign of λ for every n ≤ K at once: 74,164 of them at K = 936,411, against 862,477 composites had
-each been given a factorization witness instead. Running totals over the bits then give L, one step
-per n, retaining values only at indices lying in Q.
+sign of λ for every n ≤ K at once, 78,734 of them at K = 10⁶. The set bits are then counted in
+blocks of 32, and from those counts `L v = v − 2·(set bits below v+1)` gives every running total the
+next stage reads.
 
 The construction is sound only if the supplied list of prime powers is exactly the prime powers
-≤ K, so it rests on the kernel sieve on branch `sieve-variants` (bit t of a certified bitset is set
-exactly when the corresponding number is prime, with a lookup lemma and caches built to a chosen
-bound). K is around 10⁶, inside the range that branch already runs. Landing it is a prerequisite
-for this step.
+≤ K. The sieve's computational core is on `master` as of #98 and its correctness proof lands soon;
+its `buildMaskK` and this file's `strideMaskK` are the same doubling construction differing in seed
+and first stride, so one definition should serve both. Deriving the list from the certified sieve is
+gap 1 in the status section.
 
 ## Evaluating above K
 
@@ -79,34 +85,29 @@ thousand checks of a few hundred blocks each, with no single large reduction.
 
 ## Files
 
+Written:
+
 ```
-PrimeCert/Polya/Kernel.lean       -- mathlib-free: signed pair core, field get/set, the block walk,
-                                     the table builder, compiled twins
-PrimeCert/Polya/ChainRunner.lean  -- mathlib-free meta: per-obligation declaration builder
+PrimeCert/Polya.lean       -- module, imports nothing: strideMaskK, markStrideK, fieldK, lamLoopK,
+                              popc32K, onesLoopK, stFieldK, onesBelowK, lowLoopK, hiLoopK,
+                              blockStepK, blockLoopK, the peel/additivity/chain lemmas, and a
+                              compiled twin of every kernel-reduced definition
+PrimeCert/Meta/Polya.lean  -- run_lam n, run_polya x c K, the native prime powers and packing,
+                              one emitter per chain, defaultCutoff
+```
+
+To write, one file per gap in the status section:
+
+```
 PrimeCert/Polya/Summatory.lean    -- def L, basic lemmas
 PrimeCert/Polya/Identity.lean     -- Σ_{k≤v} L(⌊v/k⌋) = ⌊√v⌋ and the recurrence
-PrimeCert/Polya/TableCorrect.lean -- the witness check gives λ below K, the prefix sum gives L
+PrimeCert/Polya/TableCorrect.lean -- the prime powers come from the sieve; lamK is the parity of Ω;
+                                     onesK counts set bits; lowLoopK and hiLoopK hold L
 PrimeCert/Polya/BlockCorrect.lean -- the run decomposition of Σ_{k=2}^{v} L(⌊v/k⌋)
 PrimeCert/Polya/Main.lean         -- assembly, polya_witness, polya_disproof
-PrimeCertTest/PolyaSmall.lean     -- end to end at x = 10⁵…10⁷ against a compiled oracle
-PrimeCertTest/PolyaDev.lean       -- #eval oracles, outside the proof import graph
+PrimeCertTest/PolyaOracle.lean    -- independent compiled implementations, kept untracked for now
 PrimeCertTest/PolyaFull.lean      -- the x = 906150257 run, dispatch-only CI workflow
 ```
-
-## Probes
-
-Each probe times a marginal operation by differencing two declarations that hold everything fixed
-except the number of repetitions, so operand construction cancels. Rules: state the operand sizes,
-run each declaration at least twice, report every raw `[Kernel]` line and the variance, record peak
-resident memory with `/usr/bin/time -v`, and re-run any close call on CI, because the host is
-shared.
-
-| probe | declarations | decides |
-|---|---|---|
-| A. table element | m and 2m exclusive-ors of a stride mask into a K-bit operand, then m and 2m running-total steps | the first half of c₁ |
-| B. recurrence block | a fold of m and 2m blocks, each one division, one table read, one multiply-add | the second half of c₁, hence K |
-| C. one obligation | a single v ∈ Q verified as one declaration, at v near x and near K | the per-declaration cost and the memory held per obligation |
-| D. end to end | the whole certificate at x = 10⁵, 10⁶, 10⁷, value compared against a compiled oracle, no proof attached | feasibility, and the obligation count |
 
 ## Status
 
@@ -126,21 +127,21 @@ printed value is not evidence that the conjecture fails. Four things stand betwe
 
 ## Milestones
 
-- **P** [probes]: A and B fix c₁ and K; C fixes the declaration granularity; D at 10⁵ and 10⁶.
-  Raw numbers, judged by Bhavik, before anything downstream is written.
-- **M1** [math, parallel with M2]: `Summatory.lean`, `Identity.lean`.
-- **M2** [metaprogramming]: the block walk, the table builder, twins, the per-obligation builder.
-  Ends with a correct unverified value at 10⁷ and then at x.
-- **M3** [math]: the table correctness chain (witness check, prefix sum), the run decomposition,
-  assembly, `polya_witness` at 10⁵ first and then at x.
+- **P** [probes]: done. Sweeps of the split point and of steps per theorem, and a comparison of six
+  proposed speed changes; four of the six are merged.
+- **M2** [metaprogramming]: done. The value at 10⁶, 10⁷, 10⁸ matches published tables and the run at
+  x gives 1.
+- **M1** [math, next]: `Summatory.lean`, `Identity.lean`.
+- **M3** [math]: the table correctness chain, the run decomposition, assembly, `polya_witness` at
+  10⁵ first and then at x.
 
 ## Risks
 
-1. The sieve dependency: the prime case of the table check rests on branch `sieve-variants`
-   landing. Until then the table is verified only below the built-in cache bound.
-2. Sixty thousand declarations, each cheap, against one process. Probe C measures whether the
-   per-declaration overhead or the block count governs, and the obligations split across files or
-   CI jobs if it is the former.
+1. The sieve dependency, now the largest open risk: gap 1 of the status section rests on the
+   sieve's correctness proof reaching `master`.
+2. The count of generated theorems, about 14,000 at x. Measured: with them queued, peak memory rises
+   steeply as that count grows, reaching 13 GB at a split of 2·10⁵; with each finished before the
+   next it stays near 2 GB across every setting tried.
 3. Off-by-ones in the run boundaries and in the Icc 1 v summation convention. Met by differential
    tests at small x against the oracle, and by fixing the convention once in `Summatory.lean`.
 
