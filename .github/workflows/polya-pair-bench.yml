@@ -23,7 +23,7 @@ jobs:
             > /tmp/Bench.lean
           echo "round,variant,seconds,peak_rss_kb,exit,answer"
           for round in 1 2 3 4 5; do
-            for b in polya opt2-landfirst opt4-maskfuel opt24-combined; do
+            for b in polya opt2-landfirst; do
               git checkout -q -f "origin/$b" 2>/dev/null || { echo "$round,$b,,,checkout-failed,"; continue; }
               cp /tmp/Bench.lean PrimeCertTest/Bench.lean
               lake build PrimeCert.Meta.Polya > bench/build.log 2>&1 || { echo "$round,$b,,,build-failed,"; continue; }
