@@ -111,4 +111,74 @@ theorem testBit_buildMaskK {p M A B n t : ℕ} (hp : p ≠ 0) (ht : t ≤ M) (hM
     exact Nat.le_mul_of_pos_left _ (by positivity)
   simp_rw [← prog_iff_dvd this, ← exists_or, testBit_buildMaskK_pow ht, and_or_left]
 
+/-! ## Layer 3a: `markMaskK` clears exactly the mask bits -/
+
+/-- `markMaskK bits p M` is bitwise `ldiff` of `bits` against `buildMaskK` (subtracting a
+submask). -/
+theorem markMaskK_eq_ldiff {bits p M : ℕ} :
+    markMaskK bits p M = bits.ldiff (buildMaskK p M ((p * 5 - 1) / 3) ((p * 7 - 1) / 3) 32) := by
+  rw [markMaskK]
+  simp [sub_and_eq_ldiff, Nat.div_eq_div]
+
+/-- `markMaskK` clears exactly the bits set in `buildMaskK`, keeping the rest of `bits`. -/
+theorem testBit_markMaskK {bits p M t : ℕ} :
+    (markMaskK bits p M).testBit t
+      = (bits.testBit t && !(buildMaskK p M ((p * 5 - 1) / 3) ((p * 7 - 1) / 3) 32).testBit t) := by
+  rw [markMaskK_eq_ldiff, Nat.testBit_ldiff]
+
+/-! ## Layer 3b: the cleared bits are the coprime-to-6 multiples of `p`
+
+`num` (the number at an index) grows by `6*m` when the index grows by `2*m`, and the starting
+indices `(5*p-1)/3`, `(7*p-1)/3` hold the numbers `5*p`, `7*p` (for `p` coprime to 6). Hence the two
+progressions carry exactly the coprime-to-6 multiples `p*k` with `k ≥ 5`. -/
+
+/-- Adding an even amount `2*m` to the index adds `6*m` to the number. -/
+theorem num_add_two_mul {k m : ℕ} : num (k + 2 * m) = num k + 6 * m := by grind [num]
+
+theorem num_startA {p : ℕ} (hp : p % 6 = 1 ∨ p % 6 = 5) : num ((p * 5 - 1) / 3) = 5 * p := by
+  grind [num]
+
+theorem num_startB {p : ℕ} (hp : p % 6 = 1 ∨ p % 6 = 5) : num ((p * 7 - 1) / 3) = 7 * p := by
+  grind [num]
+
+/-- The `A` progression carries `num` to `p*(5 + 6*j)` (numbers `≡ 5 mod 6`). -/
+theorem numA {p t j : ℕ} (hp : p % 6 = 1 ∨ p % 6 = 5)
+    (h : t = (p * 5 - 1) / 3 + 2 * p * j) : num t = p * (5 + 6 * j) := by
+  grind [mul_assoc, num_add_two_mul, num_startA hp]
+
+/-- The `B` progression carries `num` to `p*(7 + 6*j)` (numbers `≡ 1 mod 6`). -/
+theorem numB {p t j : ℕ} (hp : p % 6 = 1 ∨ p % 6 = 5)
+    (h : t = (p * 7 - 1) / 3 + 2 * p * j) : num t = p * (7 + 6 * j) := by
+  grind [mul_assoc, num_add_two_mul, num_startB hp]
+
+theorem num_strictMono : StrictMono num := by grind [num, StrictMono]
+
+@[grind inj] theorem num_inj : Function.Injective num := num_strictMono.injective
+
+/-- `buildMaskK` started at indices `(5*p-1)/3`, `(7*p-1)/3`, the form `markMaskK` uses, marks
+index `t` iff `num t` is a coprime-to-6 multiple `p*k` with `k ≥ 5`. -/
+theorem mask_iff (p M t : ℕ) (hp6 : p % 6 = 1 ∨ p % 6 = 5) (hp : p ≠ 0)
+    (hM : M < 2 ^ 32) (ht : t ≤ M) :
+    (buildMaskK p M ((p * 5 - 1) / 3) ((p * 7 - 1) / 3) 32).testBit t ↔
+      ∃ k, 5 ≤ k ∧ (k % 6 = 1 ∨ k % 6 = 5) ∧ num t = p * k := by
+  rw [testBit_buildMaskK hp ht hM]
+  constructor
+  · rintro (⟨hle, c, hc⟩ | ⟨hle, c, hc⟩)
+    · refine ⟨5 + 6 * c, by omega, Or.inr (by omega), ?_⟩
+      grind [num]
+    · refine ⟨7 + 6 * c, by omega, Or.inl (by omega), ?_⟩
+      grind [num]
+  · rintro ⟨k, hk5, hk6, hnum⟩
+    rcases hk6 with h1 | h5
+    · right
+      obtain ⟨j, rfl⟩ : ∃ j, k = 7 + 6 * j := ⟨(k - 7) / 6, by omega⟩
+      have ht2 : num t = num ((p * 7 - 1) / 3 + 2 * p * j) := by rw [numB hp6 rfl, hnum]
+      have hteq : t = (p * 7 - 1) / 3 + 2 * p * j := num_inj ht2
+      exact ⟨by lia, j, by lia⟩
+    · left
+      obtain ⟨j, rfl⟩ : ∃ j, k = 5 + 6 * j := ⟨(k - 5) / 6, by omega⟩
+      have ht2 : num t = num ((p * 5 - 1) / 3 + 2 * p * j) := by rw [numA hp6 rfl, hnum]
+      have hteq : t = (p * 5 - 1) / 3 + 2 * p * j := num_inj ht2
+      exact ⟨by lia, j, by lia⟩
+
 end PrimeCert.Sieve
