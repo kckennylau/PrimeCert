@@ -6,10 +6,11 @@ Authors: Kenny Lau, Bhavik Mehta
 module
 
 public import Mathlib.Algebra.BigOperators.ModEq
+public import Mathlib.RingTheory.Multiplicity
+
 import Mathlib.Data.Nat.ChineseRemainder
 import Mathlib.Data.Nat.Totient
 import Mathlib.Data.Finset.Pairwise
-public import Mathlib.RingTheory.Multiplicity
 import Mathlib.Tactic.IntervalCases
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Order
