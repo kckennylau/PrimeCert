@@ -31,12 +31,13 @@ open Nat
 @[simp, grind =] public theorem numK_eq_num : numK = num := rfl
 
 /-- `testBitK` reads bit `i` as a `ℕ` (`0` or `1`); it agrees with `Nat.testBit`. -/
-theorem testBitK_eq_testBit (b i : ℕ) : testBitK b i = if b.testBit i then 1 else 0 := by
+@[grind =]
+theorem testBitK_eq_testBit {b i : ℕ} : testBitK b i = if b.testBit i then 1 else 0 := by
   simp [testBitK, Nat.shiftRight_eq_div_pow]
   grind
 
 public theorem testBitK_eq_one_iff {b i : ℕ} : testBitK b i = 1 ↔ b.testBit i := by
-  grind [testBitK_eq_testBit]
+  grind
 
 lemma initK_eq {M : ℕ} : initK M = (2 ^ M - 1) <<< 1 := by
   simp [initK, Nat.shiftLeft_eq]
