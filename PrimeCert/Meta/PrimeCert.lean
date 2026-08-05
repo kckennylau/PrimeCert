@@ -135,7 +135,7 @@ public meta def runPrimeCertLadder (grps : Array (TSyntax `step_group)) :
     let ⟨ext, steps⟩ ← parseStepGroup group
     let method ← ext.mkMethod
     for step in steps do
-      let ⟨n, nE, pf⟩ ← method step dict
+      let ⟨n, _, pf⟩ ← method step dict
       goal := n
       dict := dict.insert n pf
   return (dict, goal)
