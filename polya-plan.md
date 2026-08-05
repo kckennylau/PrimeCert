@@ -108,6 +108,22 @@ shared.
 | C. one obligation | a single v ∈ Q verified as one declaration, at v near x and near K | the per-declaration cost and the memory held per obligation |
 | D. end to end | the whole certificate at x = 10⁵, 10⁶, 10⁷, value compared against a compiled oracle, no proof attached | feasibility, and the obligation count |
 
+## Status
+
+The computation runs and prints `L(906150257) = 1`, with every batch equation checked by the kernel.
+That establishes that the numbers are what the definitions compute, and nothing about the Liouville
+function: no theorem yet connects any definition here to `ArithmeticFunction.liouville`, so the
+printed value is not evidence that the conjecture fails. Four things stand between the two:
+
+1. The prime powers are supplied by `primePowers` in the metaprogram and enter the emitted
+   statements as a literal. A list containing a composite, or missing a prime, passes every kernel
+   check and gives a wrong table. This is the sieve dependency below.
+2. Bit `n` of `lamK` is claimed to be the parity of `Ω n`.
+3. A field of `onesK` is claimed to count set bits below a position, and the fields of `lowLoopK`
+   and `hiLoopK` to hold values of `L`.
+4. `blockLoopK` is claimed to accumulate `Σ_{k≥2} L(⌊v/k⌋)`, and the identity giving `L v` from it
+   is unstated.
+
 ## Milestones
 
 - **P** [probes]: A and B fix c₁ and K; C fixes the declaration granularity; D at 10⁵ and 10⁶.
