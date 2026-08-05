@@ -20,7 +20,7 @@ open Lean Meta Elab Command Qq
 
 namespace PrimeCert.Meta
 
-/-- We store the metavariable assigned to each certified prime. -/
+/-- The proof term for each certified prime, keyed by the prime. -/
 public abbrev PrimeDict := Std.HashMap Nat Expr
 
 public meta def PrimeDict.getM (dict : PrimeDict) (n : ℕ) : MetaM Expr := do
@@ -137,9 +137,7 @@ public meta def runPrimeCertLadder (grps : Array (TSyntax `step_group)) :
     for step in steps do
       let ⟨n, nE, pf⟩ ← method step dict
       goal := n
-      let mVar ← mkFreshExprMVar q(Nat.Prime $nE) default <| .mkSimple s!"prime_{n}"
-      dict := dict.insert n mVar
-      mVar.mvarId!.assign pf
+      dict := dict.insert n pf
   return (dict, goal)
 
 /-- The main primality certificate elaborator.
