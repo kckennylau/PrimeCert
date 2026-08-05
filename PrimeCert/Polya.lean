@@ -107,11 +107,16 @@ index in field 0 and the two halves of the running sum in fields 1 and 2. -/
 /-- Set bits of `lam` below position `p`, from the recorded count at the nearest lower multiple of
 32 plus the bits of the partial chunk. -/
 @[expose] public noncomputable def onesBelowK (lam ones wc p : Nat) : Nat :=
-  (fieldK ones wc (p.div (nat_lit 32))).add
+  (Nat.shiftRight
+      (ones.land
+        ((((nat_lit 1).shiftLeft wc).sub (nat_lit 1)).shiftLeft (wc.mul (p.div (nat_lit 32)))))
+      (wc.mul (p.div (nat_lit 32)))).add
     (popc32K
-      (((lam.shiftRight ((p.div (nat_lit 32)).mul (nat_lit 32))).land
-          ((Nat.shiftLeft (nat_lit 1) (nat_lit 32)).sub (nat_lit 1))).land
-        ((Nat.shiftLeft (nat_lit 1) (p.mod (nat_lit 32))).sub (nat_lit 1))))
+      (Nat.shiftRight
+        (lam.land
+          ((((nat_lit 1).shiftLeft (p.mod (nat_lit 32))).sub (nat_lit 1)).shiftLeft
+            ((p.div (nat_lit 32)).mul (nat_lit 32))))
+        ((p.div (nat_lit 32)).mul (nat_lit 32))))
 
 /-- Perform `fuel` steps, appending to `tbl` the value `L i + off` for `i = start, start+1, …`,
 each read off the parity table and the running counts. -/
@@ -209,8 +214,8 @@ public def popc32 (v : Nat) : Nat :=
 public def stField (st i : Nat) : Nat := (st >>> (64 * i)) &&& ((1 <<< 64) - 1)
 
 public def onesBelow (lam ones wc p : Nat) : Nat :=
-  field ones wc (p / 32)
-    + popc32 (((lam >>> ((p / 32) * 32)) &&& ((1 <<< 32) - 1)) &&& ((1 <<< (p % 32)) - 1))
+  ((ones &&& (((1 <<< wc) - 1) <<< (wc * (p / 32)))) >>> (wc * (p / 32)))
+    + popc32 ((lam &&& (((1 <<< (p % 32)) - 1) <<< ((p / 32) * 32))) >>> ((p / 32) * 32))
 
 public def blockStep (x v rootx low hi wb off st : Nat) : Nat :=
   let k := st &&& ((1 <<< 64) - 1)
