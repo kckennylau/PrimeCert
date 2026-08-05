@@ -6,13 +6,15 @@ Authors: Bhavik Mehta
 module
 
 public import PrimeCert.Sieve
-import Mathlib.Data.Nat.Bitwise
 public import Mathlib.Data.Nat.Prime.Basic
+
+import Mathlib.Data.Nat.Bitwise
 import Mathlib.Tactic.Ring
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.IntervalCases
 import Mathlib.Algebra.Order.Monoid.Canonical.Basic
 import PrimeCert.ForLean
+import PrimeCert.ForMathlib
 
 /-!
 # Correctness of the mod-6 wheel sieve
@@ -55,23 +57,6 @@ theorem testBit_initK {M t : ℕ} :
 
 /-! ## Layer 2: `buildMaskK` sets two progressions stepping by `2*p` -/
 
-@[simp] lemma Nat.ldiff_zero_left {b : ℕ} : Nat.ldiff 0 b = 0 :=
-  Nat.eq_of_testBit_eq (by simp)
-
-@[simp] lemma Nat.ldiff_zero_right {b : ℕ} : Nat.ldiff b 0 = b :=
-  Nat.eq_of_testBit_eq (by simp)
-
-/-- Disjoint OR equals ADD, for `Nat`; hence subtracting a submask acts as bitwise `ldiff`. -/
-theorem and_add_ldiff {a b : ℕ} : (a &&& b) + a.ldiff b = a := by
-  induction a using Nat.binaryRec generalizing b with
-  | zero => simp
-  | bit ba a' ih =>
-    induction b using Nat.binaryRec with
-    | zero => simp
-    | bit bb b' _ => grind [Nat.land_bit, Nat.ldiff_bit, Nat.bit_val, cases Bool]
-
-theorem sub_and_eq_ldiff {a b : ℕ} : a - (a &&& b) = a.ldiff b := by grind [and_add_ldiff]
-
 @[simp, grind =] theorem buildMaskK_zero {p M A B : ℕ} :
     buildMaskK p M A B 0 = (1 <<< A) ||| (1 <<< B) := rfl
 
@@ -87,7 +72,7 @@ theorem buildMaskK_succ {p M A B n : ℕ} :
       = if p * 2 ^ (n + 1) ≤ M
         then buildMaskK p M A B n ||| (buildMaskK p M A B n) <<< (p * 2 ^ (n + 1))
         else buildMaskK p M A B n := by
-  have hs : p <<< (n + 1)  = p * 2 ^ (n + 1) := by grind [Nat.shiftLeft_eq]
+  have hs : p <<< (n + 1) = p * 2 ^ (n + 1) := by grind [Nat.shiftLeft_eq]
   simp [buildMaskK_succ_raw, hs, Bool.rec_eq]
 
 /-- After `n` doublings, `buildMaskK` sets exactly the bits at `A + 2*p*j` and `B + 2*p*j` with
