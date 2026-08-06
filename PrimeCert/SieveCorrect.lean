@@ -327,4 +327,24 @@ public theorem sieveK_testBit_iff (n sqrtN t : ℕ) (ht1 : 1 ≤ t) (htM : t ≤
   rw [hcleared] at hset
   exact Bool.noConfusion hset
 
+/-! ### Reading a prime off a cached sieve -/
+
+/-- From the numeric side-conditions (each as `Nat.ble … = true`), "bit `t` of the sieve literal
+`lit` is set", and `numK t = p`, conclude `p` is prime. The kernel reads the bit from `lit`, and
+`hEq : sieveK n sqrtN = lit`, the equation `run_sieve` proves, carries it back to the sieve. -/
+public theorem prime_of_sieve_eq (n sqrtN t lit p : ℕ) (hEq : sieveK n sqrtN = lit)
+    (h1 : Nat.ble 1 t)
+    (h2 : t.ble ((n.sub 1).div 3))
+    (h3 : (((n.sub 1).div 3).add 1).ble (Nat.pow 2 32))
+    (h4 : (numK t).ble n)
+    (h5 : n.ble (sqrtN.mul sqrtN))
+    (hbit : (testBitK lit t).beq 1)
+    (hp : (numK t).beq p) :
+    Nat.Prime p := by
+  rw [← Nat.eq_of_beq_eq_true hp, numK_eq_num]
+  refine (sieveK_testBit_iff n sqrtN t (Nat.le_of_ble_eq_true h1) (Nat.le_of_ble_eq_true h2)
+    (Nat.le_of_ble_eq_true h3) (Nat.le_of_ble_eq_true h4) (Nat.le_of_ble_eq_true h5)).mp ?_
+  rw [← testBitK_eq_one_iff, hEq]
+  exact Nat.eq_of_beq_eq_true hbit
+
 end PrimeCert.Sieve
