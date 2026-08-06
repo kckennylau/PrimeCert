@@ -68,6 +68,10 @@ theorem num_startA {p : ℕ} (hp : p % 6 = 1 ∨ p % 6 = 5) : num ((p * 5 - 1) /
 theorem num_startB {p : ℕ} (hp : p % 6 = 1 ∨ p % 6 = 5) : num ((p * 7 - 1) / 3) = 7 * p := by
   grind [num]
 
+theorem num_mod6 {k : ℕ} : num k % 6 = 1 ∨ num k % 6 = 5 := by grind [num]
+
+theorem five_le_num {k : ℕ} (hk : k ≠ 0) : 5 ≤ num k := by grind [num]
+
 theorem num_strictMono : StrictMono num := by grind [num, StrictMono]
 
 @[grind inj] theorem num_inj : Function.Injective num := num_strictMono.injective
@@ -179,10 +183,6 @@ theorem testBit_markMaskK {bits p M t : ℕ} :
 composite `num t` has a smallest prime factor `q ≤ √(num t) ≤ sqrtN`; the loop reaches `q` while its
 own bit still stands, so its `markMaskK` fires and clears `t`. -/
 
-theorem num_mod6 {k : ℕ} : num k % 6 = 1 ∨ num k % 6 = 5 := by grind [num]
-
-theorem five_le_num {k : ℕ} (hk : 1 ≤ k) : 5 ≤ num k := by grind [num]
-
 /-- The loop's "is bit `j` set" test (`1 ≤ b &&& 2^j`) is `b.testBit j`. -/
 theorem ble_one_and_eq {b j : ℕ} :
     Nat.ble 1 (b &&& (1 <<< j)) = b.testBit j := by
@@ -290,7 +290,7 @@ public theorem sieveK_testBit_iff (n sqrtN t : ℕ) (ht1 : 1 ≤ t) (htM : t ≤
     (sieveK n sqrtN).testBit t ↔ (num t).Prime := by
   refine ⟨fun hset => ?_, sieve_prime_set ht1 htM hM⟩
   by_contra hnp
-  have h5 : 5 ≤ num t := five_le_num ht1
+  have h5 : 5 ≤ num t := five_le_num (by lia)
   have hnt2 : num t % 2 = 1 := by have := num_mod6 (k := t); omega
   have hnt3 : num t % 3 ≠ 0 := by have := num_mod6 (k := t); omega
   obtain ⟨q, hqprime, hqdvd, hqsq⟩ : ∃ q, q.Prime ∧ q ∣ num t ∧ q ^ 2 ≤ num t :=
