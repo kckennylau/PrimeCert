@@ -1,0 +1,57 @@
+name: Polya certification bench
+
+on:
+  push:
+    branches:
+      - 'ci/polya-cert-bench'
+
+jobs:
+  bench:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install elan
+        run: |
+          curl -sSfL https://github.com/leanprover/elan/releases/download/v4.1.2/elan-x86_64-unknown-linux-gnu.tar.gz | tar xz
+          ./elan-init -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+
+      - name: Fetch the mathlib build cache
+        run: lake exe cache get
+
+      - name: Build the library
+        run: lake build PrimeCert.Meta.PolyaCert
+
+      - name: Time each variant, three rounds in one order
+        run: |
+          set -u
+          export LEAN_PATH=$(lake env printenv LEAN_PATH)
+          VARIANTS="Base Gap Count LamSieve Self Spread"
+          for round in 1 2 3; do
+            for v in $VARIANTS; do
+              /usr/bin/time -v lean "PrimeCertTest/CertBench$v.lean" \
+                > "out-$v-$round.txt" 2> "time-$v-$round.txt" || echo "FAILED $v round $round"
+              wall=$(grep 'Elapsed (wall clock)' "time-$v-$round.txt" | awk '{print $8}')
+              peak=$(grep 'Maximum resident set size' "time-$v-$round.txt" | awk '{print $6}')
+              echo "round $round | $v | wall $wall | peak ${peak} KB"
+              cat "out-$v-$round.txt"
+            done
+          done
+
+      - name: Collected results
+        if: always()
+        run: |
+          set -u
+          echo "variant round wall peakKB"
+          for round in 1 2 3; do
+            for v in Base Gap Count LamSieve Self Spread; do
+              f="time-$v-$round.txt"
+              if [ -f "$f" ]; then
+                wall=$(grep 'Elapsed (wall clock)' "$f" | awk '{print $8}')
+                peak=$(grep 'Maximum resident set size' "$f" | awk '{print $6}')
+                echo "$v $round $wall $peak"
+              fi
+            done
+          done
