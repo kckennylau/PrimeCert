@@ -1,0 +1,51 @@
+diff --git a/PrimeCert/Sieve.lean b/PrimeCert/Sieve.lean
+index a7d89e1..c001cf6 100644
+--- a/PrimeCert/Sieve.lean
++++ b/PrimeCert/Sieve.lean
+@@ -44,7 +44,7 @@ each index whose bit is still set, clear the bits of that number's coprime-to-6
+ `sieveK` runs this on `initK M`. -/
+ @[expose] public noncomputable def sieveLoopK (M bits start fuel : Nat) : Nat :=
+   fuel.rec bits fun i b =>
+-      (Nat.ble 1 (b.land (Nat.shiftLeft 1 (start.add i)))).rec b
++      ((testBitK b (start.add i)).beq 1).rec b
+         (markMaskK b (numK (start.add i)) M)
+ 
+ /-- Coprime-to-6 candidates `0..M`, all set except bit 0 (number 1, not prime). `= 2^(M+1) - 2`. -/
+@@ -60,7 +60,7 @@ public theorem sieveLoopK_succ (M bits start fuel : Nat) :
+     sieveLoopK M bits start (fuel + 1)
+       = Bool.rec (sieveLoopK M bits start fuel)
+           (markMaskK (sieveLoopK M bits start fuel) (numK (start + fuel)) M)
+-          (Nat.ble 1 (sieveLoopK M bits start fuel &&& (1 <<< (start + fuel)))) := rfl
++          ((testBitK (sieveLoopK M bits start fuel) (start + fuel)).beq 1) := rfl
+ 
+ /-! ### Compiled twins
+ 
+diff --git a/PrimeCert/SieveCorrect.lean b/PrimeCert/SieveCorrect.lean
+index 727d154..911f7a8 100644
+--- a/PrimeCert/SieveCorrect.lean
++++ b/PrimeCert/SieveCorrect.lean
+@@ -183,21 +183,14 @@ theorem num_mod6 {k : ℕ} : num k % 6 = 1 ∨ num k % 6 = 5 := by grind [num]
+ 
+ theorem five_le_num {k : ℕ} (hk : 1 ≤ k) : 5 ≤ num k := by grind [num]
+ 
+-/-- The loop's "is bit `j` set" test (`1 ≤ b &&& 2^j`) is `b.testBit j`. -/
+-theorem ble_one_and_eq {b j : ℕ} :
+-    Nat.ble 1 (b &&& (1 <<< j)) = b.testBit j := by
+-  rw [Nat.shiftLeft_eq, Nat.one_mul, Nat.and_two_pow]
+-  cases h : b.testBit j
+-  · simp only [Bool.toNat_false, Nat.zero_mul]; rfl
+-  · simp only [Bool.toNat_true, Nat.one_mul]
+-    exact Nat.ble_eq_true_of_le Nat.one_le_two_pow
+-
+ theorem sieveLoopK_succ_if {M bits start fuel : ℕ} :
+     sieveLoopK M bits start (fuel + 1)
+       = if (sieveLoopK M bits start fuel).testBit (start + fuel)
+         then markMaskK (sieveLoopK M bits start fuel) (num (start + fuel)) M
+         else sieveLoopK M bits start fuel := by
+-  grind [sieveLoopK_succ, ble_one_and_eq, Bool.rec_eq]
++  rw [sieveLoopK_succ, numK_eq_num]
++  cases h : (sieveLoopK M bits start fuel).testBit (start + fuel) <;>
++    simp [testBitK_eq_testBit, h] <;> rfl
+ 
+ /-- `markMaskK` (sieving by a wheel candidate `p ≥ 5`) preserves every bit whose number is prime:
+ the mask marks composite `num t = p * k` with `p, k ≥ 5`. -/
