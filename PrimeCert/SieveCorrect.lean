@@ -58,7 +58,7 @@ theorem testBit_initK {M t : ℕ} :
 /-! ## Layer 2: `buildMaskK` sets two progressions stepping by `2*p` -/
 
 @[simp, grind =] theorem buildMaskK_zero {p M A B : ℕ} :
-    buildMaskK p M A B 0 = (1 <<< A) ||| (1 <<< B) := rfl
+    buildMaskK p M A B 0 = 1 <<< A ||| 1 <<< B := rfl
 
 theorem buildMaskK_succ_raw {p M A B n : ℕ} :
     buildMaskK p M A B (n + 1)
@@ -70,7 +70,7 @@ theorem buildMaskK_succ_raw {p M A B n : ℕ} :
 theorem buildMaskK_succ {p M A B n : ℕ} :
     buildMaskK p M A B (n + 1)
       = if p * 2 ^ (n + 1) ≤ M
-        then buildMaskK p M A B n ||| (buildMaskK p M A B n) <<< (p * 2 ^ (n + 1))
+        then buildMaskK p M A B n ||| buildMaskK p M A B n <<< (p * 2 ^ (n + 1))
         else buildMaskK p M A B n := by
   have hs : p <<< (n + 1) = p * 2 ^ (n + 1) := by grind [Nat.shiftLeft_eq]
   simp [buildMaskK_succ_raw, hs, Bool.rec_eq]
