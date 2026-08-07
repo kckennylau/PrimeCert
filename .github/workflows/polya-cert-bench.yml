@@ -28,7 +28,7 @@ jobs:
         run: |
           set -u
           export LEAN_PATH=$(lake env printenv LEAN_PATH)
-          VARIANTS="Base Gap Count LamSieve Self Spread"
+          VARIANTS="Empty Base Gap Count LamSieve Self Spread"
           for round in 1 2 3; do
             for v in $VARIANTS; do
               /usr/bin/time -v lean "PrimeCertTest/CertBench$v.lean" \
@@ -46,7 +46,7 @@ jobs:
           set -u
           echo "variant round wall peakKB"
           for round in 1 2 3; do
-            for v in Base Gap Count LamSieve Self Spread; do
+            for v in Empty Base Gap Count LamSieve Self Spread; do
               f="time-$v-$round.txt"
               if [ -f "$f" ]; then
                 wall=$(grep 'Elapsed (wall clock)' "$f" | awk '{print $8}')
