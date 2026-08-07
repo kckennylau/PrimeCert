@@ -5,6 +5,8 @@ Authors: Bhavik Mehta
 -/
 import Lean
 import PrimeCert.Polya
+import PrimeCert.Polya.PrimePowers
+import PrimeCert.Meta.Sieve
 
 /-! # The `run_lam` command
 
@@ -54,6 +56,51 @@ def primePowers (M : Nat) : Array Nat := Id.run do
         j := j + p
   return out.qsort (· < ·)
 
+/-- `flags[n]` is true when `n` is prime, for `n ≤ M`. -/
+def primeFlags (M : Nat) : Array Bool := Id.run do
+  let mut flags : Array Bool := Array.replicate (M + 1) true
+  if M ≥ 1 then
+    flags := flags.set! 0 false
+    flags := flags.set! 1 false
+  let mut p := 2
+  while p * p ≤ M do
+    if flags[p]! then
+      let mut j := p * p
+      while j ≤ M do
+        flags := flags.set! j false
+        j := j + p
+    p := p + 1
+  return flags
+
+/-- The primes `5 ≤ q ≤ M` in increasing order, which `bitCheckLoopK` checks against the sieve. -/
+def sievedPrimes (M : Nat) : Array Nat := Id.run do
+  let flags := primeFlags M
+  let mut out : Array Nat := #[]
+  for q in [5:M + 1] do
+    if flags[q]! then out := out.push q
+  return out
+
+/-- 2, 3 and the prime powers of exponent at least two, in the order `hpLoopK` produces them: the
+powers of 2, then of 3, then those of each base from 5 upward. -/
+def collectedPowers (M : Nat) : Array Nat := Id.run do
+  let flags := primeFlags M
+  let mut out : Array Nat := #[]
+  for q in [2:4] do
+    let mut v := q
+    while v ≤ M do
+      out := out.push v
+      v := v * q
+  let mut t := 1
+  while PrimeCert.Sieve.num t ≤ Nat.sqrt M do
+    let p := PrimeCert.Sieve.num t
+    if p ≤ M && flags[p]! then
+      let mut v := p * p
+      while v ≤ M do
+        out := out.push v
+        v := v * p
+    t := t + 1
+  return out
+
 /-- Pack `qs` into one natural number as `w`-bit fields, lowest first. -/
 def packFields (qs : Array Nat) (w : Nat) : Nat := Id.run do
   let mut out := 0
@@ -94,6 +141,113 @@ private def emitChain (n M fuel len w rounds qs : Nat) : MetaM (Nat × Expr) := 
   -- the chain ends at a zero-step loop on `lam`, which is definitionally `lam` itself
   return (lam, ← mkExpectedTypeHint proof (mkNatEqual lhsLoop lamE))
 
+/-- Emit `fuel` steps of one loop in batches of `len`, each batch kernel-checked. `mk st start len`
+builds the loop's application, `run st start len` is its compiled twin, and `chain` with `chainArgs`
+glues consecutive batches. Returns the final state and the glued proof. -/
+private def emitLoopChain (tag : String) (fuel len st0 start0 : Nat)
+    (mk : Expr → Nat → Nat → Expr) (run : Nat → Nat → Nat → Nat)
+    (chain : Name) (chainArgs : Expr → Expr → Nat → Nat → Nat → Array Expr) :
+    MetaM (Nat × Expr) := do
+  let lhsLoop := mk (mkRawNatLit st0) start0 fuel
+  let mut st := st0
+  let mut stE := mkRawNatLit st0
+  let mut proof := mkApp2 (mkConst ``Eq.refl [Level.succ Level.zero]) (mkConst ``Nat) lhsLoop
+  let mut start := start0
+  let mut remaining := fuel
+  for i in [0:(fuel + len - 1) / len] do
+    let step := Nat.min len remaining
+    let rest := remaining - step
+    let next := run st start step
+    let nextE := mkRawNatLit next
+    let stepName := Name.mkSimple s!"{tag}_step_{i}"
+    addThm stepName (mkBeqTrue (mk stE start step) nextE) Lean.reflBoolTrue
+    proof := mkAppN (mkConst chain)
+      (#[lhsLoop] ++ chainArgs stE nextE start step rest ++ #[proof, mkConst stepName])
+    st := next
+    stE := nextE
+    start := start + step
+    remaining := rest
+  return (st, ← mkExpectedTypeHint proof (mkNatEqual lhsLoop stE))
+
+/-- The certified sieve covering exactly `n`, building one when the registry holds none. Returns the
+declaration holding its bitset and that bitset's value. -/
+private def sieveFor (n len : Nat) : MetaM (Name × Nat) := do
+  let entry ← match (← PrimeCert.Sieve.sieveCaches).find? (·.hi == n) with
+    | some c => pure c
+    | none => do
+        PrimeCert.Sieve.runSieve n len
+        match (← PrimeCert.Sieve.sieveCaches).find? (·.hi == n) with
+        | some c => pure c
+        | none => throwError "run_lam: no sieve covering {n}"
+  let T := (n - 1) / 3
+  return (entry.litName,
+    PrimeCert.Sieve.sieveLoop T (PrimeCert.Sieve.initK T) 1 ((Nat.sqrt n + 1 - 1) / 3))
+
+/-- Check the packed primes against the sieve and collect the remaining prime powers from it, both
+in kernel-checked batches. Returns the packed prime powers, in the order the checks certify. -/
+private def emitPowerChecks (n len : Nat) : MetaM Nat := do
+  let (litName, lit) ← sieveFor n len
+  let litE := mkConst litName
+  let w := Nat.log2 n + 1
+  let e := Nat.log2 n + 1
+  let primes := sievedPrimes n
+  let others := collectedPowers n
+  let qs := packFields (primes ++ others) w
+  let qsE := mkRawNatLit qs
+  let wE := mkRawNatLit w
+  let mE := mkRawNatLit n
+  let eE := mkRawNatLit e
+  -- every packed prime sits at a set sieve bit, at a rising position
+  let mkBit := fun stE start len =>
+    mkAppN (mkConst ``bitCheckLoopK) #[qsE, wE, litE, stE, mkRawNatLit start, mkRawNatLit len]
+  let (st, bitProof) ← emitLoopChain "bit" primes.size len 1 0 mkBit
+    (fun st start step => bitCheckLoop qs w lit st start step)
+    ``bitCheckLoopK_chain
+    (fun stE nextE start step rest =>
+      #[qsE, wE, litE, stE, nextE, mkRawNatLit start, mkRawNatLit step, mkRawNatLit rest])
+  addThm `PrimeCert.Polya.bitData
+    (mkNatEqual (mkBit (mkRawNatLit 1) 0 primes.size) (mkRawNatLit st)) bitProof
+  if st % 2 != 1 then throwError "run_lam: a packed prime failed its sieve test"
+  -- the sieve holds as many set bits as there are packed primes, so none is missing
+  let chunks := (n - 1) / 3 / 32 + 1
+  let mkPopc := fun accE start len =>
+    mkAppN (mkConst ``popcLoopK) #[litE, accE, mkRawNatLit start, mkRawNatLit len]
+  let (cnt, cntProof) ← emitLoopChain "popc" chunks len 0 0 mkPopc
+    (fun acc start step => popcLoop lit acc start step)
+    ``popcLoopK_chain
+    (fun accE nextE start step rest =>
+      #[litE, accE, nextE, mkRawNatLit start, mkRawNatLit step, mkRawNatLit rest])
+  addThm `PrimeCert.Polya.popcData
+    (mkNatEqual (mkPopc (mkRawNatLit 0) 0 chunks) (mkRawNatLit cnt)) cntProof
+  if cnt != primes.size then
+    throwError "run_lam: {cnt} primes in the sieve against {primes.size} packed"
+  -- 2, 3 and the powers of exponent at least two, collected from the sieve
+  let hpFuel := (Nat.sqrt n - 1) / 3
+  let mkPow := fun (q seed : Nat) (stE : Expr) =>
+    mkAppN (mkConst ``powLoopK) #[mE, wE, mkRawNatLit q, mkRawNatLit seed, stE, eE]
+  let seedE := mkPow 3 1 (mkPow 2 1 (mkRawNatLit 0))
+  let seed := powLoop n w 3 1 (powLoop n w 2 1 0 e) e
+  addThm `PrimeCert.Polya.hpSeed (mkBeqTrue seedE (mkRawNatLit seed)) Lean.reflBoolTrue
+  let mkHp := fun stE start len =>
+    mkAppN (mkConst ``hpLoopK) #[litE, mE, wE, eE, stE, mkRawNatLit start, mkRawNatLit len]
+  let (hpSt, hpProof) ← emitLoopChain "hp" hpFuel len seed 1 mkHp
+    (fun st start step => hpLoop lit n w e st start step)
+    ``hpLoopK_chain
+    (fun stE nextE start step rest =>
+      #[litE, mE, wE, eE, stE, nextE, mkRawNatLit start, mkRawNatLit step, mkRawNatLit rest])
+  let entry := mkAppN (mkConst ``hpLoopK_congr)
+    #[litE, mE, wE, eE, seedE, mkRawNatLit seed, mkRawNatLit 1, mkRawNatLit hpFuel,
+      mkConst `PrimeCert.Polya.hpSeed]
+  let full ← mkExpectedTypeHint
+    (mkAppN (mkConst ``Eq.trans [Level.succ Level.zero])
+      #[mkConst ``Nat, mkHp seedE 1 hpFuel, mkHp (mkRawNatLit seed) 1 hpFuel, mkRawNatLit hpSt,
+        entry, hpProof])
+    (mkNatEqual (mkHp seedE 1 hpFuel) (mkRawNatLit hpSt))
+  addThm `PrimeCert.Polya.hpData (mkNatEqual (mkHp seedE 1 hpFuel) (mkRawNatLit hpSt)) full
+  if hpSt >>> 128 != packFields others w || hpSt &&& ((1 <<< 64) - 1) != others.size then
+    throwError "run_lam: the collected powers differ from the packed ones"
+  return qs
+
 private def mkOnesLoopK (lamE wE tblE : Expr) (start len : Nat) : Expr :=
   mkAppN (mkConst ``onesLoopK) #[lamE, wE, tblE, mkRawNatLit start, mkRawNatLit len]
 
@@ -133,10 +287,9 @@ def buildTables (n len : Nat) : MetaM (Nat × Nat × Nat) := do
   let dataName := `PrimeCert.Polya.lamData
   if (← getEnv).contains litName then
     throwError "run_lam: a parity table already exists"
-  let powers := primePowers n
   let w := Nat.log2 n + 1
-  let qs := packFields powers w
-  let fuel := powers.size
+  let qs ← emitPowerChecks n len
+  let fuel := (sievedPrimes n).size + (collectedPowers n).size
   addDecl <| Declaration.defnDecl
     { name := qsName, levelParams := [], type := mkConst ``Nat,
       value := mkRawNatLit qs, hints := .regular 0, safety := .safe }
