@@ -10,3 +10,4 @@ run_cert_count 10000
 run_cert_lamsieve 10000
 run_cert_self 10000
 run_cert_spread 10000
+run_cert_lambits 10000
