@@ -168,6 +168,47 @@ def runCertLamSieve (M len : Nat) : MetaM Unit := do
   let viaFields := lamLoop (packFields primes w) w M rounds 0 0 primes.size
   logInfo m!"table from the sieve at {M}: matches the table from the packed primes {tbl == viaFields}"
 
+/-- Collect 2, 3 and the prime powers of exponent at least two, from the sieve positions below the
+square root of `M`. -/
+def runCertHP (M len : Nat) : MetaM Unit := do
+  let lit := sieveBits M
+  let w := Nat.log2 M + 1
+  let e := Nat.log2 M + 1
+  let fuel := (Nat.sqrt M - 1) / 3
+  let litE := mkRawNatLit lit
+  let mE := mkRawNatLit M
+  let wE := mkRawNatLit w
+  let eE := mkRawNatLit e
+  -- the state seeded with the powers of 2 and of 3, as a term the kernel reduces
+  let mkPow := fun (q seed : Nat) (stE : Expr) =>
+    mkAppN (mkConst ``powLoopK) #[mE, wE, mkRawNatLit q, mkRawNatLit seed, stE, eE]
+  let seedE := mkPow 3 1 (mkPow 2 1 (mkRawNatLit 0))
+  let seed := powLoop M w 3 1 (powLoop M w 2 1 0 e) e
+  let seedName := `PrimeCert.Polya.hpSeed
+  addThm seedName (mkBeqT seedE (mkRawNatLit seed)) Lean.reflBoolTrue
+  let mk := fun stE start len =>
+    mkAppN (mkConst ``hpLoopK) #[litE, mE, wE, eE, stE, mkRawNatLit start, mkRawNatLit len]
+  let (st, proof) ← emitLoopChain "hp" fuel len seed 1 mk
+    (fun st start step => hpLoop lit M w e st start step)
+    ``hpLoopK_chain
+    (fun stE nextE start step rest =>
+      #[litE, mE, wE, eE, stE, nextE, mkRawNatLit start, mkRawNatLit step, mkRawNatLit rest])
+  let entry := mkAppN (mkConst ``hpLoopK_congr)
+    #[litE, mE, wE, eE, seedE, mkRawNatLit seed, mkRawNatLit 1, mkRawNatLit fuel, mkConst seedName]
+  let full ← mkExpectedTypeHint
+    (mkAppN (mkConst ``Eq.trans [Level.succ Level.zero])
+      #[mkConst ``Nat, mk seedE 1 fuel, mk (mkRawNatLit seed) 1 fuel, mkRawNatLit st, entry, proof])
+    (mkNatEq (mk seedE 1 fuel) (mkRawNatLit st))
+  addThm `PrimeCert.Polya.hpData (mkNatEq (mk seedE 1 fuel) (mkRawNatLit st)) full
+  let cnt := st &&& ((1 <<< 64) - 1)
+  let out := st >>> 128
+  let got := (Array.range cnt).map (fun i => field out w i)
+  let (_, others) := primeBlocks M
+  logInfo m!"higher powers at {M}: {cnt} collected, {others.size} expected, same values {got.qsort (· < ·) == others}"
+
+elab "run_cert_hp" mStx:num lenStx:(num)? : command =>
+  liftTermElabM <| runCertHP mStx.getNat ((lenStx.map (·.getNat)).getD certBatchLen)
+
 /-- Build the parity table by walking every integer and testing its bit in a number holding one bit
 per integer, set at the prime powers. -/
 def runCertLamBits (M len : Nat) : MetaM Unit := do
