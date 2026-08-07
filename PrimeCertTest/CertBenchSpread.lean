@@ -5,4 +5,4 @@ import PrimeCert.Meta.PolyaCert
 set_option maxRecDepth 4000000
 set_option Elab.async false
 
-run_cert_spread 100000
+run_cert_spread 936411
