@@ -27,5 +27,9 @@ jobs:
             git apply bittest.patch
             lake build PrimeCert.Meta.SieveLookup
             /usr/bin/time -f "B$i (testBitK b j == 1)  wall %e s peak %M KB" lake env lean "$FILE"
+            git checkout -- PrimeCert/Sieve.lean PrimeCert/SieveCorrect.lean
+            git apply ctest.patch
+            lake build PrimeCert.Meta.SieveLookup
+            /usr/bin/time -f "C$i (testBitK as the ble) wall %e s peak %M KB" lake env lean "$FILE"
           done
           git checkout -- PrimeCert/Sieve.lean PrimeCert/SieveCorrect.lean

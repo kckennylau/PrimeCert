@@ -1,0 +1,100 @@
+[1mdiff --git a/PrimeCert/Sieve.lean b/PrimeCert/Sieve.lean[m
+[1mindex a7d89e1..294b56e 100644[m
+[1m--- a/PrimeCert/Sieve.lean[m
+[1m+++ b/PrimeCert/Sieve.lean[m
+[36m@@ -15,8 +15,8 @@[m [mreduction. The state is one natural number used as a bitset, `M` is its top inde[m
+ [m
+ namespace PrimeCert.Sieve[m
+ [m
+[31m-/-- Bit `i` of `b`, as `0` or `1`. -/[m
+[31m-@[expose] public def testBitK (b i : Nat) : Nat := (b.shiftRight i).land 1[m
+[32m+[m[32m/-- Whether bit `i` of `b` is set. -/[m
+[32m+[m[32m@[expose] public def testBitK (b i : Nat) : Bool := Nat.ble 1 (b.land (Nat.shiftLeft 1 i))[m
+ [m
+ /-- The natural number whose binary digits below position `M` are set at the first `2^n` positions[m
+ of each of `A, A + 2*p, A + 4*p, …` and `B, B + 2*p, B + 4*p, …`; `n` counts doubling rounds. -/[m
+[36m@@ -44,7 +44,7 @@[m [meach index whose bit is still set, clear the bits of that number's coprime-to-6[m
+ `sieveK` runs this on `initK M`. -/[m
+ @[expose] public noncomputable def sieveLoopK (M bits start fuel : Nat) : Nat :=[m
+   fuel.rec bits fun i b =>[m
+[31m-      (Nat.ble 1 (b.land (Nat.shiftLeft 1 (start.add i)))).rec b[m
+[32m+[m[32m      (testBitK b (start.add i)).rec b[m
+         (markMaskK b (numK (start.add i)) M)[m
+ [m
+ /-- Coprime-to-6 candidates `0..M`, all set except bit 0 (number 1, not prime). `= 2^(M+1) - 2`. -/[m
+[36m@@ -60,7 +60,7 @@[m [mpublic theorem sieveLoopK_succ (M bits start fuel : Nat) :[m
+     sieveLoopK M bits start (fuel + 1)[m
+       = Bool.rec (sieveLoopK M bits start fuel)[m
+           (markMaskK (sieveLoopK M bits start fuel) (numK (start + fuel)) M)[m
+[31m-          (Nat.ble 1 (sieveLoopK M bits start fuel &&& (1 <<< (start + fuel)))) := rfl[m
+[32m+[m[32m          (testBitK (sieveLoopK M bits start fuel) (start + fuel)) := rfl[m
+ [m
+ /-! ### Compiled twins[m
+ [m
+[1mdiff --git a/PrimeCert/SieveCorrect.lean b/PrimeCert/SieveCorrect.lean[m
+[1mindex 727d154..1267c28 100644[m
+[1m--- a/PrimeCert/SieveCorrect.lean[m
+[1m+++ b/PrimeCert/SieveCorrect.lean[m
+[36m@@ -39,14 +39,15 @@[m [mopen Nat[m
+ [m
+ @[simp, grind =] public theorem numK_eq_num : numK = num := rfl[m
+ [m
+[31m-/-- `testBitK` reads bit `i` as a `ℕ` (`0` or `1`); it agrees with `Nat.testBit`. -/[m
+[32m+[m[32m/-- `testBitK` agrees with `Nat.testBit`. -/[m
+ @[grind =][m
+[31m-theorem testBitK_eq_testBit {b i : ℕ} : testBitK b i = if b.testBit i then 1 else 0 := by[m
+[31m-  simp [testBitK, Nat.shiftRight_eq_div_pow][m
+[31m-  grind[m
+[31m-[m
+[31m-public theorem testBitK_eq_one_iff {b i : ℕ} : testBitK b i = 1 ↔ b.testBit i := by[m
+[31m-  grind[m
+[32m+[m[32mpublic theorem testBitK_eq_testBit {b i : ℕ} : testBitK b i = b.testBit i := by[m
+[32m+[m[32m  have h : testBitK b i = Nat.ble 1 (b &&& (1 <<< i)) := rfl[m
+[32m+[m[32m  rw [h, Nat.shiftLeft_eq, Nat.one_mul, Nat.and_two_pow][m
+[32m+[m[32m  cases h : b.testBit i[m
+[32m+[m[32m  · simp only [Bool.toNat_false, Nat.zero_mul]; rfl[m
+[32m+[m[32m  · simp only [Bool.toNat_true, Nat.one_mul][m
+[32m+[m[32m    exact Nat.ble_eq_true_of_le Nat.one_le_two_pow[m
+ [m
+ lemma initK_eq {M : ℕ} : initK M = (2 ^ M - 1) <<< 1 := by[m
+   simp [initK, Nat.shiftLeft_eq][m
+[36m@@ -183,21 +184,12 @@[m [mtheorem num_mod6 {k : ℕ} : num k % 6 = 1 ∨ num k % 6 = 5 := by grind [num][m
+ [m
+ theorem five_le_num {k : ℕ} (hk : 1 ≤ k) : 5 ≤ num k := by grind [num][m
+ [m
+[31m-/-- The loop's "is bit `j` set" test (`1 ≤ b &&& 2^j`) is `b.testBit j`. -/[m
+[31m-theorem ble_one_and_eq {b j : ℕ} :[m
+[31m-    Nat.ble 1 (b &&& (1 <<< j)) = b.testBit j := by[m
+[31m-  rw [Nat.shiftLeft_eq, Nat.one_mul, Nat.and_two_pow][m
+[31m-  cases h : b.testBit j[m
+[31m-  · simp only [Bool.toNat_false, Nat.zero_mul]; rfl[m
+[31m-  · simp only [Bool.toNat_true, Nat.one_mul][m
+[31m-    exact Nat.ble_eq_true_of_le Nat.one_le_two_pow[m
+[31m-[m
+ theorem sieveLoopK_succ_if {M bits start fuel : ℕ} :[m
+     sieveLoopK M bits start (fuel + 1)[m
+       = if (sieveLoopK M bits start fuel).testBit (start + fuel)[m
+         then markMaskK (sieveLoopK M bits start fuel) (num (start + fuel)) M[m
+         else sieveLoopK M bits start fuel := by[m
+[31m-  grind [sieveLoopK_succ, ble_one_and_eq, Bool.rec_eq][m
+[32m+[m[32m  grind [sieveLoopK_succ, Bool.rec_eq][m
+ [m
+ /-- `markMaskK` (sieving by a wheel candidate `p ≥ 5`) preserves every bit whose number is prime:[m
+ the mask marks composite `num t = p * k` with `p, k ≥ 5`. -/[m
+[36m@@ -338,13 +330,13 @@[m [mpublic theorem prime_of_sieve_eq (n sqrtN t lit p : ℕ) (hEq : sieveK n sqrtN =[m
+     (h3 : (((n.sub 1).div 3).add 1).ble (Nat.pow 2 32))[m
+     (h4 : (numK t).ble n)[m
+     (h5 : n.ble (sqrtN.mul sqrtN))[m
+[31m-    (hbit : (testBitK lit t).beq 1)[m
+[32m+[m[32m    (hbit : testBitK lit t)[m
+     (hp : (numK t).beq p) :[m
+     Nat.Prime p := by[m
+   rw [← Nat.eq_of_beq_eq_true hp, numK_eq_num][m
+   refine (sieveK_testBit_iff n sqrtN t (Nat.le_of_ble_eq_true h1) (Nat.le_of_ble_eq_true h2)[m
+     (Nat.le_of_ble_eq_true h3) (Nat.le_of_ble_eq_true h4) (Nat.le_of_ble_eq_true h5)).mp ?_[m
+[31m-  rw [← testBitK_eq_one_iff, hEq][m
+[31m-  exact Nat.eq_of_beq_eq_true hbit[m
+[32m+[m[32m  rw [← testBitK_eq_testBit, hEq][m
+[32m+[m[32m  exact hbit[m
+ [m
+ end PrimeCert.Sieve[m
