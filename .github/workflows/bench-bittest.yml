@@ -22,10 +22,10 @@ jobs:
           FILE=PrimeCertTest/SieveVerify1e8.lean
           for i in 1 2 3; do
             git checkout -- PrimeCert/Sieve.lean PrimeCert/SieveCorrect.lean
-            lake build PrimeCert.SieveCorrect
+            lake build PrimeCert.Meta.SieveLookup
             /usr/bin/time -f "A$i (1 <<= b &&& 1<<<j) wall %e s peak %M KB" lake env lean "$FILE"
             git apply bittest.patch
-            lake build PrimeCert.SieveCorrect
+            lake build PrimeCert.Meta.SieveLookup
             /usr/bin/time -f "B$i (testBitK b j == 1)  wall %e s peak %M KB" lake env lean "$FILE"
           done
           git checkout -- PrimeCert/Sieve.lean PrimeCert/SieveCorrect.lean
