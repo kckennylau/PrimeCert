@@ -91,6 +91,13 @@ at each index whose sieve bit is set. -/
     (Nat.ble (nat_lit 1) ((lit.shiftRight (start.add i)).land (nat_lit 1))).rec l
       (markStrideK l (numK (start.add i)) M rounds)
 
+/-- Perform `fuel` steps from `start`, flipping the parity of the multiples of every position whose
+bit in `bits` is set. `bits` marks the prime powers, one bit per integer. -/
+@[expose] public noncomputable def lamBitsLoopK (bits M rounds lam start fuel : Nat) : Nat :=
+  fuel.rec lam fun i l =>
+    (Nat.ble (nat_lit 1) ((bits.shiftRight (start.add i)).land (nat_lit 1))).rec l
+      (markStrideK l (start.add i) M rounds)
+
 /-! ### Building the parity table and a composite marker together
 
 The state holds the marker above bit `B` and the parity table below it. At a number whose marker bit
@@ -158,6 +165,28 @@ public theorem lamSieveLoopK_succ (lit M rounds lam start fuel : Nat) :
           (lamSieveLoopK lit M rounds lam start fuel)
           (markStrideK (lamSieveLoopK lit M rounds lam start fuel) (numK (start + fuel)) M
             rounds) := rfl
+
+/-- Peel the top step, in the exact form the def uses. -/
+public theorem lamBitsLoopK_succ (bits M rounds lam start fuel : Nat) :
+    lamBitsLoopK bits M rounds lam start (fuel + 1)
+      = (Nat.ble 1 ((bits.shiftRight (start + fuel)).land 1)).rec
+          (lamBitsLoopK bits M rounds lam start fuel)
+          (markStrideK (lamBitsLoopK bits M rounds lam start fuel) (start + fuel) M rounds) := rfl
+
+/-- Fuel additivity for the table built from one bit per integer. -/
+public theorem lamBitsLoopK_add (bits M rounds lam start a b : Nat) :
+    lamBitsLoopK bits M rounds lam start (a + b)
+      = lamBitsLoopK bits M rounds (lamBitsLoopK bits M rounds lam start a) (start + a) b := by
+  induction b with
+  | zero => rfl
+  | succ b ih => grind [lamBitsLoopK_succ]
+
+/-- One chain step for the table built from one bit per integer. -/
+public theorem lamBitsLoopK_chain (L bits M rounds lam lam' start len rest : Nat)
+    (hP : L = lamBitsLoopK bits M rounds lam start (len.add rest))
+    (h : (lamBitsLoopK bits M rounds lam start len).beq lam') :
+    L = lamBitsLoopK bits M rounds lam' (start.add len) rest := by
+  grind [lamBitsLoopK_add, Nat.beq_eq]
 
 /-- Peel the top round, in the exact form the def uses. -/
 public theorem spreadLoopK_succ (width rounds mrounds x start fuel : Nat) :
@@ -331,6 +360,14 @@ public def spreadLoop (width rounds mrounds x start fuel : Nat) : Nat := Id.run 
     let k := rounds - 1 - (start + i)
     y := (y ||| (y <<< (2 <<< k))) &&& repMask ((1 <<< (1 <<< k)) - 1) (3 <<< k) width mrounds
   return y
+
+public def lamBitsLoop (bits M rounds lam start fuel : Nat) : Nat := Id.run do
+  let mut l := lam
+  for i in [0:fuel] do
+    let n := start + i
+    if (bits >>> n) &&& 1 ≠ 0 then
+      l := markStride l n M rounds
+  return l
 
 public def selfStep (M rounds B st q : Nat) : Nat :=
   let comp := st >>> B

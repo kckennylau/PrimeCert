@@ -168,6 +168,33 @@ def runCertLamSieve (M len : Nat) : MetaM Unit := do
   let viaFields := lamLoop (packFields primes w) w M rounds 0 0 primes.size
   logInfo m!"table from the sieve at {M}: matches the table from the packed primes {tbl == viaFields}"
 
+/-- Build the parity table by walking every integer and testing its bit in a number holding one bit
+per integer, set at the prime powers. -/
+def runCertLamBits (M len : Nat) : MetaM Unit := do
+  let mut bits := 0
+  for q in primePowers M do
+    bits := bits ||| (1 <<< q)
+  let rounds := Nat.log2 M + 1
+  let bitsE := mkRawNatLit bits
+  let mE := mkRawNatLit M
+  let rE := mkRawNatLit rounds
+  let mk := fun lamE start len =>
+    mkAppN (mkConst ``lamBitsLoopK) #[bitsE, mE, rE, lamE, mkRawNatLit start, mkRawNatLit len]
+  let (tbl, proof) ← emitLoopChain "lambits" (M - 1) len 0 2 mk
+    (fun lam start step => lamBitsLoop bits M rounds lam start step)
+    ``lamBitsLoopK_chain
+    (fun lamE nextE start step rest =>
+      #[bitsE, mE, rE, lamE, nextE, mkRawNatLit start, mkRawNatLit step, mkRawNatLit rest])
+  addThm `PrimeCert.Polya.lamBitsData (mkNatEq (mk (mkRawNatLit 0) 2 (M - 1)) (mkRawNatLit tbl))
+    proof
+  let all := primePowers M
+  let w := Nat.log2 M + 1
+  let viaFields := lamLoop (packFields all w) w M rounds 0 0 all.size
+  logInfo m!"table from one bit per integer at {M}: matches the table from the packed prime powers {tbl == viaFields}"
+
+elab "run_cert_lambits" mStx:num lenStx:(num)? : command =>
+  liftTermElabM <| runCertLamBits mStx.getNat ((lenStx.map (·.getNat)).getD certBatchLen)
+
 /-- Build the parity table together with a composite marker, reading neither. -/
 def runCertSelf (M len : Nat) : MetaM Unit := do
   let rounds := Nat.log2 M + 1
