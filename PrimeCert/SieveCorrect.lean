@@ -179,21 +179,12 @@ theorem testBit_markMaskK {bits p M t : ℕ} :
 composite `num t` has a smallest prime factor `q ≤ √(num t) ≤ sqrtN`; the loop reaches `q` while its
 own bit still stands, so its `markMaskK` fires and clears `t`. -/
 
-/-- The loop's "is bit `j` set" test (`1 ≤ b &&& 2^j`) is `b.testBit j`. -/
-theorem ble_one_and_eq {b j : ℕ} :
-    Nat.ble 1 (b &&& (1 <<< j)) = b.testBit j := by
-  rw [Nat.shiftLeft_eq, Nat.one_mul, Nat.and_two_pow]
-  cases h : b.testBit j
-  · simp only [Bool.toNat_false, Nat.zero_mul]; rfl
-  · simp only [Bool.toNat_true, Nat.one_mul]
-    exact Nat.ble_eq_true_of_le Nat.one_le_two_pow
-
 theorem sieveLoopK_succ_if {M bits start fuel : ℕ} :
     sieveLoopK M bits start (fuel + 1)
       = if (sieveLoopK M bits start fuel).testBit (start + fuel)
         then markMaskK (sieveLoopK M bits start fuel) (num (start + fuel)) M
         else sieveLoopK M bits start fuel := by
-  grind [sieveLoopK_succ, ble_one_and_eq, Bool.rec_eq]
+  grind [sieveLoopK_succ, Bool.rec_eq]
 
 /-- `markMaskK` (sieving by a wheel candidate `p ≥ 5`) preserves every bit whose number is prime:
 the mask marks composite `num t = p * k` with `p, k ≥ 5`. -/
