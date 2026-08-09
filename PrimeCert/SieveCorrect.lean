@@ -264,7 +264,7 @@ theorem prime_ge5_mod6 {q : ℕ} (hq : q.Prime) (h2 : q ≠ 2) (h3 : q ≠ 3) :
 
 /-- For `1 ≤ t ≤ (n-1)/3` with `num t ≤ n ≤ sqrtN*sqrtN`, bit `t` of the sieve is set iff `num t`
 is prime. -/
-public theorem sieveK_testBit_iff (n sqrtN t : ℕ) (ht : t ≠ 0) (htM : t ≤ (n - 1) / 3)
+public theorem sieveK_testBit_iff {n sqrtN t : ℕ} (ht : t ≠ 0) (htM : t ≤ (n - 1) / 3)
     (hM : (n - 1) / 3 < 2 ^ 32) (hbound : num t ≤ n) (hsqrt : n ≤ sqrtN * sqrtN) :
     (sieveK n sqrtN).testBit t ↔ (num t).Prime := by
   set k := (n - 1) / 3
