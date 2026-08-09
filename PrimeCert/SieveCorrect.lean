@@ -42,12 +42,7 @@ open Nat
 /-- The loop's bit test agrees with `Nat.testBit`. -/
 @[grind =]
 public theorem testBitK_eq_testBit {b i : ℕ} : testBitK b i = b.testBit i := by
-  have h : testBitK b i = Nat.ble 1 (b &&& (1 <<< i)) := rfl
-  rw [h, Nat.shiftLeft_eq, Nat.one_mul, Nat.and_two_pow]
-  cases hb : b.testBit i
-  · simp only [Bool.toNat_false, Nat.zero_mul]; rfl
-  · simp only [Bool.toNat_true, Nat.one_mul]
-    exact Nat.ble_eq_true_of_le Nat.one_le_two_pow
+  grind [testBitK, shiftLeft_eq', one_shiftLeft, land_eq, and_two_pow, Nat.ble_eq]
 
 lemma initK_eq {M : ℕ} : initK M = (2 ^ M - 1) <<< 1 := by
   simp [initK, Nat.shiftLeft_eq]
