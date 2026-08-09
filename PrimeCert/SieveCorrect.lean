@@ -39,14 +39,10 @@ open Nat
 
 @[simp, grind =] public theorem numK_eq_num : numK = num := rfl
 
-/-- `testBitK` reads bit `i` as a `ℕ` (`0` or `1`); it agrees with `Nat.testBit`. -/
+/-- The loop's bit test agrees with `Nat.testBit`. -/
 @[grind =]
-theorem testBitK_eq_testBit {b i : ℕ} : testBitK b i = if b.testBit i then 1 else 0 := by
-  simp [testBitK, Nat.shiftRight_eq_div_pow]
-  grind
-
-public theorem testBitK_eq_one_iff {b i : ℕ} : testBitK b i = 1 ↔ b.testBit i := by
-  grind
+public theorem testBitK_eq_testBit {b i : ℕ} : testBitK b i = b.testBit i := by
+  grind [testBitK, shiftLeft_eq', one_shiftLeft, land_eq, and_two_pow, Nat.ble_eq]
 
 lemma initK_eq {M : ℕ} : initK M = (2 ^ M - 1) <<< 1 := by
   simp [initK, Nat.shiftLeft_eq]
@@ -67,6 +63,10 @@ theorem num_startA {p : ℕ} (hp : p % 6 = 1 ∨ p % 6 = 5) : num ((p * 5 - 1) /
 @[grind =]
 theorem num_startB {p : ℕ} (hp : p % 6 = 1 ∨ p % 6 = 5) : num ((p * 7 - 1) / 3) = 7 * p := by
   grind [num]
+
+theorem num_mod6 {k : ℕ} : num k % 6 = 1 ∨ num k % 6 = 5 := by grind [num]
+
+theorem five_le_num {k : ℕ} (hk : k ≠ 0) : 5 ≤ num k := by grind [num]
 
 theorem num_strictMono : StrictMono num := by grind [num, StrictMono]
 
@@ -179,25 +179,12 @@ theorem testBit_markMaskK {bits p M t : ℕ} :
 composite `num t` has a smallest prime factor `q ≤ √(num t) ≤ sqrtN`; the loop reaches `q` while its
 own bit still stands, so its `markMaskK` fires and clears `t`. -/
 
-theorem num_mod6 {k : ℕ} : num k % 6 = 1 ∨ num k % 6 = 5 := by grind [num]
-
-theorem five_le_num {k : ℕ} (hk : 1 ≤ k) : 5 ≤ num k := by grind [num]
-
-/-- The loop's "is bit `j` set" test (`1 ≤ b &&& 2^j`) is `b.testBit j`. -/
-theorem ble_one_and_eq {b j : ℕ} :
-    Nat.ble 1 (b &&& (1 <<< j)) = b.testBit j := by
-  rw [Nat.shiftLeft_eq, Nat.one_mul, Nat.and_two_pow]
-  cases h : b.testBit j
-  · simp only [Bool.toNat_false, Nat.zero_mul]; rfl
-  · simp only [Bool.toNat_true, Nat.one_mul]
-    exact Nat.ble_eq_true_of_le Nat.one_le_two_pow
-
 theorem sieveLoopK_succ_if {M bits start fuel : ℕ} :
     sieveLoopK M bits start (fuel + 1)
       = if (sieveLoopK M bits start fuel).testBit (start + fuel)
         then markMaskK (sieveLoopK M bits start fuel) (num (start + fuel)) M
         else sieveLoopK M bits start fuel := by
-  grind [sieveLoopK_succ, ble_one_and_eq, Bool.rec_eq]
+  grind [sieveLoopK_succ, Bool.rec_eq]
 
 /-- `markMaskK` (sieving by a wheel candidate `p ≥ 5`) preserves every bit whose number is prime:
 the mask marks composite `num t = p * k` with `p, k ≥ 5`. -/
@@ -290,7 +277,7 @@ public theorem sieveK_testBit_iff (n sqrtN t : ℕ) (ht1 : 1 ≤ t) (htM : t ≤
     (sieveK n sqrtN).testBit t ↔ (num t).Prime := by
   refine ⟨fun hset => ?_, sieve_prime_set ht1 htM hM⟩
   by_contra hnp
-  have h5 : 5 ≤ num t := five_le_num ht1
+  have h5 : 5 ≤ num t := five_le_num (by lia)
   have hnt2 : num t % 2 = 1 := by have := num_mod6 (k := t); omega
   have hnt3 : num t % 3 ≠ 0 := by have := num_mod6 (k := t); omega
   obtain ⟨q, hqprime, hqdvd, hqsq⟩ : ∃ q, q.Prime ∧ q ∣ num t ∧ q ^ 2 ≤ num t :=

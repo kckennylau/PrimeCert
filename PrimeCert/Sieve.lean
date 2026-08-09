@@ -15,8 +15,8 @@ reduction. The state is one natural number used as a bitset, `M` is its top inde
 
 namespace PrimeCert.Sieve
 
-/-- Bit `i` of `b`, as `0` or `1`. -/
-@[expose] public def testBitK (b i : Nat) : Nat := (b.shiftRight i).land 1
+/-- Whether bit `i` of `b` is set (`testBitK_eq_testBit` in `SieveCorrect`). -/
+@[expose] public def testBitK (b i : Nat) : Bool := Nat.ble 1 (b.land (Nat.shiftLeft 1 i))
 
 /-- The natural number whose binary digits below position `M` are set at the first `2^n` positions
 of each of `A, A + 2*p, A + 4*p, …` and `B, B + 2*p, B + 4*p, …`; `n` counts doubling rounds. -/
@@ -44,7 +44,7 @@ each index whose bit is still set, clear the bits of that number's coprime-to-6 
 `sieveK` runs this on `initK M`. -/
 @[expose] public noncomputable def sieveLoopK (M bits start fuel : Nat) : Nat :=
   fuel.rec bits fun i b =>
-      (Nat.ble 1 (b.land (Nat.shiftLeft 1 (start.add i)))).rec b
+      (testBitK b (start.add i)).rec b
         (markMaskK b (numK (start.add i)) M)
 
 /-- Coprime-to-6 candidates `0..M`, all set except bit 0 (number 1, not prime). `= 2^(M+1) - 2`. -/
@@ -60,7 +60,7 @@ public theorem sieveLoopK_succ (M bits start fuel : Nat) :
     sieveLoopK M bits start (fuel + 1)
       = Bool.rec (sieveLoopK M bits start fuel)
           (markMaskK (sieveLoopK M bits start fuel) (numK (start + fuel)) M)
-          (Nat.ble 1 (sieveLoopK M bits start fuel &&& (1 <<< (start + fuel)))) := rfl
+          (testBitK (sieveLoopK M bits start fuel) (start + fuel)) := rfl
 
 /-! ### Compiled twins
 
