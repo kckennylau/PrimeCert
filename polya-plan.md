@@ -149,80 +149,63 @@ Over the emitted table arguments `qs`, `w`, `cnt` and the cutoff `M`:
 Injectivity is not decoration: the parity table is one exclusive-or per field, so a field appearing
 twice cancels and the table is wrong.
 
-### Generate rather than validate
+### What the kernel checks
 
-Validating the existing literal needs, between consecutive entries, a witness that each intervening
-number is not a prime power, which is a witness per number up to the cutoff. Generating the list
-inside the kernel from the sieve bits gets completeness from a single induction over the index range
-instead. Two ways to generate:
+The strides stay computed by the metaprogram and arrive packed as before, in two blocks: the primes
+from 5 upward in increasing order, then 2, 3 and the powers whose exponent is at least two. Three
+loops in `PrimeCert/Polya/PrimePowers.lean` tie both blocks to the sieve, each batched in the house
+style with a peel lemma by `rfl`, fuel additivity by induction, and a chain lemma.
 
-1. A generator loop builds the packed list from the sieve literal, and the parity loop stays exactly
-   as it is, with its measured tuning intact. One new loop, one new literal.
-2. The parity loop reads the sieve bits directly and skips clear ones, so the list never exists.
-   One stage fewer, at the price of changing the hot loop, running it over every candidate index
-   rather than every prime power, and nesting the powers of each base inside its fuel.
+- `bitCheckLoopK` tests the first block field by field: the value is 1 or 5 modulo 6, its sieve index
+  `(q-1)/3` exceeds the previous field's, and its sieve bit is set. The state carries that index
+  above bit 0 and a flag in bit 0, which survives only when every test passes.
+- `popcLoopK` adds up the sieve's set bits over 32-position blocks through `popc32K`. The run
+  demands that total equal the number of fields in the first block.
+- `hpLoopK`, over sieve positions `1 … (√M - 1)/3`, collects each prime's powers through `powLoopK`,
+  starting from a state seeded with the powers of 2 and of 3 and joined to the chain by
+  `hpLoopK_congr`. The run demands its output equal the packed second block.
 
-Take route 1.
+Why the three suffice: a set bit gives primality by the forward direction of `sieveK_testBit_iff`,
+rising indices make the first block injective, and a count equal to the sieve's own set-bit total
+leaves no prime out, since an injection into a set of that size is onto. Every prime power with
+exponent at least two has base at most `√M`, which is the range `hpLoopK` walks.
 
-### Shape of the generator
+Measured at the cutoff on one CI machine, this design ran fastest of the five tried; numbers and the
+alternatives are in project memory `project_polya_measurements`.
 
-State layout: the count in the low 64 bits, the packed fields above bit 64, so appending field `k`
-is `state + (q <<< (64 + w * k)) + 1` and reading the count is one `land`. This is the packed-state
-pattern `blockStepK` already uses.
-
-One definition `ppLoopK sieve M e state start fuel` walks candidate indices; at each index whose bit
-is set it appends `p`, `p^2`, … up to `min` of `M` and exponent fuel `e`, through an inner loop.
-It runs twice:
-
-- indices `1 … (Nat.sqrt M - 1)/3` with `e` at `Nat.log2 M + 1`, covering every base whose higher
-  powers stay below the cutoff, 322 steps at the cutoff 936411;
-- the remaining indices up to `(M-1)/3` with `e = 1`, sound because `p > Nat.sqrt M` gives
-  `p * p > M`, 312,136 steps.
-
-Bases 2 and 3 sit outside the sieve's index range, so a seed emits `2, 4, 8, …` and `3, 9, 27, …`
-first, with the primality of 2 and 3 by `norm_num`.
-
-Each of the two runs is batched in the house style: peel by `rfl`, fuel additivity by induction,
-chain lemma, one emitter, batch length swept like every other stage.
-
-### The proof
+### The proof to write
 
 Canonical base and exponent of a prime power come from
-`IsPrimePow.minFac_pow_factorization_eq : q.minFac ^ q.factorization q.minFac = q`. Loop invariant
-after processing indices `[1, t)`: the fields hold exactly those `q ≤ M` with `IsPrimePow q` whose
-base is 2, 3, or `num s` for a processed `s`, each once. Soundness of an appended field is the
-sieve's forward direction; completeness is its backward direction together with
-`num ((q - 1) / 3) = q` for `q` coprime to 6 (`num_wheel`, `prime_ge5_mod6`), which puts every prime
-in `[5, M]` at an index the loop visits. Injectivity splits on the base: distinct bases give
-distinct values, equal bases give equal exponents by `Nat.pow_right_injective`.
+`IsPrimePow.minFac_pow_factorization_eq : q.minFac ^ q.factorization q.minFac = q`.
 
-Reading fields back out of the accumulator is shared with gap 3, so the append and read lemmas, with
-the invariant that bits above `w * k` are clear and every entry is below `2 ^ w`, go in their own
+- From the surviving flag: each field of the first block is prime, by `num_wheel` and the forward
+  direction of `sieveK_testBit_iff`, and the fields strictly increase.
+- From the count: the fields of the first block are every prime in `[5, M]`. Cardinality closes it,
+  with the set-bit count of the sieve equal to that of the primes by `popcLoopK`'s own lemma.
+- From `hpLoopK`: an induction over the positions it walks, whose invariant names the powers
+  collected so far by base and exponent, giving the second block exactly. Distinct fields follow
+  from distinct bases and `Nat.pow_right_injective`.
+
+Reading fields back out of a packed number is shared with gap 3, so those lemmas go in their own
 file.
-
-### Order
-
-The native `primePowers` sorts its output; the generator emits by base. Drop the `qsort` so the two
-agree. No order-independence lemma is needed, because the table equation is recomputed for whichever
-list the generator produces.
 
 ### Prerequisites in the sieve file
 
 `num_wheel`, `prime_ge5_mod6`, `num_inj`, `num_mod6` and `five_le_num` carry no `public` marker, so
 the module system hides them downstream. Gap 1 needs them exported.
 
-### Files and order of work
+### Files
 
 ```
-PrimeCert/Polya/Field.lean        -- packing: append, read back, field bounds
-PrimeCert/Polya/PrimePowers.lean  -- ppLoopK, its chain lemmas, the two theorems above
-PrimeCert/Meta/Polya.lean         -- emitPPChain, the sieve-cache lookup, drop the qsort
+PrimeCert/Polya/PrimePowers.lean  -- bitCheckLoopK, popcLoopK, hpLoopK, their chain lemmas, and
+                                     the theorems above
+PrimeCert/Polya/Field.lean        -- reading a packed field: bounds and the value at an index
+PrimeCert/Meta/Polya.lean         -- the sieve-cache lookup, the two blocks, one emitter per chain
 ```
 
-The loop, its emitter and the batching are independent of the sieve's correctness proof and can be
-written and checked now against the native list at `M = 10^3` and `10^5`. The mathematical bridge
-lands after the sieve does. Step counts and the literal's width (74,164 fields of 20 bits at the
-cutoff) say nothing about cost; measure the new stage in CI before it goes in.
+The loops, their emitters and the batching are written and run: `run_polya` prints the published
+value at `10^6` and `10^7` with the checks inside it. The theorems above wait on the sieve's
+correctness proof reaching `master`.
 
 ## Milestones
 
