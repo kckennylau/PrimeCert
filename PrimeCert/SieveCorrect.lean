@@ -310,7 +310,8 @@ public theorem prime_of_sieve_eq (n sqrtN t lit p : ℕ) (hEq : sieveK n sqrtN =
     (hp : (numK t).beq p) :
     Nat.Prime p := by
   rw [← Nat.eq_of_beq_eq_true hp, numK_eq_num]
-  refine (sieveK_testBit_iff n sqrtN t (Nat.le_of_ble_eq_true h1) (Nat.le_of_ble_eq_true h2)
+  refine (sieveK_testBit_iff n sqrtN t (by have := Nat.le_of_ble_eq_true h1; lia)
+    (Nat.le_of_ble_eq_true h2)
     (Nat.le_of_ble_eq_true h3) (Nat.le_of_ble_eq_true h4) (Nat.le_of_ble_eq_true h5)).mp ?_
   rw [← testBitK_eq_testBit, hEq]
   exact hbit
