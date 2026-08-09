@@ -300,7 +300,7 @@ public theorem sieveK_testBit_iff (n sqrtN t : ℕ) (ht : t ≠ 0) (htM : t ≤ 
 /-- From the numeric side-conditions (each as `Nat.ble … = true`), "bit `t` of the sieve literal
 `lit` is set", and `numK t = p`, conclude `p` is prime. The kernel reads the bit from `lit`, and
 `hEq : sieveK n sqrtN = lit`, the equation `run_sieve` proves, carries it back to the sieve. -/
-public theorem prime_of_sieve_eq (n sqrtN t lit p : ℕ) (hEq : sieveK n sqrtN = lit)
+public theorem prime_of_sieve_eq {n sqrtN t lit p : ℕ} (hEq : sieveK n sqrtN = lit)
     (h1 : Nat.ble 1 t)
     (h2 : t.ble ((n.sub 1).div 3))
     (h3 : (((n.sub 1).div 3).add 1).ble (Nat.pow 2 32))
@@ -309,11 +309,12 @@ public theorem prime_of_sieve_eq (n sqrtN t lit p : ℕ) (hEq : sieveK n sqrtN =
     (hbit : testBitK lit t)
     (hp : (numK t).beq p) :
     Nat.Prime p := by
+  subst hEq
   rw [← Nat.eq_of_beq_eq_true hp, numK_eq_num]
   refine (sieveK_testBit_iff n sqrtN t (by have := Nat.le_of_ble_eq_true h1; lia)
     (Nat.le_of_ble_eq_true h2)
     (Nat.le_of_ble_eq_true h3) (Nat.le_of_ble_eq_true h4) (Nat.le_of_ble_eq_true h5)).mp ?_
-  rw [← testBitK_eq_testBit, hEq]
+  rw [← testBitK_eq_testBit]
   exact hbit
 
 end PrimeCert.Sieve
