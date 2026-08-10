@@ -53,10 +53,6 @@ public def powModTR' (a b n : ℕ) : ℕ :=
       aux (a * a % n) (b / 2) (a * c % n)
     partial_fixpoint
 
-lemma Bool.rec_eq_ite {α : Type*} {b : Bool} {t f : α} :
-    b.rec f t = if b then t else f := by
-  cases b <;> simp
-
 @[simp] lemma powModTR_aux_zero_eq {n a b c : ℕ} :
     powModTR.aux n 0 a b c = 0 := rfl
 
@@ -73,7 +69,7 @@ lemma powModTR_aux_succ_eq' {n a b c fuel : ℕ} :
       if b = 0 then c % n else
       if b % 2 = 0 then powModTR.aux n fuel (a * a % n) (b / 2) c
       else powModTR.aux n fuel (a * a % n) (b / 2) (a * c % n) := by
-  simp only [powModTR_aux_succ_eq, Bool.rec_eq_ite, beq_eq]
+  simp only [powModTR_aux_succ_eq, Bool.rec_eq, beq_eq]
 
 lemma powModTR_aux_eq (n a b c fuel) (hfuel : b < fuel) :
     powModTR.aux n fuel a b c = powModAux a b c n := by
