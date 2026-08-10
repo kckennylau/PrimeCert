@@ -29,33 +29,29 @@ meta def mkSieveLoopK (mE bits : Expr) (start len : Nat) : Expr :=
 meta def addThm (name : Name) (type value : Expr) : MetaM Unit :=
   addDecl <| Declaration.thmDecl { name, levelParams := [], type, value }
 
-/-- Returns a bitset `b` and a proof of `sieveLoopK M (initK M) 1 fuel = b`, split into batches of
-at most `len` steps; `n` only distinguishes the names of the emitted batch lemmas. -/
-meta def emitChain (n M fuel len : Nat) : MetaM (Nat × Expr) := do
+/-- Given the top index `M`, the step count `fuel` and a batch length `len`, outputs the bitset `b`
+and a proof of `sieveLoopK M (initK M) 1 fuel = b`. Emits lemmas `parent.init : initK M == b₀` and
+`parent.step_i : sieveLoopK M bᵢ (1 + i * len) step == bᵢ₊₁` with `step ≤ len`, chained together by
+`sieveLoopK_congr`, `sieveLoopK_chain` and `sieveLoopK_last`. -/
+meta def emitChain (parent : Name) (M fuel len : Nat) : MetaM (Nat × Expr) := do
   let mE := mkRawNatLit M
   let initE := mkApp (mkConst ``initK) mE
-  -- the fixed left-hand side of the chain: the full loop on the kernel-side initial bitset
   let lhsLoop := mkSieveLoopK mE initE 1 fuel
   let mut bits := initK M
-  -- the run starts at the expression `initK M`, the batches at numerals, so the kernel is asked
-  -- once to agree that the two coincide
-  let initName := Name.mkSimple s!"chain_init_{n}"
+  let initName := mkPrivateName (← getEnv) (parent ++ `init)
   addThm initName (mkBeqTrue initE (mkRawNatLit bits)) Lean.reflBoolTrue
-  -- what is proved so far: the target run equals one that begins at `bits` and still owes
-  -- `fuel - i * len` steps, which each iteration lowers by `step`
+  -- each `mkAppN` applies a chaining lemma to the proof built so far and one emitted lemma
   let mut proof := mkAppN (mkConst ``sieveLoopK_congr)
     #[mE, initE, mkRawNatLit bits, mkRawNatLit 1, mkRawNatLit fuel, mkConst initName]
   for i in [0:(fuel + len - 1) / len] do
     let start := 1 + i * len
     let owed := fuel - i * len
     let step := Nat.min len owed
-    -- run this batch to find where it lands; `next` is what the theorem below claims
+    -- `sieveLoop` is executable, so this runs the batch and gives the numeral to claim
     let next := sieveLoop M bits start step
-    let stepName := Name.mkSimple s!"chain_step_{n}_{i}"
-    -- one kernel check per batch, sized by `len`: `step` steps from one numeral reach another
+    let stepName := mkPrivateName (← getEnv) (parent ++ Name.mkSimple s!"step_{i}")
     addThm stepName (mkBeqTrue (mkSieveLoopK mE (mkRawNatLit bits) start step) (mkRawNatLit next))
       Lean.reflBoolTrue
-    -- the last batch leaves nothing owed, so it yields the value of the whole run
     proof := if owed == step then
         mkAppN (mkConst ``sieveLoopK_last)
           #[lhsLoop, mE, mkRawNatLit bits, mkRawNatLit next, mkRawNatLit start, mkRawNatLit step,
@@ -73,13 +69,12 @@ and its equation. -/
 meta def runSieve (n : Nat) (len? : Option Nat := none) : MetaM Unit := do
   if let some c := (← sieveCaches).find? (n ≤ ·.hi) then
     throwError "run_sieve: a sieve cache up to {c.hi} already covers {n}"
-  let idx := (← sieveCaches).size
-  let litName := Name.mkNum `PrimeCert.Sieve.sieveLit idx
-  let dataName := Name.mkNum `PrimeCert.Sieve.sieveData idx
+  let litName := Name.mkNum `PrimeCert.Sieve.sieveBits n
+  let dataName := Name.mkNum `PrimeCert.Sieve.sieveK_eq n
   let sq := Nat.sqrt n + 1
   let fuel := (sq - 1) / 3
   let len := Nat.max 1 (len?.getD 16)
-  let (lit, proof) ← emitChain n ((n - 1) / 3) fuel len
+  let (lit, proof) ← emitChain dataName ((n - 1) / 3) fuel len
   addDecl <| Declaration.defnDecl
     { name := litName, levelParams := [], type := Nat.mkType,
       value := mkRawNatLit lit, hints := .regular 0, safety := .safe }
