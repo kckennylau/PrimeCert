@@ -38,28 +38,27 @@ meta def emitChain (parent : Name) (M fuel len : Nat) : MetaM (Nat × Expr) := d
   let initE := mkApp (mkConst ``initK) mE
   let lhsLoop := mkSieveLoopK mE initE 1 fuel
   let mut bits := initK M
+  let mut bitsE := initE
   let env ← getEnv
-  let initName := mkPrivateName env (parent ++ `init)
-  addThm initName (mkBeqTrue initE (mkRawNatLit bits)) Lean.reflBoolTrue
-  let mut proof := mkAppN (mkConst ``sieveLoopK_congr)
-    #[mE, initE, mkRawNatLit bits, mkRawNatLit 1, mkRawNatLit fuel, mkConst initName]
+  let mut proof := mkAppN (mkConst ``Eq.refl [Level.succ Level.zero]) #[Nat.mkType, lhsLoop]
   for i in [0:(fuel + len - 1) / len] do
     let start := 1 + i * len
     let owed := fuel - i * len
     let step := Nat.min len owed
     let next := sieveLoop M bits start step
     let stepName := mkPrivateName env (parent ++ Name.mkSimple s!"step_{i}")
-    addThm stepName (mkBeqTrue (mkSieveLoopK mE (mkRawNatLit bits) start step) (mkRawNatLit next))
+    addThm stepName (mkBeqTrue (mkSieveLoopK mE bitsE start step) (mkRawNatLit next))
       Lean.reflBoolTrue
     proof := if owed == step then
         mkAppN (mkConst ``sieveLoopK_last)
-          #[lhsLoop, mE, mkRawNatLit bits, mkRawNatLit next, mkRawNatLit start, mkRawNatLit step,
+          #[lhsLoop, mE, bitsE, mkRawNatLit next, mkRawNatLit start, mkRawNatLit step,
             proof, mkConst stepName]
       else
         mkAppN (mkConst ``sieveLoopK_chain)
-          #[lhsLoop, mE, mkRawNatLit bits, mkRawNatLit next, mkRawNatLit start, mkRawNatLit step,
+          #[lhsLoop, mE, bitsE, mkRawNatLit next, mkRawNatLit start, mkRawNatLit step,
             mkRawNatLit (owed - step), proof, mkConst stepName]
     bits := next
+    bitsE := mkRawNatLit next
   return (bits, proof)
 
 /-- Build the cache for numbers up to `n` and register it. The sieving runs in batches of `len?`
