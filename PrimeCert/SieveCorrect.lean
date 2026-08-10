@@ -264,7 +264,7 @@ theorem prime_ge5_mod6 {q : ℕ} (hq : q.Prime) (h2 : q ≠ 2) (h3 : q ≠ 3) :
 
 /-- For `1 ≤ t ≤ (n-1)/3` with `num t ≤ n ≤ sqrtN*sqrtN`, bit `t` of the sieve is set iff `num t`
 is prime. -/
-public theorem sieveK_testBit_iff (n sqrtN t : ℕ) (ht : t ≠ 0) (htM : t ≤ (n - 1) / 3)
+public theorem sieveK_testBit_iff {n sqrtN t : ℕ} (ht : t ≠ 0) (htM : t ≤ (n - 1) / 3)
     (hM : (n - 1) / 3 < 2 ^ 32) (hbound : num t ≤ n) (hsqrt : n ≤ sqrtN * sqrtN) :
     (sieveK n sqrtN).testBit t ↔ (num t).Prime := by
   set k := (n - 1) / 3
@@ -294,5 +294,21 @@ public theorem sieveK_testBit_iff (n sqrtN t : ℕ) (ht : t ≠ 0) (htM : t ≤ 
     grind [sieveLoopK_clears, num_wheel hq6]
   simp only [sieveK, sub_eq, div_eq_div] at hset
   grind
+
+/-! ### Reading a prime off a cached sieve -/
+
+/-- From the numeric side-conditions (each as `Nat.ble … = true`), "bit `t` of the sieve literal
+`lit` is set", and `numK t = p`, conclude `p` is prime. The kernel reads the bit from `lit`, and
+`hEq : sieveK n sqrtN = lit`, the equation `run_sieve` proves, carries it back to the sieve. -/
+public theorem prime_of_sieve_eq {n sqrtN t lit p : ℕ} (hEq : sieveK n sqrtN = lit)
+    (h1 : Nat.ble 1 t)
+    (h2 : t.ble ((n.sub 1).div 3))
+    (h3 : n.ble 12884901888)
+    (h4 : (numK t).ble n)
+    (h5 : n.ble (sqrtN.mul sqrtN))
+    (hbit : testBitK lit t)
+    (hp : (numK t).beq p) :
+    Nat.Prime p := by
+  grind [sieveK_testBit_iff, Nat.ble_eq, Nat.beq_eq, Nat.div_eq_div]
 
 end PrimeCert.Sieve
