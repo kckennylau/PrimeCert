@@ -38,18 +38,17 @@ meta def emitChain (parent : Name) (M fuel len : Nat) : MetaM (Nat × Expr) := d
   let initE := mkApp (mkConst ``initK) mE
   let lhsLoop := mkSieveLoopK mE initE 1 fuel
   let mut bits := initK M
-  let initName := mkPrivateName (← getEnv) (parent ++ `init)
+  let env ← getEnv
+  let initName := mkPrivateName env (parent ++ `init)
   addThm initName (mkBeqTrue initE (mkRawNatLit bits)) Lean.reflBoolTrue
-  -- each `mkAppN` applies a chaining lemma to the proof built so far and one emitted lemma
   let mut proof := mkAppN (mkConst ``sieveLoopK_congr)
     #[mE, initE, mkRawNatLit bits, mkRawNatLit 1, mkRawNatLit fuel, mkConst initName]
   for i in [0:(fuel + len - 1) / len] do
     let start := 1 + i * len
     let owed := fuel - i * len
     let step := Nat.min len owed
-    -- `sieveLoop` is executable, so this runs the batch and gives the numeral to claim
     let next := sieveLoop M bits start step
-    let stepName := mkPrivateName (← getEnv) (parent ++ Name.mkSimple s!"step_{i}")
+    let stepName := mkPrivateName env (parent ++ Name.mkSimple s!"step_{i}")
     addThm stepName (mkBeqTrue (mkSieveLoopK mE (mkRawNatLit bits) start step) (mkRawNatLit next))
       Lean.reflBoolTrue
     proof := if owed == step then
