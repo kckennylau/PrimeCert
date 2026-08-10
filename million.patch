@@ -1,0 +1,12 @@
+diff --git a/PrimeCert/SieveBase.lean b/PrimeCert/SieveBase.lean
+index 4cbdacc..c4bc516 100644
+--- a/PrimeCert/SieveBase.lean
++++ b/PrimeCert/SieveBase.lean
+@@ -15,6 +15,6 @@ A certified sieve for numbers up to `100000`, built when this module compiles an
+ 
+ namespace PrimeCert.Sieve
+ 
+-run_sieve 100000
++run_sieve 1000000
+ 
+ end PrimeCert.Sieve

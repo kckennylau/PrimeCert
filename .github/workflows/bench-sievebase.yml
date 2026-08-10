@@ -1,0 +1,29 @@
+name: Time the built-in sieve
+
+on:
+  push:
+    branches:
+      - 'sieve-registry'
+  workflow_dispatch:
+
+jobs:
+  bench:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: leanprover/lean-action@v1
+        with:
+          build: true
+          test: false
+          lint: false
+
+      - name: Time the built-in sieve at each size, interleaved
+        run: |
+          FILE=PrimeCert/SieveBase.lean
+          for i in 1 2 3; do
+            git checkout -- "$FILE"
+            /usr/bin/time -f "A$i 100000 wall %e s peak %M KB" lake env lean "$FILE"
+            git apply million.patch
+            /usr/bin/time -f "B$i 1000000 wall %e s peak %M KB" lake env lean "$FILE"
+          done
+          git checkout -- "$FILE"
