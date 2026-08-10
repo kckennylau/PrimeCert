@@ -5,7 +5,7 @@ Authors: Bhavik Mehta
 -/
 module
 
-public meta import Lean.Elab.Command
+public import Lean.Elab.Command
 public meta import PrimeCert.Meta.SieveCache
 public meta import PrimeCert.Sieve
 
@@ -68,8 +68,8 @@ and its equation. -/
 meta def runSieve (n : Nat) (len? : Option Nat := none) : MetaM Unit := do
   if let some c := (← sieveCaches).find? (n ≤ ·.hi) then
     throwError "run_sieve: a sieve cache up to {c.hi} already covers {n}"
-  let litName := Name.mkNum `PrimeCert.Sieve.sieveBits n
-  let dataName := Name.mkNum `PrimeCert.Sieve.sieveK_eq n
+  let litName := `PrimeCert.Sieve ++ Name.mkSimple s!"sieveBits_{n}"
+  let dataName := `PrimeCert.Sieve ++ Name.mkSimple s!"sieveK_eq_{n}"
   let sq := Nat.sqrt n + 1
   let fuel := (sq - 1) / 3
   let len := Nat.max 1 (len?.getD 16)
