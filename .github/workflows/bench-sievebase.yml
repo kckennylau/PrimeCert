@@ -23,8 +23,10 @@ jobs:
           lake build PrimeCert.Meta.Sieve
           for i in 1 2 3; do
             git checkout -- "$FILE"
+            grep -n run_sieve "$FILE" | tail -1
             /usr/bin/time -f "A$i 100000 wall %e s peak %M KB" lake env lean "$FILE"
             git apply million.patch
+            grep -n run_sieve "$FILE" | tail -1
             /usr/bin/time -f "B$i 1000000 wall %e s peak %M KB" lake env lean "$FILE"
           done
           git checkout -- "$FILE"
