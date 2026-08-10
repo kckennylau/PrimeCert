@@ -56,7 +56,7 @@ each index whose bit is still set, clear the bits of that number's coprime-to-6 
   sieveLoopK ((n.sub 1).div 3) (initK ((n.sub 1).div 3)) 1 ((sqrtN.sub 1).div 3)
 
 /-- Loop recurrence: peel the top index `start+fuel`, in the exact `Bool.rec` form the def uses. -/
-public theorem sieveLoopK_succ (M bits start fuel : Nat) :
+public theorem sieveLoopK_succ {M bits start fuel : Nat} :
     sieveLoopK M bits start (fuel + 1)
       = Bool.rec (sieveLoopK M bits start fuel)
           (markMaskK (sieveLoopK M bits start fuel) (numK (start + fuel)) M)
@@ -89,7 +89,7 @@ public def sieveLoop (M bits start fuel : Nat) : Nat := Id.run do
 
 /-- Fuel additivity: running `a + b` steps is running `a` steps, then `b` steps from where the
 first run stopped. This is the glue that joins consecutive batches. -/
-public theorem sieveLoopK_add (M bits start a b : Nat) :
+public theorem sieveLoopK_add {M bits start a b : Nat} :
     sieveLoopK M bits start (a + b)
       = sieveLoopK M (sieveLoopK M bits start a) (start + a) b := by
   induction b with
@@ -98,17 +98,25 @@ public theorem sieveLoopK_add (M bits start a b : Nat) :
 
 /-- Replace the loop's starting bitset by a kernel-checked equal literal. `run_sieve` uses this to
 enter the chain at `sieveLoopK M (initK M) 1 fuel = sieveLoopK M b₀ 1 fuel`. -/
-public theorem sieveLoopK_congr (M b b' start fuel : Nat) (h : b.beq b') :
+public theorem sieveLoopK_congr {M b b' start fuel : Nat} (h : b.beq b') :
     sieveLoopK M b start fuel = sieveLoopK M b' start fuel := by
   rw [Nat.eq_of_beq_eq_true h]
 
 /-- One chain step: given `L = sieveLoopK M b start (len + rest)` and a kernel-checked batch
 equation saying `len` steps from `b` reach `b'`, restate `L` as a loop from `b'` at index
 `start + len` with `rest` steps left. -/
-public theorem sieveLoopK_chain (L M b b' start len rest : Nat)
+public theorem sieveLoopK_chain {L M b b' start len rest : Nat}
     (hP : L = sieveLoopK M b start (len.add rest))
     (h : (sieveLoopK M b start len).beq b') :
     L = sieveLoopK M b' (start.add len) rest := by
   grind [sieveLoopK_add, Nat.beq_eq]
+
+/-- Last chain step: with no steps left after this batch, the batch equation gives the value of
+the whole run. -/
+public theorem sieveLoopK_last {L M b b' start len : Nat}
+    (hP : L = sieveLoopK M b start len)
+    (h : (sieveLoopK M b start len).beq b') :
+    L = b' := by
+  grind [Nat.beq_eq]
 
 end PrimeCert.Sieve
