@@ -8,6 +8,7 @@ module
 public import Lean.Elab.Command
 public meta import PrimeCert.Meta.SieveCache
 public meta import PrimeCert.Sieve
+public meta import PrimeCert.SieveCorrect
 
 /-! # The `run_sieve` command
 
@@ -80,6 +81,12 @@ meta def runSieve (n : Nat) (len? : Option Nat := none) : MetaM Unit := do
   -- literal and, on the other side, `sieveK n sq`
   let lhs := mkAppN (mkConst ``sieveK) #[mkRawNatLit n, mkRawNatLit sq]
   addThm dataName (mkNatEq lhs (mkConst litName)) proof
+  -- the range bounds hold for this cache alone, so they are discharged here rather than at lookup
+  let primeName := `PrimeCert.Sieve ++ Name.mkSimple s!"sievePrime_{n}"
+  let primeProof := mkAppN (mkConst ``prime_of_sieve_eq)
+    #[mkRawNatLit n, mkRawNatLit sq, mkConst litName, mkConst dataName,
+      Lean.reflBoolTrue, Lean.reflBoolTrue]
+  addThm primeName (← inferType primeProof) primeProof
   sieveCacheExt.add { lo := 5, hi := n, litName, dataName }
 
 /-- Command wrapper for `runSieve`: `run_sieve n` builds the certified cache for numbers up to
