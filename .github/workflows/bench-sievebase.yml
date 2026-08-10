@@ -20,6 +20,7 @@ jobs:
       - name: Time the built-in sieve at each size, interleaved
         run: |
           FILE=PrimeCert/SieveBase.lean
+          lake build PrimeCert.Meta.Sieve
           for i in 1 2 3; do
             git checkout -- "$FILE"
             /usr/bin/time -f "A$i 100000 wall %e s peak %M KB" lake env lean "$FILE"
