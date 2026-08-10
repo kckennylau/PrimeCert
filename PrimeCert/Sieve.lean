@@ -111,4 +111,12 @@ public theorem sieveLoopK_chain (L M b b' start len rest : Nat)
     L = sieveLoopK M b' (start.add len) rest := by
   grind [sieveLoopK_add, Nat.beq_eq]
 
+/-- Last chain step: with no steps left after this batch, the batch equation gives the value of
+the whole run. -/
+public theorem sieveLoopK_last (L M b b' start len : Nat)
+    (hP : L = sieveLoopK M b start len)
+    (h : (sieveLoopK M b start len).beq b') :
+    L = b' := by
+  grind [Nat.beq_eq]
+
 end PrimeCert.Sieve
