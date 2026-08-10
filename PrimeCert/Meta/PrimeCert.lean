@@ -4,8 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kenny Lau
 -/
 
-import Mathlib.Data.Nat.Prime.Defs
-import Qq
+module
+
+public import Mathlib.Data.Nat.Prime.Defs
+public import Qq
 
 /-! # Extensible framework for primality certificates
 
@@ -18,26 +20,26 @@ open Lean Meta Elab Command Qq
 
 namespace PrimeCert.Meta
 
-/-- We store the metavariable assigned to each certified prime. -/
-abbrev PrimeDict := Std.HashMap Nat Expr
+/-- The proof term for each certified prime, keyed by the prime. -/
+public abbrev PrimeDict := Std.HashMap Nat Expr
 
-def PrimeDict.getM (dict : PrimeDict) (n : ℕ) : MetaM Expr := do
+public meta def PrimeDict.getM (dict : PrimeDict) (n : ℕ) : MetaM Expr := do
   let .some entry := dict.get? n
     | throwError s!"Primality not yet certified for {n}"
   return entry
 
-abbrev PrimeCertMethod (syntaxName : Name) :=
+public abbrev PrimeCertMethod (syntaxName : Name) :=
   TSyntax syntaxName → PrimeDict → MetaM (Nat × (N : Q(Nat)) × Q(($N).Prime))
 
 /-- A method to climb one step in the ladder, given the dictionary of previously proved primes. -/
-structure PrimeCertExt where
+public structure PrimeCertExt where
   /-- The syntax specific to the certification method -/
   syntaxName : Name
   /-- The function to build the prime proof in the step -/
   methodName : Name
   deriving Inhabited
 
-initialize primeCertExt : SimpleScopedEnvExtension
+meta initialize primeCertExt : SimpleScopedEnvExtension
     (String × PrimeCertExt) (Std.HashMap String PrimeCertExt) ←
   registerSimpleScopedEnvExtension {
     addEntry dict entry := dict.insert entry.1 entry.2
@@ -53,12 +55,13 @@ This registers the method under `key`, generating syntax rules so it can be used
 syntax (name := prime_cert) "prime_cert " ident : attr
 
 /-- Read a `prime_cert` extension from a declaration of the right type. -/
-def mkPrimeCertExt (n : Name) : ImportM PrimeCertExt := do
+meta def mkPrimeCertExt (n : Name) : ImportM PrimeCertExt := do
   let { env, opts, .. } ← read
   IO.ofExcept <| unsafe env.evalConstCheck PrimeCertExt opts ``PrimeCertExt n
 
 /-- Read a prime certifying method from a declaration of the right type. -/
-def PrimeCertExt.mkMethod (ext : PrimeCertExt) : ImportM (PrimeCertMethod ext.syntaxName) := do
+meta def PrimeCertExt.mkMethod (ext : PrimeCertExt) :
+    ImportM (PrimeCertMethod ext.syntaxName) := do
   let { env, opts, .. } ← read
   IO.ofExcept <| unsafe env.evalConst (PrimeCertMethod ext.syntaxName) opts ext.methodName
 
@@ -66,7 +69,7 @@ def PrimeCertExt.mkMethod (ext : PrimeCertExt) : ImportM (PrimeCertMethod ext.sy
 declare_syntax_cat step_group
 
 /-- Convert a syntax category name to a ``TSyntax `stx`` dynamically. -/
-def _root_.Lean.Name.toSyntaxCat (cat : Name) : TSyntax `stx :=
+meta def _root_.Lean.Name.toSyntaxCat (cat : Name) : TSyntax `stx :=
   .mk <| mkNode `Lean.Parser.Syntax.cat #[mkIdent cat, mkNullNode]
 
 /-- If we're given a syntax `pock_spec` for a step in `pock`, we do the following:
@@ -75,12 +78,12 @@ syntax "pock" pock_spec : step_spec
 syntax "pock" "{" pock_spec;+ "}" : step_spec
 ```
 -/
-def mkSyntax (key : String) (spec : Name) : CommandElabM Unit := do
+meta def mkSyntax (key : String) (spec : Name) : CommandElabM Unit := do
   have spec := spec.toSyntaxCat
   elabCommand =<< `(command| syntax $(quote key):str $spec : step_group)
   elabCommand =<< `(command| syntax $(quote key):str "{" sepBy1($spec,"; ") "}" : step_group)
 
-initialize registerBuiltinAttribute {
+meta initialize registerBuiltinAttribute {
   name := `prime_cert
   descr := "adds a prime_cert extension"
   applicationTime := .afterCompilation
@@ -101,7 +104,7 @@ initialize registerBuiltinAttribute {
 -- #eval `(step_group| pock {3; 4})
 -- end
 
-def parseStepGroup (stx : TSyntax `step_group) :
+meta def parseStepGroup (stx : TSyntax `step_group) :
     CoreM ((e : PrimeCertExt) × Array (TSyntax e.syntaxName)) := do
   match stx.raw with
   | .node _ _ #[.atom _ key, step] => do
@@ -124,18 +127,17 @@ Each group is a registered method name followed by one or more steps:
 
 Groups are processed left-to-right, steps within a group in order. Every certified prime is
 added to the `PrimeDict` so later steps can reference it. -/
-def runPrimeCertLadder (grps : Array (TSyntax `step_group)) : MetaM (PrimeDict × Nat) := do
+public meta def runPrimeCertLadder (grps : Array (TSyntax `step_group)) :
+    MetaM (PrimeDict × Nat) := do
   let mut dict : PrimeDict := ∅
   let mut goal : ℕ := 0
   for group in grps do
     let ⟨ext, steps⟩ ← parseStepGroup group
     let method ← ext.mkMethod
     for step in steps do
-      let ⟨n, nE, pf⟩ ← method step dict
+      let ⟨n, _, pf⟩ ← method step dict
       goal := n
-      let mVar ← mkFreshExprMVar q(Nat.Prime $nE) default <| .mkSimple s!"prime_{n}"
-      dict := dict.insert n mVar
-      mVar.mvarId!.assign pf
+      dict := dict.insert n pf
   return (dict, goal)
 
 /-- The main primality certificate elaborator.
@@ -166,7 +168,7 @@ conjunctions. Each prime must have been certified by the ladder.
 
 This is the MetaM entry point into the machinery: given a `dict` (built by `runPrimeCertLadder`)
 and a goal type, it returns the proof term, so other tactics can reuse it. -/
-partial def provePrimeGoal (dict : PrimeDict) (t : Expr) : MetaM Expr := do
+public meta partial def provePrimeGoal (dict : PrimeDict) (t : Expr) : MetaM Expr := do
   match_expr t with
   | And a b =>
     return mkApp4 (mkConst ``And.intro) a b (← provePrimeGoal dict a) (← provePrimeGoal dict b)

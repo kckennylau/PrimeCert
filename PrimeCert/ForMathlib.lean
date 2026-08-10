@@ -3,12 +3,15 @@ Copyright (c) 2025 Kenny Lau, Bhavik Mehta. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kenny Lau, Bhavik Mehta
 -/
+module
 
-import Mathlib.Algebra.BigOperators.ModEq
+public import Mathlib.Algebra.BigOperators.ModEq
+public import Mathlib.RingTheory.Multiplicity
+
+import Mathlib.Data.Nat.Bitwise
 import Mathlib.Data.Nat.ChineseRemainder
 import Mathlib.Data.Nat.Totient
 import Mathlib.Data.Finset.Pairwise
-import Mathlib.RingTheory.Multiplicity
 import Mathlib.Tactic.IntervalCases
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Order
@@ -20,7 +23,7 @@ certificate proofs. None of these are specific to primality certificates; they a
 here as candidates for upstreaming to Mathlib.
 -/
 
-theorem Nat.prime_iff_not_exists_mul_eq' (p : ℕ) :
+public theorem Nat.prime_iff_not_exists_mul_eq' (p : ℕ) :
     Nat.Prime p ↔ 2 ≤ p ∧ ¬∃ m n, 2 ≤ m ∧ m < p ∧ 2 ≤ n ∧ n < p ∧ m * n = p := by
   rw [prime_iff_not_exists_mul_eq]
   refine and_congr_right fun hp ↦ not_congr <| exists_congr fun m ↦ exists_congr fun n ↦ ?_
@@ -37,7 +40,7 @@ theorem Nat.modEq_finset_prod_iff {a b : ℕ} {ι : Type*} (s : Finset ι) (e : 
   · simp_rw [List.mem_toFinset]
   · rwa [← List.pairwise_iff_coe_toFinset_pairwise hl]
 
-theorem Nat.modEq_iff_forall_prime_dvd {a b n : ℕ} :
+public theorem Nat.modEq_iff_forall_prime_dvd {a b n : ℕ} :
     a ≡ b [MOD n] ↔ ∀ p : ℕ, p ∣ n → p.Prime → a ≡ b [MOD p ^ multiplicity p n] := by
   by_cases hn₀ : n = 0
   · subst hn₀
@@ -56,7 +59,7 @@ theorem Nat.modEq_iff_forall_prime_dvd {a b n : ℕ} :
       rw [multiplicity_eq_factorization hp hn₀]
     · grind [support_factorization, coprime_pow_primes, Set.Pairwise]
 
-theorem Nat.pow_multiplicity_dvd_of_dvd_of_not_dvd_div
+public theorem Nat.pow_multiplicity_dvd_of_dvd_of_not_dvd_div
     {q n x : ℕ} (hq : q.Prime) (hxn : x ∣ n) (hxnq : ¬ x ∣ n / q) :
     q ^ multiplicity q n ∣ x := by
   by_cases hqn : q ∣ n
@@ -81,7 +84,8 @@ theorem Nat.pow_multiplicity_dvd_of_dvd_of_not_dvd_div
   · rw [multiplicity_eq_zero.mpr hqn, pow_zero]
     exact one_dvd _
 
-theorem Nat.modEq_one_of_dvd_of_prime (n b : ℕ) (prime : ∀ p, Nat.Prime p → p ∣ n → p ≡ 1 [MOD b])
+public theorem Nat.modEq_one_of_dvd_of_prime (n b : ℕ)
+    (prime : ∀ p, Nat.Prime p → p ∣ n → p ≡ 1 [MOD b])
     (d : ℕ) (hdn : d ∣ n) : d ≡ 1 [MOD b] := by
   by_cases hn : n = 0
   · have := prime 2 prime_two <| hn ▸ dvd_zero _
@@ -94,10 +98,28 @@ theorem Nat.modEq_one_of_dvd_of_prime (n b : ℕ) (prime : ∀ p, Nat.Prime p �
   rw [support_factorization, mem_primeFactors] at hp
   exact ((prime p hp.1 (hp.2.1.trans hdn)).pow _).trans <| by simp; rfl
 
-theorem Nat.add_sq_eq_dist_sq_add_four_mul (c d : ℕ) :
+public theorem Nat.add_sq_eq_dist_sq_add_four_mul (c d : ℕ) :
     (c + d) ^ 2 = (max c d - min c d) ^ 2 + 4 * (c * d) := by
   wlog h : c ≤ d
   · rw [add_comm, max_comm, min_comm, mul_comm c d]; exact this d c (by order)
   obtain ⟨d, rfl⟩ := le_iff_exists_add.mp h
   rw [max_eq_right h, min_eq_left h, Nat.add_sub_cancel_left]
   ring
+
+@[simp] public lemma Nat.ldiff_zero_left {b : ℕ} : Nat.ldiff 0 b = 0 :=
+  Nat.eq_of_testBit_eq (by simp)
+
+@[simp] public lemma Nat.ldiff_zero_right {b : ℕ} : Nat.ldiff b 0 = b :=
+  Nat.eq_of_testBit_eq (by simp)
+
+/-- Disjoint OR equals ADD, for `Nat`; hence subtracting a submask acts as bitwise `ldiff`. -/
+public theorem Nat.and_add_ldiff {a b : ℕ} : (a &&& b) + a.ldiff b = a := by
+  induction a using Nat.binaryRec generalizing b with
+  | zero => simp
+  | bit ba a' ih =>
+    induction b using Nat.binaryRec with
+    | zero => simp
+    | bit bb b' _ => grind [Nat.land_bit, Nat.ldiff_bit, Nat.bit_val, cases Bool]
+
+public theorem Nat.sub_and_eq_ldiff {a b : ℕ} : a - (a &&& b) = a.ldiff b := by
+  grind [Nat.and_add_ldiff]
