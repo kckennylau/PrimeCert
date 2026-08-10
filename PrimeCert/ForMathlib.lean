@@ -125,7 +125,7 @@ public theorem Nat.sub_and_eq_ldiff {a b : ℕ} : a - (a &&& b) = a.ldiff b := b
   grind [Nat.and_add_ldiff]
 
 /-- A prime other than `2` and `3` is coprime to 6. -/
-public theorem Nat.Prime.mod_6 {p : ℕ} (hp : p.Prime) (hp₂ : p ≠ 2) (hp₃ : p ≠ 3) :
+public theorem Nat.Prime.mod_six_eq_one_or_five {p : ℕ} (hp : p.Prime) (hp₂ : p ≠ 2) (hp₃ : p ≠ 3) :
     p % 6 = 1 ∨ p % 6 = 5 := by
   have h₂ : p % 2 = 1 := Nat.odd_iff.mp (hp.eq_two_or_odd'.resolve_left (by lia))
   have h₃ : p % 3 ≠ 0 := by

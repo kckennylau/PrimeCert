@@ -269,7 +269,7 @@ public theorem sieveK_testBit_iff {n sqrtN t : ℕ} (ht : t ≠ 0) (htM : t ≤ 
     ⟨(num t).minFac, minFac_prime (by omega), minFac_dvd _, minFac_sq_le_self (by omega) hnp⟩
   have hq2le : 2 ≤ q := hqprime.two_le
   have hq6 : q % 6 = 1 ∨ q % 6 = 5 :=
-    hqprime.mod_6 (by rintro rfl; lia) (by rintro rfl; lia)
+    hqprime.mod_six_eq_one_or_five (by rintro rfl; lia) (by rintro rfl; lia)
   obtain ⟨m, hm⟩ := hqdvd
   have hqm : q ≤ m := Nat.le_of_mul_le_mul_left (by rw [← pow_two]; omega) (by lia)
   have hm5 : 5 ≤ m := by lia

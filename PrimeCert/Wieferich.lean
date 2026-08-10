@@ -76,7 +76,7 @@ theorem wieferich_mirimanoff {p : ℕ} (hp : p.Prime) (p_bound : p < 6000) :
     revert hp
     decide +revert +kernel
   have hp₁ : p ≠ 1 := hp.ne_one
-  obtain h₁ | h₅ := hp.mod_6 (by lia) (by lia)
+  obtain h₁ | h₅ := hp.mod_six_eq_one_or_five (by lia) (by lia)
   · simpa [hp₁] using! wieferich_mirimanoff₁ p p_bound h₁
   · simpa [hp₁] using! Or.inl <| wieferich₅ p p_bound h₅
 
