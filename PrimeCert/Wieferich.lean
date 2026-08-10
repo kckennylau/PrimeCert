@@ -6,6 +6,7 @@ Authors: Kenny Lau
 
 import Mathlib.Data.Nat.Totient
 import Mathlib.Tactic.IntervalCases
+import PrimeCert.ForMathlib
 import PrimeCert.Interval
 import PrimeCert.PowMod
 
@@ -67,24 +68,6 @@ theorem wieferich_mirimanoff₁ : ∀ n < 6000, n % 6 = 1 →
 -- 6n+5 to 6000
 theorem wieferich₅ : ∀ n < 6000, n % 6 = 5 → !wieferichKR n := by
   check_interval
-
-theorem Nat.Prime.mod_6 {p : ℕ} (hp : p.Prime) (hp₂ : p ≠ 2) (hp₃ : p ≠ 3) :
-    p % 6 = 1 ∨ p % 6 = 5 := by
-  have h₁ := div_add_mod p 6
-  have h₂ := mod_lt p (by decide +kernel : 0 < 6)
-  generalize p / 6 = k at *
-  generalize p % 6 = r at *
-  subst p
-  interval_cases r
-  · rw [add_zero, prime_mul_iff, eq_false (p := Prime 6) (by decide)] at hp; simp at hp
-  · left; lia
-  · rw [show 6 * k + 2 = 2 * (3 * k + 1) by ring, prime_mul_iff] at hp
-    rcases hp with ⟨-, h⟩ | ⟨-, h⟩ <;> lia
-  · rw [show 6 * k + 3 = 3 * (2 * k + 1) by ring, prime_mul_iff] at hp
-    rcases hp with ⟨-, h⟩ | ⟨-, h⟩ <;> lia
-  · rw [show 6 * k + 4 = 2 * (3 * k + 2) by ring, prime_mul_iff] at hp
-    rcases hp with ⟨-, h⟩ | ⟨-, h⟩ <;> lia
-  · right; lia
 
 theorem wieferich_mirimanoff {p : ℕ} (hp : p.Prime) (p_bound : p < 6000) :
     ¬(2 ^ (p - 1) ≡ 1 [MOD p^2]) ∨ ¬(3 ^ (p - 1) ≡ 1 [MOD p^2]) := by

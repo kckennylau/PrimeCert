@@ -254,14 +254,6 @@ theorem coprime6_mod {m : ℕ} : m.Coprime 6 ↔ m % 6 = 1 ∨ m % 6 = 5 := by
   have : ∀ t < 6, t.gcd 6 = 1 ↔ t % 6 = 1 ∨ t % 6 = 5 := by decide
   simpa using this (m % 6) (Nat.mod_lt _ (by simp))
 
-theorem prime_ge5_mod6 {q : ℕ} (hq : q.Prime) (h2 : q ≠ 2) (h3 : q ≠ 3) :
-    q % 6 = 1 ∨ q % 6 = 5 := by
-  have h2 : q % 2 = 1 := Nat.odd_iff.mp (hq.eq_two_or_odd'.resolve_left (by lia))
-  have h3 : q % 3 ≠ 0 := by
-    rw [ne_eq, ← Nat.dvd_iff_mod_eq_zero, Nat.dvd_prime_two_le hq (by lia)]
-    lia
-  lia
-
 /-- For `1 ≤ t ≤ (n-1)/3` with `num t ≤ n ≤ sqrtN*sqrtN`, bit `t` of the sieve is set iff `num t`
 is prime. -/
 public theorem sieveK_testBit_iff {n sqrtN t : ℕ} (ht : t ≠ 0) (htM : t ≤ (n - 1) / 3)
@@ -277,7 +269,7 @@ public theorem sieveK_testBit_iff {n sqrtN t : ℕ} (ht : t ≠ 0) (htM : t ≤ 
     ⟨(num t).minFac, minFac_prime (by omega), minFac_dvd _, minFac_sq_le_self (by omega) hnp⟩
   have hq2le : 2 ≤ q := hqprime.two_le
   have hq6 : q % 6 = 1 ∨ q % 6 = 5 :=
-    prime_ge5_mod6 hqprime (by rintro rfl; lia) (by rintro rfl; lia)
+    hqprime.mod_6 (by rintro rfl; lia) (by rintro rfl; lia)
   obtain ⟨m, hm⟩ := hqdvd
   have hqm : q ≤ m := Nat.le_of_mul_le_mul_left (by rw [← pow_two]; omega) (by lia)
   have hm5 : 5 ≤ m := by lia
