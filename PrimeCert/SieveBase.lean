@@ -9,12 +9,12 @@ public meta import PrimeCert.Meta.Sieve
 
 /-! # The built-in sieve cache
 
-A certified sieve for numbers up to `100000`, built when this module compiles and available to
+A certified sieve for numbers up to `1000000`, built when this module compiles and available to
 `sieve_lookup` and `prime_cert [sieve …]` on import. Larger sieves are added with `run_sieve`.
 -/
 
 namespace PrimeCert.Sieve
 
-run_sieve 100000
+run_sieve 1000000
 
 end PrimeCert.Sieve
