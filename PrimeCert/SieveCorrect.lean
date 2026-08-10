@@ -303,15 +303,14 @@ public theorem sieveK_testBit_iff {n sqrtN t : ℕ} (ht : t ≠ 0) (htM : t ≤ 
 public theorem prime_of_sieve_eq {n sqrtN t lit p : ℕ} (hEq : sieveK n sqrtN = lit)
     (h1 : Nat.ble 1 t)
     (h2 : t.ble ((n.sub 1).div 3))
-    (h3 : (((n.sub 1).div 3).add 1).ble (Nat.pow 2 32))
+    (h3 : n.ble 12884901888)
     (h4 : (numK t).ble n)
     (h5 : n.ble (sqrtN.mul sqrtN))
     (hbit : testBitK lit t)
     (hp : (numK t).beq p) :
     Nat.Prime p := by
   subst hEq
-  simp only [Nat.ble_eq, Nat.beq_eq, Nat.pow_eq, Nat.sub_eq, Nat.add_eq, Nat.mul_eq,
-    Nat.div_eq_div] at h1 h2 h3 h4 h5 hp
+  simp only [Nat.ble_eq, Nat.beq_eq, Nat.sub_eq, Nat.mul_eq, Nat.div_eq_div] at h1 h2 h3 h4 h5 hp
   grind [sieveK_testBit_iff]
 
 end PrimeCert.Sieve
