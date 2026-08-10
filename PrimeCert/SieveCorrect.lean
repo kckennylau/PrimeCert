@@ -292,25 +292,16 @@ public theorem sieveK_testBit_iff {n sqrtN t : ℕ} (ht : t ≠ 0) (htM : t ≤ 
 /-- From the numeric side-conditions (each as `Nat.ble … = true`), "bit `t` of the sieve literal
 `lit` is set", and `numK t = p`, conclude `p` is prime. The kernel reads the bit from `lit`, and
 `hEq : sieveK n sqrtN = lit`, the equation `run_sieve` proves, carries it back to the sieve. -/
-public theorem prime_of_sieve_eq {n sqrtN t lit p : ℕ} (hEq : sieveK n sqrtN = lit)
+public theorem prime_of_sieve_eq {n sqrtN lit : ℕ} (hEq : sieveK n sqrtN = lit)
+    (h3 : n.ble 12884901888)
+    (h5 : n.ble (sqrtN.mul sqrtN))
+    {t p : ℕ}
     (h1 : Nat.ble 1 t)
     (h2 : t.ble ((n.sub 1).div 3))
-    (h3 : n.ble 12884901888)
-    (h4 : (numK t).ble n)
-    (h5 : n.ble (sqrtN.mul sqrtN))
+    (h4 : p.ble n)
     (hbit : testBitK lit t)
     (hp : (numK t).beq p) :
     Nat.Prime p := by
   grind [sieveK_testBit_iff, Nat.ble_eq, Nat.beq_eq, Nat.div_eq_div]
-
-/-- The sieve's conclusion for every index at once: given `hEq : sieveK n sqrtN = lit` and the two
-bounds on `n`, a set bit of `lit` names a prime. `run_sieve` emits this once per cache, so a
-lookup supplies only the index and its two comparisons. -/
-public theorem primes_of_sieve_eq {n sqrtN lit : ℕ} (hEq : sieveK n sqrtN = lit)
-    (h3 : n.ble 12884901888)
-    (h5 : n.ble (sqrtN.mul sqrtN)) :
-    ∀ t, Nat.ble 1 t → t.ble ((n.sub 1).div 3) → (numK t).ble n → testBitK lit t →
-      Nat.Prime (num t) := by
-  grind [prime_of_sieve_eq, Nat.beq_eq]
 
 end PrimeCert.Sieve
