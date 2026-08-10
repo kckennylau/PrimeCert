@@ -6,6 +6,7 @@ Authors: Bhavik Mehta
 module
 
 public meta import PrimeCert.Meta.SieveCache
+public meta import PrimeCert.Sieve
 
 /-! # The `run_sieve` command
 
