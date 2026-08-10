@@ -5,6 +5,7 @@ Authors: Bhavik Mehta
 -/
 module
 
+public meta import Lean.Elab.Command
 public meta import PrimeCert.Meta.SieveCache
 public meta import PrimeCert.Sieve
 
@@ -29,7 +30,7 @@ private meta def addThm (name : Name) (type value : Expr) : MetaM Unit :=
   addDecl <| Declaration.thmDecl { name, levelParams := [], type, value }
 
 /-- Sieving steps per batch, used when `run_sieve` is given no batch count. -/
-public meta def defaultBatchLen : Nat := 16
+private meta def defaultBatchLen : Nat := 16
 
 /-- Returns a bitset `b` and a proof of `sieveLoopK M (initK M) 1 fuel = b`, split into batches of
 at most `len` steps; `n` only distinguishes the names of the emitted batch lemmas. -/
@@ -69,7 +70,7 @@ private meta def emitChain (n M fuel len : Nat) : MetaM (Nat × Expr) := do
 `len?` steps, defaulting to `defaultBatchLen`, and each batch is kernel-checked separately. The
 bitset and its equation are held by generated declarations; `sieve_lookup` finds them through the
 registry. -/
-public meta def runSieve (n : Nat) (len? : Option Nat := none) : MetaM Unit := do
+private meta def runSieve (n : Nat) (len? : Option Nat := none) : MetaM Unit := do
   if let some c := (← sieveCaches).find? (n ≤ ·.hi) then
     throwError "run_sieve: a sieve cache up to {c.hi} already covers {n}"
   let idx := (← sieveCaches).size
