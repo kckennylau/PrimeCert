@@ -37,31 +37,35 @@ meta def emitChain (n M fuel len : Nat) : MetaM (Nat × Expr) := do
   -- the fixed left-hand side of the chain: the full loop on the kernel-side initial bitset
   let lhsLoop := mkSieveLoopK mE initE 1 fuel
   let mut bits := initK M
-  let mut bitsE := mkRawNatLit bits
-  -- enter the chain by replacing `initK M` with its literal: initK M = b_0
+  -- the run starts at the expression `initK M`, the batches at numerals, so the kernel is asked
+  -- once to agree that the two coincide
   let initName := Name.mkSimple s!"chain_init_{n}"
-  addThm initName (mkBeqTrue initE bitsE) Lean.reflBoolTrue
-  -- invariant: proof : lhsLoop = sieveLoopK M bits start remaining
+  addThm initName (mkBeqTrue initE (mkRawNatLit bits)) Lean.reflBoolTrue
+  -- what is proved so far: the target run equals one that begins at `bits` and still owes
+  -- `fuel - i * len` steps, which each iteration lowers by `step`
   let mut proof := mkAppN (mkConst ``sieveLoopK_congr)
-    #[mE, initE, bitsE, mkRawNatLit 1, mkRawNatLit fuel, mkConst initName]
-  let mut start := 1
-  let mut remaining := fuel
+    #[mE, initE, mkRawNatLit bits, mkRawNatLit 1, mkRawNatLit fuel, mkConst initName]
   for i in [0:(fuel + len - 1) / len] do
-    let step := Nat.min len remaining
-    let rest := remaining - step
+    let start := 1 + i * len
+    let owed := fuel - i * len
+    let step := Nat.min len owed
+    -- run this batch to find where it lands; `next` is what the theorem below claims
     let next := sieveLoop M bits start step
-    let nextE := mkRawNatLit next
     let stepName := Name.mkSimple s!"chain_step_{n}_{i}"
-    addThm stepName (mkBeqTrue (mkSieveLoopK mE bitsE start step) nextE) Lean.reflBoolTrue
-    proof := mkAppN (mkConst ``sieveLoopK_chain)
-      #[lhsLoop, mE, bitsE, nextE, mkRawNatLit start, mkRawNatLit step, mkRawNatLit rest,
-        proof, mkConst stepName]
+    -- one kernel check per batch, sized by `len`: `step` steps from one numeral reach another
+    addThm stepName (mkBeqTrue (mkSieveLoopK mE (mkRawNatLit bits) start step) (mkRawNatLit next))
+      Lean.reflBoolTrue
+    -- the last batch leaves nothing owed, so it yields the value of the whole run
+    proof := if owed == step then
+        mkAppN (mkConst ``sieveLoopK_last)
+          #[lhsLoop, mE, mkRawNatLit bits, mkRawNatLit next, mkRawNatLit start, mkRawNatLit step,
+            proof, mkConst stepName]
+      else
+        mkAppN (mkConst ``sieveLoopK_chain)
+          #[lhsLoop, mE, mkRawNatLit bits, mkRawNatLit next, mkRawNatLit start, mkRawNatLit step,
+            mkRawNatLit (owed - step), proof, mkConst stepName]
     bits := next
-    bitsE := nextE
-    start := start + step
-    remaining := rest
-  -- the chain ends at a zero-step loop on `bits`, which is definitionally `bits` itself
-  return (bits, ← mkExpectedTypeHint proof (mkNatEq lhsLoop bitsE))
+  return (bits, proof)
 
 /-- Build the cache for numbers up to `n` and register it. The sieving runs in batches of `len?`
 steps, defaulting to 16, each kernel-checked on its own; generated declarations hold the bitset
