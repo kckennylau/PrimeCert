@@ -304,16 +304,27 @@ public theorem prime_of_sieve_eq {n sqrtN lit : ℕ} (hEq : sieveK n sqrtN = lit
     Nat.Prime p := by
   grind [sieveK_testBit_iff, Nat.ble_eq, Nat.beq_eq, Nat.div_eq_div]
 
-/-- Both directions for a cached sieve: within its range, a bit of `lit` is set exactly when the
-number at that index is prime. `run_sieve` supplies `hEq`, `h3` and `h5` once per cache. -/
-public theorem testBit_sieve_eq_iff {n sqrtN lit : ℕ} (hEq : sieveK n sqrtN = lit)
+/-- `lit` decides primality for the numbers up to `n`: within the index range, a bit of `lit` is
+set exactly when the number at that index is prime. -/
+@[expose] public def IsSieve (n lit : ℕ) : Prop :=
+  ∀ t, Nat.ble 1 t → t.ble ((n.sub 1).div 3) → (numK t).ble n → (testBitK lit t ↔ (num t).Prime)
+
+/-- A cached sieve satisfies `IsSieve`. `run_sieve` applies this once, so a consumer works from
+`IsSieve` alone and never mentions `sieveK` or its square root. -/
+public theorem isSieve_of_sieveK_eq {n sqrtN lit : ℕ} (hEq : sieveK n sqrtN = lit)
     (h3 : n.ble 12884901888)
-    (h5 : n.ble (sqrtN.mul sqrtN))
-    {t : ℕ}
+    (h5 : n.ble (sqrtN.mul sqrtN)) :
+    IsSieve n lit := by
+  grind [IsSieve, sieveK_testBit_iff, Nat.ble_eq, Nat.div_eq_div]
+
+/-- Read a prime off a sieve: a set bit at index `t` with `numK t = p` makes `p` prime. -/
+public theorem IsSieve.prime {n lit t p : ℕ} (h : IsSieve n lit)
     (h1 : Nat.ble 1 t)
     (h2 : t.ble ((n.sub 1).div 3))
-    (h4 : (numK t).ble n) :
-    testBitK lit t ↔ (num t).Prime := by
-  grind [sieveK_testBit_iff, Nat.ble_eq, Nat.div_eq_div]
+    (h4 : p.ble n)
+    (hbit : testBitK lit t)
+    (hp : (numK t).beq p) :
+    Nat.Prime p := by
+  grind [IsSieve, Nat.beq_eq]
 
 end PrimeCert.Sieve
