@@ -5,7 +5,7 @@ Authors: Bhavik Mehta
 -/
 module
 
-public meta import PrimeCert.Meta.Sieve
+meta import PrimeCert.Meta.Sieve
 
 /-! # The built-in sieve cache
 

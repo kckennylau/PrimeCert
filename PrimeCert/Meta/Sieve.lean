@@ -29,9 +29,6 @@ meta def mkSieveLoopK (mE bits : Expr) (start len : Nat) : Expr :=
 meta def addThm (name : Name) (type value : Expr) : MetaM Unit :=
   addDecl <| Declaration.thmDecl { name, levelParams := [], type, value }
 
-/-- Sieving steps per batch, used when `run_sieve` is given no batch count. -/
-meta def defaultBatchLen : Nat := 16
-
 /-- Returns a bitset `b` and a proof of `sieveLoopK M (initK M) 1 fuel = b`, split into batches of
 at most `len` steps; `n` only distinguishes the names of the emitted batch lemmas. -/
 meta def emitChain (n M fuel len : Nat) : MetaM (Nat × Expr) := do
@@ -67,7 +64,7 @@ meta def emitChain (n M fuel len : Nat) : MetaM (Nat × Expr) := do
   return (bits, ← mkExpectedTypeHint proof (mkNatEq lhsLoop bitsE))
 
 /-- Build the cache for numbers up to `n` and register it. The sieving is split into batches of
-`len?` steps, defaulting to `defaultBatchLen`, and each batch is kernel-checked separately. The
+`len?` steps, defaulting to 16, and each batch is kernel-checked separately. The
 bitset and its equation are held by generated declarations; `sieve_lookup` finds them through the
 registry. -/
 meta def runSieve (n : Nat) (len? : Option Nat := none) : MetaM Unit := do
@@ -78,7 +75,7 @@ meta def runSieve (n : Nat) (len? : Option Nat := none) : MetaM Unit := do
   let dataName := Name.mkNum `PrimeCert.Sieve.sieveData idx
   let sq := Nat.sqrt n + 1
   let fuel := (sq - 1) / 3
-  let len := Nat.max 1 (len?.getD defaultBatchLen)
+  let len := Nat.max 1 (len?.getD 16)
   let (lit, proof) ← emitChain n ((n - 1) / 3) fuel len
   addDecl <| Declaration.defnDecl
     { name := litName, levelParams := [], type := Nat.mkType,
