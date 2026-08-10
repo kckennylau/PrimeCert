@@ -304,4 +304,16 @@ public theorem prime_of_sieve_eq {n sqrtN lit : ℕ} (hEq : sieveK n sqrtN = lit
     Nat.Prime p := by
   grind [sieveK_testBit_iff, Nat.ble_eq, Nat.beq_eq, Nat.div_eq_div]
 
+/-- Both directions for a cached sieve: within its range, a bit of `lit` is set exactly when the
+number at that index is prime. `run_sieve` supplies `hEq`, `h3` and `h5` once per cache. -/
+public theorem testBit_sieve_eq_iff {n sqrtN lit : ℕ} (hEq : sieveK n sqrtN = lit)
+    (h3 : n.ble 12884901888)
+    (h5 : n.ble (sqrtN.mul sqrtN))
+    {t : ℕ}
+    (h1 : Nat.ble 1 t)
+    (h2 : t.ble ((n.sub 1).div 3))
+    (h4 : (numK t).ble n) :
+    testBitK lit t ↔ (num t).Prime := by
+  grind [sieveK_testBit_iff, Nat.ble_eq, Nat.div_eq_div]
+
 end PrimeCert.Sieve
