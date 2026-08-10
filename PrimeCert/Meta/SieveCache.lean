@@ -6,7 +6,6 @@ Authors: Bhavik Mehta
 module
 
 public import Lean
-public import PrimeCert.Sieve
 
 /-! # The registry of sieve caches
 
