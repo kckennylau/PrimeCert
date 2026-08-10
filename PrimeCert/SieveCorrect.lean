@@ -304,6 +304,30 @@ public theorem prime_of_sieve_eq {n sqrtN lit : ℕ} (hEq : sieveK n sqrtN = lit
     Nat.Prime p := by
   grind [sieveK_testBit_iff, Nat.ble_eq, Nat.beq_eq, Nat.div_eq_div]
 
+theorem markMaskK_le {bits p M : ℕ} : markMaskK bits p M ≤ bits := by
+  rw [markMaskK_eq_ldiff]
+  grind [Nat.and_add_ldiff]
+
+theorem sieveLoopK_le {M bits start fuel : ℕ} : sieveLoopK M bits start fuel ≤ bits := by
+  induction fuel with
+  | zero => exact Nat.le_refl _
+  | succ f ih =>
+    rw [sieveLoopK_succ_eq_ite]
+    split
+    · exact Nat.le_trans markMaskK_le ih
+    · exact ih
+
+/-- The sieve leaves every bit above its top index clear. -/
+public theorem sieveK_lt {n sqrtN : ℕ} : sieveK n sqrtN < 2 ^ ((n - 1) / 3 + 1) := by
+  have h : sieveK n sqrtN ≤ initK ((n - 1) / 3) := by
+    rw [sieveK]
+    grind [sieveLoopK_le, Nat.div_eq_div]
+  have hp : 0 < 2 ^ ((n - 1) / 3) := by positivity
+  have hi : initK ((n - 1) / 3) < 2 ^ ((n - 1) / 3 + 1) := by
+    rw [initK_eq, Nat.shiftLeft_eq, pow_one, Nat.pow_succ]
+    lia
+  lia
+
 /-- `lit` decides primality for the numbers up to `n`: within the index range, a bit of `lit` is
 set exactly when the number at that index is prime. -/
 @[expose] public def IsSieve (n lit : ℕ) : Prop :=
