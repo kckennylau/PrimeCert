@@ -63,10 +63,9 @@ meta def emitChain (n M fuel len : Nat) : MetaM (Nat × Expr) := do
   -- the chain ends at a zero-step loop on `bits`, which is definitionally `bits` itself
   return (bits, ← mkExpectedTypeHint proof (mkNatEq lhsLoop bitsE))
 
-/-- Build the cache for numbers up to `n` and register it. The sieving is split into batches of
-`len?` steps, defaulting to 16, and each batch is kernel-checked separately. The
-bitset and its equation are held by generated declarations; `sieve_lookup` finds them through the
-registry. -/
+/-- Build the cache for numbers up to `n` and register it. The sieving runs in batches of `len?`
+steps, defaulting to 16, each kernel-checked on its own; generated declarations hold the bitset
+and its equation. -/
 meta def runSieve (n : Nat) (len? : Option Nat := none) : MetaM Unit := do
   if let some c := (← sieveCaches).find? (n ≤ ·.hi) then
     throwError "run_sieve: a sieve cache up to {c.hi} already covers {n}"
