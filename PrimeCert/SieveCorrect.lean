@@ -309,6 +309,6 @@ public theorem prime_of_sieve_eq {n sqrtN t lit p : ℕ} (hEq : sieveK n sqrtN =
     (hbit : testBitK lit t)
     (hp : (numK t).beq p) :
     Nat.Prime p := by
-  grind [sieveK_testBit_iff, Nat.ble_eq, Nat.beq_eq, Nat.sub_eq, Nat.div_eq_div]
+  grind [sieveK_testBit_iff, Nat.ble_eq, Nat.beq_eq, Nat.div_eq_div]
 
 end PrimeCert.Sieve
