@@ -5,6 +5,7 @@ Authors: Bhavik Mehta
 -/
 module
 
+public meta import PrimeCert.Meta.PrimeCert
 public meta import PrimeCert.Meta.SieveCache
 import PrimeCert.SieveCorrect
 meta import PrimeCert.SieveBase
@@ -47,5 +48,26 @@ elab "sieve_lookup" : tactic => liftMetaFinishingTactic fun g => do
   let some pv := p.nat?
     | throwError "sieve_lookup: the argument of `Nat.Prime` is not a numeral"
   g.assign (← mkSieveLookup pv)
+
+/-- Syntax for the `sieve` method: a numeric literal `n`, looked up in the sieve cache.
+
+```lean
+-- In a prime_cert call, after `run_sieve`:
+prime_cert [sieve {1009; 1999}, ...]
+```
+-/
+public syntax sieve_spec := num
+
+/-- The `sieve` method: certify the number in the step by a sieve lookup. -/
+public meta def mkSieveProof : Meta.PrimeCertMethod ``sieve_spec := fun stx _ ↦ match stx with
+  | `(sieve_spec| $n:num) => do
+    have n := n.getNat
+    return ⟨n, mkNatLit n, ← mkSieveLookup n⟩
+  | _ => throwUnsupportedSyntax
+
+/-- Registration of the `sieve` method with the `prime_cert` ladder. -/
+@[prime_cert sieve] public meta def PrimeCertExt.sieve : Meta.PrimeCertExt where
+  syntaxName := ``sieve_spec
+  methodName := ``mkSieveProof
 
 end PrimeCert.Sieve
