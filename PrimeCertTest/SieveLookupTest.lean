@@ -60,3 +60,10 @@ run_sieve 2000000
 
 example : Nat.Prime 1000003 := by sieve_lookup
 example : Nat.Prime 1009 := by sieve_lookup
+
+/-- info: 1009 uses the cache for 5..1000000 -/
+#guard_msgs in
+open Lean in
+run_cmd do
+  let some c ← Elab.Command.liftCoreM <| findSieveCache 1009 | throwError "no cache covers 1009"
+  logInfo s!"1009 uses the cache for {c.lo}..{c.hi}"
