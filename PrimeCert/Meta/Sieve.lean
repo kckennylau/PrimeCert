@@ -82,11 +82,11 @@ meta def runSieve (n : Nat) (len? : Option Nat := none) : MetaM Unit := do
   let lhs := mkAppN (mkConst ``sieveK) #[mkRawNatLit n, mkRawNatLit sq]
   addThm dataName (mkNatEq lhs (mkConst litName)) proof
   -- the range bounds hold for this cache alone, so they are discharged here rather than at lookup
-  let primeName := `PrimeCert.Sieve ++ Name.mkSimple s!"sievePrime_{n}"
-  let primeProof := mkAppN (mkConst ``prime_of_sieve_eq)
+  let isSieveName := `PrimeCert.Sieve ++ Name.mkSimple s!"isSieve_{n}"
+  let isSieveProof := mkAppN (mkConst ``isSieve_of_sieveK_eq)
     #[mkRawNatLit n, mkRawNatLit sq, mkConst litName, mkConst dataName,
       Lean.reflBoolTrue, Lean.reflBoolTrue]
-  addThm primeName (← inferType primeProof) primeProof
+  addThm isSieveName (mkAppN (mkConst ``IsSieve) #[mkRawNatLit n, mkConst litName]) isSieveProof
   sieveCacheExt.add { lo := 5, hi := n, litName, dataName }
 
 /-- Command wrapper for `runSieve`: `run_sieve n` builds the certified cache for numbers up to
