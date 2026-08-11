@@ -7,6 +7,7 @@ module
 
 public import Lean.Elab.Command
 public meta import PrimeCert.Meta.SieveCache
+public meta import PrimeCert.Sieve
 public import PrimeCert.SieveCorrect
 
 /-! # The `run_sieve` command
