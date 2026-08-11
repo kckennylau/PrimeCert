@@ -28,6 +28,8 @@ public structure SieveCache where
   litName : Name
   /-- Declaration holding the equation for the bitset. -/
   dataName : Name
+  /-- Declaration holding `IsSieve lo..hi litName`. -/
+  isSieveName : Name
   deriving Inhabited
 
 public meta initialize sieveCacheExt : SimpleScopedEnvExtension SieveCache (Array SieveCache) ←
