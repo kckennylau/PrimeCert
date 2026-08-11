@@ -302,18 +302,18 @@ public theorem prime_of_sieve_eq {n sqrtN lit : ℕ} (hEq : sieveK n sqrtN = lit
 theorem markMaskK_le {bits p M : ℕ} : markMaskK bits p M ≤ bits := by
   grind [markMaskK_eq_ldiff, Nat.and_add_ldiff]
 
+grind_pattern markMaskK_le => markMaskK bits p M
+
 theorem sieveLoopK_le {M bits start fuel : ℕ} : sieveLoopK M bits start fuel ≤ bits := by
   induction fuel with
-  | zero => exact Nat.le_refl _
-  | succ f ih =>
-    rw [sieveLoopK_succ_eq_ite]
-    split
-    · exact Nat.le_trans markMaskK_le ih
-    · exact ih
+  | zero => rfl
+  | succ f ih => grind [sieveLoopK_succ_eq_ite]
+
+grind_pattern sieveLoopK_le => sieveLoopK M bits start fuel
 
 /-- The sieve leaves every bit above its top index clear. -/
 public theorem sieveK_lt {n sqrtN : ℕ} : sieveK n sqrtN < 2 ^ ((n - 1) / 3 + 1) := by
-  have h : sieveK n sqrtN ≤ initK ((n - 1) / 3) := by grind [sieveK, sieveLoopK_le, Nat.div_eq_div]
+  have h : sieveK n sqrtN ≤ initK ((n - 1) / 3) := by grind [sieveK, Nat.div_eq_div]
   have hp : 0 < 2 ^ ((n - 1) / 3) := by positivity
   have hi : initK ((n - 1) / 3) < 2 ^ ((n - 1) / 3 + 1) := by
     rw [initK_eq, Nat.shiftLeft_eq, pow_one, Nat.pow_succ]
@@ -326,7 +326,7 @@ theorem le_div_of_num_le {n t : ℕ} (h : num t ≤ n) : t ≤ (n - 1) / 3 := by
 /-- `lit` decides primality for the numbers up to `n`: bit `t` is set exactly when `num t`, the
 number at that index, is prime. `IsSieve.prime` reads it in the kernel-checked form. -/
 @[expose] public def IsSieve (n lit : ℕ) : Prop :=
-  ∀ t, 1 ≤ t → num t ≤ n → (lit.testBit t ↔ (num t).Prime)
+  ∀ t ≠ 0, num t ≤ n → (lit.testBit t ↔ (num t).Prime)
 
 /-- A cached sieve satisfies `IsSieve`. `run_sieve` applies this once, so a consumer works from
 `IsSieve` alone and never mentions `sieveK` or its square root. -/
