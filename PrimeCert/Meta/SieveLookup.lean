@@ -58,12 +58,14 @@ prime_cert [sieve {1009; 1999}, ...]
 -/
 public syntax sieve_spec := num
 
+/-- The `sieve` method: certify the number in the step by a sieve lookup. -/
 public meta def mkSieveProof : Meta.PrimeCertMethod ``sieve_spec := fun stx _ ↦ match stx with
   | `(sieve_spec| $n:num) => do
     have n := n.getNat
     return ⟨n, mkNatLit n, ← mkSieveLookup n⟩
   | _ => throwUnsupportedSyntax
 
+/-- Registration of the `sieve` method with the `prime_cert` ladder. -/
 @[prime_cert sieve] public meta def PrimeCertExt.sieve : Meta.PrimeCertExt where
   syntaxName := ``sieve_spec
   methodName := ``mkSieveProof
