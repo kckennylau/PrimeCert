@@ -5,9 +5,9 @@ Authors: Bhavik Mehta
 -/
 module
 
-public import Lean.Elab.Command
+import Lean.Elab.Command
 public meta import PrimeCert.Meta.SieveCache
-public meta import PrimeCert.Sieve
+meta import PrimeCert.Sieve
 public import PrimeCert.SieveCorrect
 
 /-! # The `run_sieve` command
