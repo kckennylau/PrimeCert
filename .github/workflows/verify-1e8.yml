@@ -1,0 +1,18 @@
+name: Verify the 1e8 sieve
+
+on:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: leanprover/lean-action@v1
+        with:
+          build: true
+          test: false
+          lint: false
+
+      - name: Build the sieve to 1e8 and read primes off it
+        run: /usr/bin/time -v lake env lean PrimeCertTest/SieveVerify1e8.lean
