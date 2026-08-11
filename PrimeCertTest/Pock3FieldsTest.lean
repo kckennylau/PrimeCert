@@ -19,6 +19,8 @@ open PrimeCert
 theorem pock3_no_m : Nat.Prime 73471 := prime_cert%
   [small {2; 7; 31}, pock3 (73471, 3, 7, 2 * 31)]
 
--- legacy 5-field form still parses and proves
+-- legacy 5-field form still parses and proves, but warns
+/-- warning: pock3: the 5-field form `(N, root, m, mode, F)` is deprecated; use the 4-field form `(N, root, mode, F)` instead (m is now computed automatically) -/
+#guard_msgs in
 theorem pock3_legacy_m : Nat.Prime 73471 := prime_cert%
   [small {2; 7; 31}, pock3 (73471, 3, 1, 7, 2 * 31)]
