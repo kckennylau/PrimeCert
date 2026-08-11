@@ -17,7 +17,7 @@ tightest sieve in scope that covers the number. `run_sieve` adds a wider one.
 
 namespace PrimeCert.Sieve
 
-open Lean Elab Tactic Meta
+open Lean Elab Tactic
 
 /-- A proof of `Nat.Prime p`, read off a sieve in the environment. `2` and `3` come from
 `Nat.prime_two` and `Nat.prime_three`, the primes a mod-6 sieve skips. -/
