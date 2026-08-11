@@ -293,13 +293,8 @@ public theorem sieveK_testBit_iff {n sqrtN t : ℕ} (ht : t ≠ 0) (htM : t ≤ 
 `lit` is set", and `numK t = p`, conclude `p` is prime. The kernel reads the bit from `lit`, and
 `hEq : sieveK n sqrtN = lit`, the equation `run_sieve` proves, carries it back to the sieve. -/
 public theorem prime_of_sieve_eq {n sqrtN lit : ℕ} (hEq : sieveK n sqrtN = lit)
-    (h3 : n.ble 12884901888)
-    (h5 : n.ble (sqrtN.mul sqrtN))
-    {t p : ℕ}
-    (h1 : Nat.ble 1 t)
-    (h2 : t.ble ((n.sub 1).div 3))
-    (h4 : p.ble n)
-    (hbit : testBitK lit t)
+    (h3 : n.ble 12884901888) (h5 : n.ble (sqrtN.mul sqrtN)) {t p : ℕ} (h1 : Nat.ble 1 t)
+    (h2 : t.ble ((n.sub 1).div 3)) (h4 : p.ble n) (hbit : testBitK lit t)
     (hp : (numK t).beq p) :
     Nat.Prime p := by
   grind [sieveK_testBit_iff, Nat.ble_eq, Nat.beq_eq, Nat.div_eq_div]
@@ -336,17 +331,13 @@ number at that index, is prime. `IsSieve.prime` reads it in the kernel-checked f
 /-- A cached sieve satisfies `IsSieve`. `run_sieve` applies this once, so a consumer works from
 `IsSieve` alone and never mentions `sieveK` or its square root. -/
 public theorem isSieve_of_sieveK_eq {n sqrtN lit : ℕ} (hEq : sieveK n sqrtN = lit)
-    (h3 : n.ble 12884901888)
-    (h5 : n.ble (sqrtN.mul sqrtN)) :
+    (h3 : n.ble 12884901888) (h5 : n.ble (sqrtN.mul sqrtN)) :
     IsSieve n lit := by
   grind [IsSieve, sieveK_testBit_iff, le_div_of_num_le, Nat.ble_eq, Nat.div_eq_div]
 
 /-- Read a prime off a sieve: a set bit at index `t` with `numK t = p` makes `p` prime. -/
-public theorem IsSieve.prime {n lit t p : ℕ} (h : IsSieve n lit)
-    (h1 : Nat.ble 1 t)
-    (h4 : p.ble n)
-    (hbit : testBitK lit t)
-    (hp : (numK t).beq p) :
+public theorem IsSieve.prime {n lit t p : ℕ} (h : IsSieve n lit) (h1 : Nat.ble 1 t)
+    (h4 : p.ble n) (hbit : testBitK lit t) (hp : (numK t).beq p) :
     Nat.Prime p := by
   grind [IsSieve, Nat.beq_eq, Nat.ble_eq]
 
