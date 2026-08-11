@@ -6,7 +6,6 @@ Authors: Bhavik Mehta
 module
 
 public meta import PrimeCert.Meta.SieveCache
-
 import PrimeCert.SieveCorrect
 meta import PrimeCert.SieveBase
 
