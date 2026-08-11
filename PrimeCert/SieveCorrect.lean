@@ -305,8 +305,7 @@ public theorem prime_of_sieve_eq {n sqrtN lit : ℕ} (hEq : sieveK n sqrtN = lit
   grind [sieveK_testBit_iff, Nat.ble_eq, Nat.beq_eq, Nat.div_eq_div]
 
 theorem markMaskK_le {bits p M : ℕ} : markMaskK bits p M ≤ bits := by
-  rw [markMaskK_eq_ldiff]
-  grind [Nat.and_add_ldiff]
+  grind [markMaskK_eq_ldiff, Nat.and_add_ldiff]
 
 theorem sieveLoopK_le {M bits start fuel : ℕ} : sieveLoopK M bits start fuel ≤ bits := by
   induction fuel with
@@ -319,9 +318,7 @@ theorem sieveLoopK_le {M bits start fuel : ℕ} : sieveLoopK M bits start fuel �
 
 /-- The sieve leaves every bit above its top index clear. -/
 public theorem sieveK_lt {n sqrtN : ℕ} : sieveK n sqrtN < 2 ^ ((n - 1) / 3 + 1) := by
-  have h : sieveK n sqrtN ≤ initK ((n - 1) / 3) := by
-    rw [sieveK]
-    grind [sieveLoopK_le, Nat.div_eq_div]
+  have h : sieveK n sqrtN ≤ initK ((n - 1) / 3) := by grind [sieveK, sieveLoopK_le, Nat.div_eq_div]
   have hp : 0 < 2 ^ ((n - 1) / 3) := by positivity
   have hi : initK ((n - 1) / 3) < 2 ^ ((n - 1) / 3 + 1) := by
     rw [initK_eq, Nat.shiftLeft_eq, pow_one, Nat.pow_succ]
@@ -331,10 +328,10 @@ public theorem sieveK_lt {n sqrtN : ℕ} : sieveK n sqrtN < 2 ^ ((n - 1) / 3 + 1
 /-- The number at an index bounds the index: `num t ≤ n` forces `t ≤ (n-1)/3`. -/
 theorem le_div_of_num_le {n t : ℕ} (h : num t ≤ n) : t ≤ (n - 1) / 3 := by grind [num]
 
-/-- `lit` decides primality for the numbers up to `n`: within the index range, a bit of `lit` is
-set exactly when the number at that index is prime. -/
+/-- `lit` decides primality for the numbers up to `n`: bit `t` is set exactly when `num t`, the
+number at that index, is prime. `IsSieve.prime` reads it in the kernel-checked form. -/
 @[expose] public def IsSieve (n lit : ℕ) : Prop :=
-  ∀ t, Nat.ble 1 t → (numK t).ble n → (testBitK lit t ↔ (num t).Prime)
+  ∀ t, 1 ≤ t → num t ≤ n → (lit.testBit t ↔ (num t).Prime)
 
 /-- A cached sieve satisfies `IsSieve`. `run_sieve` applies this once, so a consumer works from
 `IsSieve` alone and never mentions `sieveK` or its square root. -/
@@ -351,6 +348,6 @@ public theorem IsSieve.prime {n lit t p : ℕ} (h : IsSieve n lit)
     (hbit : testBitK lit t)
     (hp : (numK t).beq p) :
     Nat.Prime p := by
-  grind [IsSieve, Nat.beq_eq]
+  grind [IsSieve, Nat.beq_eq, Nat.ble_eq]
 
 end PrimeCert.Sieve
