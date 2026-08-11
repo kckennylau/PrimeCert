@@ -27,8 +27,9 @@ with 6, lies outside the cache, or has its bit clear (i.e. is composite). -/
 meta def mkSieveLookup (p : Nat) : MetaM Expr := do
   if p == 2 then return mkConst ``Nat.prime_two
   if p == 3 then return mkConst ``Nat.prime_three
-  if p < 5 ∨ (p % 6 != 1 && p % 6 != 5) then
-    throwError "sieve lookup: {p} is neither 2 nor 3 nor coprime to 6, so it is not prime"
+  if p % 2 == 0 then throwError "sieve lookup: {p} is even, so it is not prime"
+  if p % 3 == 0 then throwError "sieve lookup: {p} is a multiple of 3, so it is not prime"
+  if p < 5 then throwError "sieve lookup: {p} is not prime"
   let t := (p - 1) / 3
   let some cache ← findSieveCache p
     | throwError "sieve lookup: no sieve cache covers {p}; the caches in scope are {
@@ -43,13 +44,11 @@ meta def mkSieveLookup (p : Nat) : MetaM Expr := do
       Lean.reflBoolTrue, Lean.reflBoolTrue, Lean.reflBoolTrue, Lean.reflBoolTrue]
 
 /-- Close a `Nat.Prime p` goal with `mkSieveLookup`. -/
-elab "sieve_lookup" : tactic => withMainContext do
-  let g ← getMainGoal
+elab "sieve_lookup" : tactic => liftMetaFinishingTactic fun g => do
   let_expr Nat.Prime p := ← instantiateMVars (← g.getType)
     | throwError "sieve_lookup: goal is not `Nat.Prime _`"
   let some pv := p.nat?
     | throwError "sieve_lookup: the argument of `Nat.Prime` is not a numeral"
   g.assign (← mkSieveLookup pv)
-  replaceMainGoal []
 
 end PrimeCert.Sieve

@@ -26,9 +26,17 @@ example : Nat.Prime 3 := by sieve_lookup
 
 /-! Rejected inputs. -/
 
-/-- error: sieve lookup: 8 is neither 2 nor 3 nor coprime to 6, so it is not prime -/
+/-- error: sieve lookup: 8 is even, so it is not prime -/
 #guard_msgs in
 example : Nat.Prime 8 := by sieve_lookup
+
+/-- error: sieve lookup: 9 is a multiple of 3, so it is not prime -/
+#guard_msgs in
+example : Nat.Prime 9 := by sieve_lookup
+
+/-- error: sieve lookup: 1 is not prime -/
+#guard_msgs in
+example : Nat.Prime 1 := by sieve_lookup
 
 /-- error: sieve lookup: bit 333 of the sieve is clear, so 1001 is not prime -/
 #guard_msgs in
