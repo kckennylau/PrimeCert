@@ -7,29 +7,27 @@ module
 
 public meta import PrimeCert.Meta.PrimeCert
 public meta import PrimeCert.Meta.SieveCache
-
 import PrimeCert.SieveCorrect
 meta import PrimeCert.SieveBase
 
 /-! # Reading a prime off the sieve cache
 
-`mkSieveLookup` builds the proof term and the `sieve_lookup` tactic calls it. The cache from
-`PrimeCert.SieveBase` covers numbers up to `1000000`; beyond that a caller adds one with
-`run_sieve`.
+`mkSieveLookup` builds the proof term and the `sieve_lookup` tactic calls it, choosing the
+tightest sieve in scope that covers the number. `run_sieve` adds a wider one.
 -/
 
 namespace PrimeCert.Sieve
 
-open Lean Elab Tactic Meta
+open Lean Elab Tactic
 
-/-- A proof of `Nat.Prime p`, read off the sieve cache in the environment; `2` and `3` come from
-`Nat.prime_two` and `Nat.prime_three`, which the sieve's numbers skip. Fails if `p` shares a factor
-with 6, lies outside the cache, or has its bit clear (i.e. is composite). -/
+/-- A proof of `Nat.Prime p`, read off a sieve in the environment. `2` and `3` come from
+`Nat.prime_two` and `Nat.prime_three`, the primes a mod-6 sieve skips. -/
 meta def mkSieveLookup (p : Nat) : MetaM Expr := do
   if p == 2 then return mkConst ``Nat.prime_two
   if p == 3 then return mkConst ``Nat.prime_three
-  if p < 5 ∨ (p % 6 != 1 && p % 6 != 5) then
-    throwError "sieve lookup: {p} is neither 2 nor 3 nor coprime to 6, so it is not prime"
+  if p % 2 == 0 then throwError "sieve lookup: {p} is even, so it is not prime"
+  if p % 3 == 0 then throwError "sieve lookup: {p} is a multiple of 3, so it is not prime"
+  if p < 5 then throwError "sieve lookup: {p} is not prime"
   let t := (p - 1) / 3
   let some cache ← findSieveCache p
     | throwError "sieve lookup: no sieve cache covers {p}; the caches in scope are {
@@ -44,14 +42,12 @@ meta def mkSieveLookup (p : Nat) : MetaM Expr := do
       Lean.reflBoolTrue, Lean.reflBoolTrue, Lean.reflBoolTrue, Lean.reflBoolTrue]
 
 /-- Close a `Nat.Prime p` goal with `mkSieveLookup`. -/
-elab "sieve_lookup" : tactic => withMainContext do
-  let g ← getMainGoal
+elab "sieve_lookup" : tactic => liftMetaFinishingTactic fun g => do
   let_expr Nat.Prime p := ← instantiateMVars (← g.getType)
     | throwError "sieve_lookup: goal is not `Nat.Prime _`"
   let some pv := p.nat?
     | throwError "sieve_lookup: the argument of `Nat.Prime` is not a numeral"
   g.assign (← mkSieveLookup pv)
-  replaceMainGoal []
 
 /-- Syntax for the `sieve` method: a numeric literal `n`, looked up in the sieve cache.
 
