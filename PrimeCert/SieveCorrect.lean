@@ -289,19 +289,46 @@ public theorem sieveK_testBit_iff {n sqrtN t : ℕ} (ht : t ≠ 0) (htM : t ≤ 
 
 /-! ### Reading a prime off a cached sieve -/
 
-/-- From the numeric side-conditions (each as `Nat.ble … = true`), "bit `t` of the sieve literal
-`lit` is set", and `numK t = p`, conclude `p` is prime. The kernel reads the bit from `lit`, and
-`hEq : sieveK n sqrtN = lit`, the equation `run_sieve` proves, carries it back to the sieve. -/
-public theorem prime_of_sieve_eq {n sqrtN lit : ℕ} (hEq : sieveK n sqrtN = lit)
-    (h3 : n.ble 12884901888)
-    (h5 : n.ble (sqrtN.mul sqrtN))
-    {t p : ℕ}
-    (h1 : Nat.ble 1 t)
-    (h2 : t.ble ((n.sub 1).div 3))
-    (h4 : p.ble n)
-    (hbit : testBitK lit t)
-    (hp : (numK t).beq p) :
+theorem markMaskK_le {bits p M : ℕ} : markMaskK bits p M ≤ bits := by
+  grind [markMaskK_eq_ldiff, Nat.and_add_ldiff]
+
+grind_pattern markMaskK_le => markMaskK bits p M
+
+theorem sieveLoopK_le {M bits start fuel : ℕ} : sieveLoopK M bits start fuel ≤ bits := by
+  induction fuel with
+  | zero => rfl
+  | succ f ih => grind [sieveLoopK_succ_eq_ite]
+
+grind_pattern sieveLoopK_le => sieveLoopK M bits start fuel
+
+/-- The sieve leaves every bit above its top index clear. -/
+public theorem sieveK_lt {n sqrtN : ℕ} : sieveK n sqrtN < 2 ^ ((n - 1) / 3 + 1) := by
+  have h : sieveK n sqrtN ≤ initK ((n - 1) / 3) := by grind [sieveK, Nat.div_eq_div]
+  have hp : 0 < 2 ^ ((n - 1) / 3) := by positivity
+  have hi : initK ((n - 1) / 3) < 2 ^ ((n - 1) / 3 + 1) := by
+    rw [initK_eq, Nat.shiftLeft_eq, pow_one, Nat.pow_succ]
+    lia
+  lia
+
+/-- The number at an index bounds the index: `num t ≤ n` forces `t ≤ (n-1)/3`. -/
+theorem le_div_of_num_le {n t : ℕ} (h : num t ≤ n) : t ≤ (n - 1) / 3 := by grind [num]
+
+/-- `lit` decides primality for the numbers up to `n`: bit `t` is set exactly when `num t`, the
+number at that index, is prime. `IsSieve.prime` reads it in the kernel-checked form. -/
+@[expose] public def IsSieve (n lit : ℕ) : Prop :=
+  ∀ t ≠ 0, num t ≤ n → (lit.testBit t ↔ (num t).Prime)
+
+/-- A cached sieve satisfies `IsSieve`. `run_sieve` applies this once, so a consumer works from
+`IsSieve` alone and never mentions `sieveK` or its square root. -/
+public theorem isSieve_of_sieveK_eq {n sqrtN lit : ℕ} (hEq : sieveK n sqrtN = lit)
+    (h3 : n.ble 12884901888) (h5 : n.ble (sqrtN.mul sqrtN)) :
+    IsSieve n lit := by
+  grind [IsSieve, sieveK_testBit_iff, le_div_of_num_le, Nat.ble_eq, Nat.div_eq_div]
+
+/-- Read a prime off a sieve: a set bit at index `t` with `numK t = p` makes `p` prime. -/
+public theorem IsSieve.prime {n lit t p : ℕ} (h : IsSieve n lit) (h1 : Nat.ble 1 t)
+    (h4 : p.ble n) (hbit : testBitK lit t) (hp : (numK t).beq p) :
     Nat.Prime p := by
-  grind [sieveK_testBit_iff, Nat.ble_eq, Nat.beq_eq, Nat.div_eq_div]
+  grind [IsSieve, Nat.beq_eq, Nat.ble_eq]
 
 end PrimeCert.Sieve
