@@ -7,15 +7,14 @@ import PrimeCert.Meta.SieveLookup
 
 /-! # Verifying `sieve_lookup` against a 1e8 cache
 
-Builds the sieve to `100000003` and proves four primes through it, the largest just under the
+Builds the sieve to `100000000` and proves four primes through it, the largest just under the
 bound.
 -/
 
 open PrimeCert.Sieve
 
-set_option maxRecDepth 4000000
-
-run_sieve 100000003
+set_option maxRecDepth 4000000 in
+run_sieve 100000000
 
 example : Nat.Prime 5 := by sieve_lookup
 example : Nat.Prime 1009 := by sieve_lookup
