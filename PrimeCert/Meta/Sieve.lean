@@ -66,8 +66,8 @@ meta def emitChain (parent : Name) (M fuel len : Nat) : MetaM (Nat × Expr) := d
 steps, defaulting to 16, each kernel-checked on its own; generated declarations hold the bitset
 and its equation. -/
 meta def runSieve (n : Nat) (len? : Option Nat := none) : MetaM Unit := do
-  if let some c := (← sieveCaches).find? (n ≤ ·.hi) then
-    throwError "run_sieve: a sieve cache up to {c.hi} already covers {n}"
+  if let some c := (← sieveCaches).find? (fun c => c.lo ≤ 5 && n ≤ c.hi) then
+    throwError "run_sieve: the cache for {c.lo}..{c.hi} already covers 5..{n}"
   let litName := `PrimeCert.Sieve ++ Name.mkSimple s!"sieveBits_{n}"
   let dataName := `PrimeCert.Sieve ++ Name.mkSimple s!"sieveK_eq_{n}"
   let sq := Nat.sqrt n + 1
