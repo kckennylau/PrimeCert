@@ -5,17 +5,16 @@ Authors: Bhavik Mehta
 -/
 module
 
-public meta import PrimeCert.Meta.PrimeCert
-public import PrimeCert.SieveCorrect
-
-meta import PrimeCert.SieveBase
 public meta import PrimeCert.Meta.SieveCache
+
+import PrimeCert.SieveCorrect
+meta import PrimeCert.SieveBase
 
 /-! # Reading a prime off the sieve cache
 
-`mkSieveLookup` builds the proof term; the `sieve_lookup` tactic and the `sieve` certificate
-method both call it. The cache from `PrimeCert.SieveBase` covers numbers up to `1000000`; beyond
-that a caller adds one with `run_sieve`.
+`mkSieveLookup` builds the proof term and the `sieve_lookup` tactic calls it. The cache from
+`PrimeCert.SieveBase` covers numbers up to `1000000`; beyond that a caller adds one with
+`run_sieve`.
 -/
 
 namespace PrimeCert.Sieve
@@ -29,7 +28,7 @@ meta def mkSieveLookup (p : Nat) : MetaM Expr := do
   if p == 2 then return mkConst ``Nat.prime_two
   if p == 3 then return mkConst ``Nat.prime_three
   if p < 5 ∨ (p % 6 != 1 && p % 6 != 5) then
-    throwError "sieve lookup: {p} must be 2, 3, or coprime to 6"
+    throwError "sieve lookup: {p} is neither 2 nor 3 nor coprime to 6, so it is not prime"
   let t := (p - 1) / 3
   let some cache ← findSieveCache p
     | throwError "sieve lookup: no sieve cache covers {p}; the caches in scope are {
@@ -52,24 +51,5 @@ elab "sieve_lookup" : tactic => withMainContext do
     | throwError "sieve_lookup: the argument of `Nat.Prime` is not a numeral"
   g.assign (← mkSieveLookup pv)
   replaceMainGoal []
-
-/-- Syntax for the `sieve` method: a numeric literal `n`, looked up in the sieve cache.
-
-```lean
--- In a prime_cert call, after `run_sieve`:
-prime_cert [sieve {1009; 1999}, ...]
-```
--/
-public syntax sieve_spec := num
-
-public meta def mkSieveProof : Meta.PrimeCertMethod ``sieve_spec := fun stx _ ↦ match stx with
-  | `(sieve_spec| $n:num) => do
-    have n := n.getNat
-    return ⟨n, mkNatLit n, ← mkSieveLookup n⟩
-  | _ => throwUnsupportedSyntax
-
-@[prime_cert sieve] public meta def PrimeCertExt.sieve : Meta.PrimeCertExt where
-  syntaxName := ``sieve_spec
-  methodName := ``mkSieveProof
 
 end PrimeCert.Sieve

@@ -4,10 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bhavik Mehta
 -/
 import PrimeCert.Meta.SieveLookup
-import PrimeCert.Meta.SmallPrime
-import PrimeCert.Meta.Pocklington3
 
-/-! # Tests for `sieve_lookup` and the `sieve` certificate method
+/-! # Tests for `sieve_lookup`
 
 The built-in cache from `PrimeCert.SieveBase` covers numbers up to `1000000`; a larger one is
 built here to check that caches coexist.
@@ -15,37 +13,20 @@ built here to check that caches coexist.
 
 open PrimeCert.Sieve
 
-/-! Reading primes off the built-in cache, by tactic and through `prime_cert`. -/
+/-! Reading primes off the built-in cache. -/
 
 example : Nat.Prime 5 := by sieve_lookup
 example : Nat.Prime 1009 := by sieve_lookup
 example : Nat.Prime 99991 := by sieve_lookup
-
-example : Nat.Prime 1999 := by prime_cert [sieve 1999]
-example : Nat.Prime 1993 := by prime_cert [sieve {1009; 1993}]
-
-/-! Mixing the sieve with another method in one ladder. -/
-
-example : Nat.Prime 1997 := by prime_cert [small {2; 3}, sieve {1993; 1997}]
-
-/-! Feeding sieve lookups to a Pocklington step. -/
-
-example : Nat.Prime 16290860017 := by
-  prime_cert [sieve {3; 29},
-    pock3 (339392917, 2, 3, 2 ^ 2 * 3 ^ 4 * 29),
-    pock3 (16290860017, 5, 0, 2 ^ 4 * 3 * 339392917)]
 
 /-! The primes the sieve's numbers skip. -/
 
 example : Nat.Prime 2 := by sieve_lookup
 example : Nat.Prime 3 := by sieve_lookup
 
-example : Nat.Prime 2 := by prime_cert [sieve {2}]
-example : Nat.Prime 5 := by prime_cert [sieve {2; 3; 5}]
-
 /-! Rejected inputs. -/
 
-/-- error: sieve lookup: 8 must be 2, 3, or coprime to 6 -/
+/-- error: sieve lookup: 8 is neither 2 nor 3 nor coprime to 6, so it is not prime -/
 #guard_msgs in
 example : Nat.Prime 8 := by sieve_lookup
 
