@@ -11,18 +11,16 @@ meta import PrimeCert.SieveBase
 
 /-! # Reading a prime off the sieve cache
 
-`mkSieveLookup` builds the proof term and the `sieve_lookup` tactic calls it. The cache from
-`PrimeCert.SieveBase` covers numbers up to `1000000`; beyond that a caller adds one with
-`run_sieve`.
+`mkSieveLookup` builds the proof term and the `sieve_lookup` tactic calls it, choosing the
+tightest sieve in scope that covers the number. `run_sieve` adds a wider one.
 -/
 
 namespace PrimeCert.Sieve
 
 open Lean Elab Tactic Meta
 
-/-- A proof of `Nat.Prime p`, read off the sieve cache in the environment; `2` and `3` come from
-`Nat.prime_two` and `Nat.prime_three`, which the sieve's numbers skip. Fails if `p` shares a factor
-with 6, lies outside the cache, or has its bit clear (i.e. is composite). -/
+/-- A proof of `Nat.Prime p`, read off a sieve in the environment. `2` and `3` come from
+`Nat.prime_two` and `Nat.prime_three`, the primes a mod-6 sieve skips. -/
 meta def mkSieveLookup (p : Nat) : MetaM Expr := do
   if p == 2 then return mkConst ``Nat.prime_two
   if p == 3 then return mkConst ``Nat.prime_three
