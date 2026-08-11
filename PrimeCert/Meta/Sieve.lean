@@ -31,9 +31,9 @@ meta def addThm (name : Name) (type value : Expr) : MetaM Unit :=
   addDecl <| Declaration.thmDecl { name, levelParams := [], type, value }
 
 /-- Given the top index `M`, the step count `fuel` and a batch length `len`, outputs the bitset `b`
-and a proof of `sieveLoopK M (initK M) 1 fuel = b`. Emits lemmas `parent.init : initK M == b₀` and
-`parent.step_i : sieveLoopK M bᵢ (1 + i * len) step == bᵢ₊₁` with `step ≤ len`, chained together by
-`sieveLoopK_congr`, `sieveLoopK_chain` and `sieveLoopK_last`. -/
+and a proof of `sieveLoopK M (initK M) 1 fuel = b`. Emits lemmas
+`parent.step_i : sieveLoopK M bᵢ (1 + i * len) step == bᵢ₊₁` with `step ≤ len` and `b₀ = initK M`,
+chained together by `sieveLoopK_chain` and `sieveLoopK_last`. -/
 meta def emitChain (parent : Name) (M fuel len : Nat) : MetaM (Nat × Expr) := do
   let mE := mkRawNatLit M
   let initE := mkApp (mkConst ``initK) mE
