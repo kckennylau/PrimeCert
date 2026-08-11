@@ -87,7 +87,7 @@ meta def runSieve (n : Nat) (len? : Option Nat := none) : MetaM Unit := do
     #[mkRawNatLit n, mkRawNatLit sq, mkConst litName, mkConst dataName,
       Lean.reflBoolTrue, Lean.reflBoolTrue]
   addThm isSieveName (mkAppN (mkConst ``IsSieve) #[mkRawNatLit n, mkConst litName]) isSieveProof
-  sieveCacheExt.add { lo := 5, hi := n, litName, dataName }
+  sieveCacheExt.add { lo := 5, hi := n, litName, dataName, isSieveName }
 
 /-- Command wrapper for `runSieve`: `run_sieve n` builds the certified cache for numbers up to
 `n`, and `run_sieve n len` sets the batch length to `len` sieving steps. -/
