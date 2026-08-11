@@ -13,7 +13,7 @@ bound.
 
 open PrimeCert.Sieve
 
-set_option maxRecDepth 4000000 in
+set_option maxRecDepth 100000 in
 run_sieve 100000000
 
 example : Nat.Prime 5 := by sieve_lookup
