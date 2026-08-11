@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2025 Kenny Lau, Bhavik Mehta. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Kenny Lau, Bhavik Mehta
+-/
 import PrimeCert.Meta.PowMod
 
 /-! # Tests for `prove_pow_mod`
