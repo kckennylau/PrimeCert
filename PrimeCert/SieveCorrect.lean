@@ -289,16 +289,6 @@ public theorem sieveK_testBit_iff {n sqrtN t : ℕ} (ht : t ≠ 0) (htM : t ≤ 
 
 /-! ### Reading a prime off a cached sieve -/
 
-/-- From the numeric side-conditions (each as `Nat.ble … = true`), "bit `t` of the sieve literal
-`lit` is set", and `numK t = p`, conclude `p` is prime. The kernel reads the bit from `lit`, and
-`hEq : sieveK n sqrtN = lit`, the equation `run_sieve` proves, carries it back to the sieve. -/
-public theorem prime_of_sieve_eq {n sqrtN lit : ℕ} (hEq : sieveK n sqrtN = lit)
-    (h3 : n.ble 12884901888) (h5 : n.ble (sqrtN.mul sqrtN)) {t p : ℕ} (h1 : Nat.ble 1 t)
-    (h2 : t.ble ((n.sub 1).div 3)) (h4 : p.ble n) (hbit : testBitK lit t)
-    (hp : (numK t).beq p) :
-    Nat.Prime p := by
-  grind [sieveK_testBit_iff, Nat.ble_eq, Nat.beq_eq, Nat.div_eq_div]
-
 theorem markMaskK_le {bits p M : ℕ} : markMaskK bits p M ≤ bits := by
   grind [markMaskK_eq_ldiff, Nat.and_add_ldiff]
 
