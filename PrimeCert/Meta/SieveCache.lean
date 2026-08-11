@@ -3,8 +3,9 @@ Copyright (c) 2026 Bhavik Mehta. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bhavik Mehta
 -/
-import Lean
-import PrimeCert.Sieve
+module
+
+public import Lean
 
 /-! # The registry of sieve caches
 
@@ -18,7 +19,7 @@ namespace PrimeCert.Sieve
 
 /-- A certified sieve in the environment: bits for the coprime-to-6 numbers in `[lo, hi]`, held by
 `litName` and certified by `dataName : sieveK hi sq = <lit>`. -/
-structure SieveCache where
+public structure SieveCache where
   /-- Smallest number the cache decides. -/
   lo : Nat
   /-- Largest number the cache decides. -/
@@ -29,18 +30,18 @@ structure SieveCache where
   dataName : Name
   deriving Inhabited
 
-initialize sieveCacheExt : SimpleScopedEnvExtension SieveCache (Array SieveCache) ←
+public meta initialize sieveCacheExt : SimpleScopedEnvExtension SieveCache (Array SieveCache) ←
   registerSimpleScopedEnvExtension {
     addEntry caches c := caches.push c
     initial := #[]
   }
 
 /-- The caches in scope. -/
-def sieveCaches : CoreM (Array SieveCache) :=
+public meta def sieveCaches : CoreM (Array SieveCache) :=
   return sieveCacheExt.getState (← getEnv)
 
 /-- The smallest cache deciding `p`, if any. -/
-def findSieveCache (p : Nat) : CoreM (Option SieveCache) := do
+public meta def findSieveCache (p : Nat) : CoreM (Option SieveCache) := do
   let covering := (← sieveCaches).filter fun c => c.lo ≤ p && p ≤ c.hi
   return covering.foldl (init := none) fun best c =>
     match best with

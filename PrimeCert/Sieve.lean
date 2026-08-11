@@ -15,8 +15,8 @@ reduction. The state is one natural number used as a bitset, `M` is its top inde
 
 namespace PrimeCert.Sieve
 
-/-- Bit `i` of `b`, as `0` or `1`. -/
-@[expose] public def bitVal (b i : Nat) : Nat := (b.shiftRight i).land 1
+/-- Whether bit `i` of `b` is set (`testBitK_eq_testBit` in `SieveCorrect`). -/
+@[expose] public def testBitK (b i : Nat) : Bool := Nat.ble 1 (b.land (Nat.shiftLeft 1 i))
 
 /-- The natural number whose binary digits below position `M` are set at the first `2^n` positions
 of each of `A, A + 2*p, A + 4*p, …` and `B, B + 2*p, B + 4*p, …`; `n` counts doubling rounds. -/
@@ -39,14 +39,12 @@ of each of `A, A + 2*p, A + 4*p, …` and `B, B + 2*p, B + 4*p, …`; `n` counts
 /-- `num` in the raw `Nat` operations the kernel-side defs use. -/
 @[expose] public def numK (k : Nat) : Nat := (k.mul 3).succ.add (k.mod 2)
 
-@[simp, grind =] public theorem numK_eq_num (k : Nat) : numK k = num k := rfl
-
 /-- Perform `fuel` sieving steps on the bitset `bits`, scanning indices `start, start+1, …`: at
 each index whose bit is still set, clear the bits of that number's coprime-to-6 multiples.
 `sieveK` runs this on `initK M`. -/
 @[expose] public noncomputable def sieveLoopK (M bits start fuel : Nat) : Nat :=
   fuel.rec bits fun i b =>
-      (Nat.ble 1 (b.land (Nat.shiftLeft 1 (start.add i)))).rec b
+      (testBitK b (start.add i)).rec b
         (markMaskK b (numK (start.add i)) M)
 
 /-- Coprime-to-6 candidates `0..M`, all set except bit 0 (number 1, not prime). `= 2^(M+1) - 2`. -/
@@ -58,11 +56,11 @@ each index whose bit is still set, clear the bits of that number's coprime-to-6 
   sieveLoopK ((n.sub 1).div 3) (initK ((n.sub 1).div 3)) 1 ((sqrtN.sub 1).div 3)
 
 /-- Loop recurrence: peel the top index `start+fuel`, in the exact `Bool.rec` form the def uses. -/
-public theorem sieveLoopK_succ (M bits start fuel : Nat) :
+public theorem sieveLoopK_succ {M bits start fuel : Nat} :
     sieveLoopK M bits start (fuel + 1)
       = Bool.rec (sieveLoopK M bits start fuel)
           (markMaskK (sieveLoopK M bits start fuel) (numK (start + fuel)) M)
-          (Nat.ble 1 (sieveLoopK M bits start fuel &&& (1 <<< (start + fuel)))) := rfl
+          (testBitK (sieveLoopK M bits start fuel) (start + fuel)) := rfl
 
 /-! ### Compiled twins
 
@@ -91,7 +89,7 @@ public def sieveLoop (M bits start fuel : Nat) : Nat := Id.run do
 
 /-- Fuel additivity: running `a + b` steps is running `a` steps, then `b` steps from where the
 first run stopped. This is the glue that joins consecutive batches. -/
-public theorem sieveLoopK_add (M bits start a b : Nat) :
+public theorem sieveLoopK_add {M bits start a b : Nat} :
     sieveLoopK M bits start (a + b)
       = sieveLoopK M (sieveLoopK M bits start a) (start + a) b := by
   induction b with
@@ -100,17 +98,25 @@ public theorem sieveLoopK_add (M bits start a b : Nat) :
 
 /-- Replace the loop's starting bitset by a kernel-checked equal literal. `run_sieve` uses this to
 enter the chain at `sieveLoopK M (initK M) 1 fuel = sieveLoopK M b₀ 1 fuel`. -/
-public theorem sieveLoopK_congr (M b b' start fuel : Nat) (h : b.beq b') :
+public theorem sieveLoopK_congr {M b b' start fuel : Nat} (h : b.beq b') :
     sieveLoopK M b start fuel = sieveLoopK M b' start fuel := by
   rw [Nat.eq_of_beq_eq_true h]
 
 /-- One chain step: given `L = sieveLoopK M b start (len + rest)` and a kernel-checked batch
 equation saying `len` steps from `b` reach `b'`, restate `L` as a loop from `b'` at index
 `start + len` with `rest` steps left. -/
-public theorem sieveLoopK_chain (L M b b' start len rest : Nat)
+public theorem sieveLoopK_chain {L M b b' start len rest : Nat}
     (hP : L = sieveLoopK M b start (len.add rest))
     (h : (sieveLoopK M b start len).beq b') :
     L = sieveLoopK M b' (start.add len) rest := by
   grind [sieveLoopK_add, Nat.beq_eq]
+
+/-- Last chain step: with no steps left after this batch, the batch equation gives the value of
+the whole run. -/
+public theorem sieveLoopK_last {L M b b' start len : Nat}
+    (hP : L = sieveLoopK M b start len)
+    (h : (sieveLoopK M b start len).beq b') :
+    L = b' := by
+  grind [Nat.beq_eq]
 
 end PrimeCert.Sieve
