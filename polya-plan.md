@@ -112,19 +112,31 @@ PrimeCertTest/PolyaFull.lean      -- the x = 906150257 run, dispatch-only CI wor
 ## Status
 
 The computation runs and prints `L(906150257) = 1`, with every batch equation checked by the kernel.
-That establishes that the numbers are what the definitions compute, and nothing about the Liouville
-function: no theorem yet connects any definition here to `ArithmeticFunction.liouville`, so the
-printed value is not evidence that the conjecture fails. Four things stand between the two:
+The mathematics connecting those numbers to `ArithmeticFunction.liouville` is being written; where
+each of the four gaps stands:
 
-1. The prime powers are supplied by the metaprogram and enter the emitted statements as a literal.
-   The kernel now checks them against the certified sieve, by the three loops in the section below,
-   and a run stops when a check fails. What is missing is the theorem saying that passing those
-   checks makes the fields exactly the prime powers `≤ M`.
-2. Bit `n` of `lamK` is claimed to be the parity of `Ω n`.
-3. A field of `onesK` is claimed to count set bits below a position, and the fields of `lowLoopK`
-   and `hiLoopK` to hold values of `L`.
-4. `blockLoopK` is claimed to accumulate `Σ_{k≥2} L(⌊v/k⌋)`, and the identity giving `L v` from it
-   is unstated.
+1. **The prime powers come from the sieve, partly proved.** `bitCheckLoopK_spec` in
+   `Polya/BitCheck.lean` says a surviving flag forces every packed field to be `1` or `5` modulo 6,
+   to have a set sieve bit, and to have a strictly rising sieve index. Still to write: the set-bit
+   count from `popcLoopK` leaves no prime out, the collection from `hpLoopK` gives the higher
+   powers, and the two together give `IsPrimePowerTable`.
+2. **The parity table, proved.** `testBit_lamK` in `Polya/LamCorrect.lean`: bit `n` is set exactly
+   when `Ω n` is odd, for `1 ≤ n ≤ M`, given `IsPrimePowerTable`. It rests on the stride masks
+   marking the multiples (`Polya/Parity.lean`) and on the prime powers dividing `n` numbering `Ω n`
+   (`Polya/CardFactors.lean`).
+3. **The counts and the value tables, proved.** `popc32K_eq_bitSum` in `Polya/PopCount.lean`
+   (the byte-wise argument, no `decide` over the word), `fieldK_onesK` and `onesBelowK_eq` in
+   `Polya/Ones.lean`, `lowLoopK_spec`, `hiLoopK_spec` and `val_eq_L` in `Polya/Tables.lean`.
+4. **The block loop, partly proved.** `Polya/Runs.lean` has the run decomposition: the indices with
+   a given quotient form a contiguous run, so a sum over them collapses to one term. Still to
+   write: the loop invariant over the packed 64-bit state, and the assembly with the recurrence.
+
+The recurrence itself is proved: `Polya/Summatory.lean` defines `L`, and `Polya/Identity.lean`
+gives `∑_{k=1}^{v} L ⌊v/k⌋ = ⌊√v⌋` and `L_eq_sqrt_sub`, off the divisor sum of `λ` being the
+indicator of the squares.
+
+Beyond the four gaps, the metaprogram still emits arithmetic equations only; emitting the
+mathematical statement is the last step.
 
 ## Gap 1: the prime powers come from the sieve
 
