@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kenny Lau, Bhavik Mehta
 -/
 
-import Mathlib.Tactic.NormNum.Prime
+module
+
+public import Mathlib.Tactic.NormNum.Prime
 
 /-! # Primality proofs for small primes
 
@@ -19,7 +21,8 @@ local elab "make%" hi:num : command => do
     if Nat.Prime i then
       have iStx := Lean.Syntax.mkNatLit i
       have name := Lean.mkIdent <| Lean.Name.mkSimple s!"prime_{i}"
-      Lean.Elab.Command.elabCommand =<< `(command| theorem $name : Nat.Prime $iStx := by norm_num)
+      Lean.Elab.Command.elabCommand =<<
+        `(command| public theorem $name : Nat.Prime $iStx := by norm_num)
 
 make% 3000
 
