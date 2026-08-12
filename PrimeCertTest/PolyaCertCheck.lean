@@ -1,4 +1,4 @@
-import PrimeCert.Meta.Polya
+import Polya.Meta
 
 /-! Runs the whole computation at small arguments, with the prime powers checked against the
 certified sieve. -/

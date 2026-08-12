@@ -5,8 +5,8 @@ Authors: Bhavik Mehta
 -/
 module
 
-public import PrimeCert.Polya.PopCount
-public import PrimeCert.Polya.Field
+public import Polya.PopCount
+public import Polya.Field
 public import PrimeCert.ForLean
 
 /-!

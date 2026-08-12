@@ -5,9 +5,9 @@ Authors: Bhavik Mehta
 -/
 module
 
-public import PrimeCert.Polya.Ones
-public import PrimeCert.Polya.LamCorrect
-public import PrimeCert.Polya.Count
+public import Polya.Ones
+public import Polya.LamCorrect
+public import Polya.Count
 
 /-!
 # The tables of values of `L`

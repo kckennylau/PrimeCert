@@ -87,26 +87,39 @@ thousand checks of a few hundred blocks each, with no single large reduction.
 
 Written:
 
-```
-PrimeCert/Polya.lean       -- module, imports nothing: strideMaskK, markStrideK, fieldK, lamLoopK,
-                              popc32K, onesLoopK, stFieldK, onesBelowK, lowLoopK, hiLoopK,
-                              blockStepK, blockLoopK, the peel/additivity/chain lemmas, and a
-                              compiled twin of every kernel-reduced definition
-PrimeCert/Meta/Polya.lean  -- run_lam n, run_polya x c K, the native prime powers and packing,
-                              one emitter per chain, defaultCutoff
-```
-
-To write, one file per gap in the status section:
+The whole development is the `Polya` lean_lib, built on demand rather than as a default target.
 
 ```
-PrimeCert/Polya/Summatory.lean    -- def L, basic lemmas
-PrimeCert/Polya/Identity.lean     -- Σ_{k≤v} L(⌊v/k⌋) = ⌊√v⌋ and the recurrence
-PrimeCert/Polya/TableCorrect.lean -- the prime powers come from the sieve; lamK is the parity of Ω;
-                                     onesK counts set bits; lowLoopK and hiLoopK hold L
-PrimeCert/Polya/BlockCorrect.lean -- the run decomposition of Σ_{k=2}^{v} L(⌊v/k⌋)
-PrimeCert/Polya/Main.lean         -- assembly, polya_witness, polya_disproof
-PrimeCertTest/PolyaOracle.lean    -- independent compiled implementations, kept untracked for now
-PrimeCertTest/PolyaFull.lean      -- the x = 906150257 run, dispatch-only CI workflow
+Polya/Defs.lean        -- module, imports nothing: strideMaskK, markStrideK, fieldK, lamLoopK,
+                          popc32K, onesLoopK, stFieldK, onesBelowK, lowLoopK, hiLoopK, blockStepK,
+                          blockLoopK, the peel/additivity/chain lemmas, and a compiled twin of
+                          every kernel-reduced definition
+Polya/Meta.lean        -- run_lam n, run_polya x c K, the native prime powers and packing, one
+                          emitter per chain, defaultCutoff
+Polya/PrimePowers.lean -- bitCheckLoopK, popcLoopK, hpLoopK, their chain lemmas, and the twins
+Polya/Summatory.lean   -- def L, basic lemmas
+Polya/Identity.lean    -- Σ_{k≤v} L(⌊v/k⌋) = ⌊√v⌋ and the recurrence
+Polya/Field.lean       -- reading a packed field: bounds and the value at an index
+Polya/BitCheck.lean    -- what surviving the sieve bit checks says about the packed primes
+Polya/Complete.lean    -- equal counts leave no prime out of the packing
+Polya/PowerPack.lean   -- the packed state of the power collection, and what one loop appends
+Polya/Parity.lean      -- the stride masks mark the multiples
+Polya/CardFactors.lean -- the prime powers dividing n number Ω n
+Polya/LamCorrect.lean  -- lamK is the parity of Ω
+Polya/PopCount.lean    -- popc32K counts set bits
+Polya/Ones.lean        -- onesK holds the running counts
+Polya/Count.lean       -- L from a count of odd Ω
+Polya/Tables.lean      -- lowLoopK and hiLoopK hold values of L
+Polya/Runs.lean        -- the run decomposition of Σ_{k=2}^{v} L(⌊v/k⌋)
+```
+
+To write:
+
+```
+Polya/BlockCorrect.lean        -- the invariant of blockLoopK over its packed state
+Polya/Main.lean                -- assembly, polya_witness, polya_disproof
+PrimeCertTest/PolyaOracle.lean -- independent compiled implementations, kept untracked for now
+PrimeCertTest/PolyaFull.lean   -- the x = 906150257 run, dispatch-only CI workflow
 ```
 
 ## Status
@@ -166,7 +179,7 @@ twice cancels and the table is wrong.
 
 The strides stay computed by the metaprogram and arrive packed as before, in two blocks: the primes
 from 5 upward in increasing order, then 2, 3 and the powers whose exponent is at least two. Three
-loops in `PrimeCert/Polya/PrimePowers.lean` tie both blocks to the sieve, each batched in the house
+loops in `Polya/PrimePowers.lean` tie both blocks to the sieve, each batched in the house
 style with a peel lemma by `rfl`, fuel additivity by induction, and a chain lemma.
 
 - `bitCheckLoopK` tests the first block field by field: the value is 1 or 5 modulo 6, its sieve index
@@ -214,10 +227,12 @@ bound of 5, its monotonicity, its injectivity and `num ((q-1)/3) = q` are each o
 ### Files
 
 ```
-PrimeCert/Polya/PrimePowers.lean  -- bitCheckLoopK, popcLoopK, hpLoopK, their chain lemmas, and
-                                     the theorems above
-PrimeCert/Polya/Field.lean        -- reading a packed field: bounds and the value at an index
-PrimeCert/Meta/Polya.lean         -- the sieve-cache lookup, the two blocks, one emitter per chain
+Polya/PrimePowers.lean  -- bitCheckLoopK, popcLoopK, hpLoopK, their chain lemmas
+Polya/BitCheck.lean     -- what the surviving flag says about the packed primes
+Polya/Complete.lean     -- equal counts leave no prime out
+Polya/PowerPack.lean    -- the packed state of the power collection
+Polya/Field.lean        -- reading a packed field: bounds and the value at an index
+Polya/Meta.lean         -- the sieve-cache lookup, the two blocks, one emitter per chain
 ```
 
 The loops, their emitters and the batching are written and run: `run_polya` prints the published

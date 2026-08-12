@@ -1,4 +1,4 @@
-import PrimeCert.Meta.Polya
+import Polya.Meta
 
 /-! The computation at the smallest counterexample to Pólya's conjecture, taking the prime powers as
 given, as the arm to compare the checked run against. -/

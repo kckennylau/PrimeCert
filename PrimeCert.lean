@@ -4,15 +4,11 @@ import PrimeCert.ForallB
 import PrimeCert.Interval
 import PrimeCert.Meta.Pocklington
 import PrimeCert.Meta.Pocklington3
-import PrimeCert.Meta.Polya
 import PrimeCert.Meta.PowMod
 import PrimeCert.Meta.PrimeCert
 import PrimeCert.Meta.SmallPrime
 import PrimeCert.Pocklington
 import PrimeCert.Pocklington3
-import PrimeCert.Polya
-import PrimeCert.Polya.Identity
-import PrimeCert.Polya.Summatory
 import PrimeCert.PowMod
 import PrimeCert.PredMod
 import PrimeCert.SmallPrimes

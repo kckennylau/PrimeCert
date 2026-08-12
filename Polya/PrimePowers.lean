@@ -5,7 +5,7 @@ Authors: Bhavik Mehta
 -/
 module
 
-public import PrimeCert.Polya
+public import Polya.Defs
 public import PrimeCert.Sieve
 
 /-!

@@ -4,14 +4,14 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bhavik Mehta
 -/
 import Lean
-import PrimeCert.Polya
-import PrimeCert.Polya.PrimePowers
+import Polya.Defs
+import Polya.PrimePowers
 import PrimeCert.Meta.Sieve
 
 /-! # The `run_lam` command
 
-Builds a certified parity table for the Liouville function up to `n`. Split out from
-`PrimeCert.Polya` so the computational core stays free of metaprogramming.
+Builds a certified parity table for the Liouville function up to `n`. Split out from `Polya.Defs`
+so the computational core stays free of metaprogramming.
 
 The prime powers are packed here into `w`-bit fields and handed to the table builder. The emitted
 equation holds for that packing whatever it contains; tying its fields to the prime powers is

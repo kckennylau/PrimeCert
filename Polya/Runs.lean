@@ -5,7 +5,7 @@ Authors: Bhavik Mehta
 -/
 module
 
-public import PrimeCert.Polya.Summatory
+public import Polya.Summatory
 public import Mathlib.Algebra.BigOperators.Intervals
 
 /-!

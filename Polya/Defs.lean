@@ -19,7 +19,7 @@ per step of the loop; `PolyaCorrect` derives that packing from the certified sie
 The `rounds` argument is the number of doubling rounds in `strideMaskK`, so strides up to
 `2 ^ rounds` times the table width are covered.
 
-The `run_lam` command in `Meta/Polya` computes the table natively in batches, has the kernel check
+The `run_lam` command in `Polya.Meta` computes the table natively in batches, has the kernel check
 each, and glues them into an equation `lamK qs w M cnt = <literal>`.
 -/
 
