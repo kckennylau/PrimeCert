@@ -40,8 +40,7 @@ noncomputable def mirimanoffKR (p : ℕ) : Bool :=
     powModTR_eq, powMod, Nat.pow_eq, Nat.pred_eq_sub_one]
 
 @[simp] theorem wieferichKR_eq_false_iff (p : ℕ) (hp : p ≠ 1) :
-    wieferichKR p = false ↔ ¬Wieferich p := by
-  rw [← Bool.not_eq_true, wieferichKR_eq_true_iff p hp]
+    wieferichKR p = false ↔ ¬Wieferich p := by rw [← Bool.not_eq_true, wieferichKR_eq_true_iff p hp]
 
 @[simp] theorem mirimanoffKR_eq_true_iff (p : ℕ) (hp : p ≠ 1) : mirimanoffKR p ↔ Mirimanoff p := by
   have hp2 : p ^ 2 ≠ 1 := by rwa [ne_eq, sq, mul_eq_one, and_self]
