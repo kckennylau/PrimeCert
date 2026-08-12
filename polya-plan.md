@@ -116,9 +116,10 @@ That establishes that the numbers are what the definitions compute, and nothing 
 function: no theorem yet connects any definition here to `ArithmeticFunction.liouville`, so the
 printed value is not evidence that the conjecture fails. Four things stand between the two:
 
-1. The prime powers are supplied by `primePowers` in the metaprogram and enter the emitted
-   statements as a literal. A list containing a composite, or missing a prime, passes every kernel
-   check and gives a wrong table. This is the sieve dependency below.
+1. The prime powers are supplied by the metaprogram and enter the emitted statements as a literal.
+   The kernel now checks them against the certified sieve, by the three loops in the section below,
+   and a run stops when a check fails. What is missing is the theorem saying that passing those
+   checks makes the fields exactly the prime powers `≤ M`.
 2. Bit `n` of `lamK` is claimed to be the parity of `Ω n`.
 3. A field of `onesK` is claimed to count set bits below a position, and the fields of `lowLoopK`
    and `hiLoopK` to hold values of `L`.
@@ -189,10 +190,14 @@ Canonical base and exponent of a prime power come from
 Reading fields back out of a packed number is shared with gap 3, so those lemmas go in their own
 file.
 
-### Prerequisites in the sieve file
+### What the sieve supplies now
 
-`num_wheel`, `prime_ge5_mod6`, `num_inj`, `num_mod6` and `five_le_num` carry no `public` marker, so
-the module system hides them downstream. Gap 1 needs them exported.
+`master` carries `IsSieve n lit`, which says that for every index `t ≠ 0` whose number `num t` is at
+most `n`, bit `t` of `lit` is set exactly when `num t` is prime, and `sieveK_lt`, which bounds a
+sieve below `2 ^ ((n-1)/3 + 1)` so a count over whole 32-position blocks sees nothing above the
+range. `run_sieve n` emits `sieveBits_n`, `sieveK_eq_n` and `isSieve_n`, and registers all three.
+The proofs below take `IsSieve` as their hypothesis. `num` stays exposed, so its residues, its lower
+bound of 5, its monotonicity, its injectivity and `num ((q-1)/3) = q` are each one line here.
 
 ### Files
 
