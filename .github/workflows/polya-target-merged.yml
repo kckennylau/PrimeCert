@@ -1,0 +1,36 @@
+name: Polya at the target on the merged branch
+
+on:
+  push:
+    branches:
+      - 'ci/polya-target-merged'
+
+jobs:
+  target:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install elan
+        run: |
+          curl -sSfL https://github.com/leanprover/elan/releases/download/v4.1.2/elan-x86_64-unknown-linux-gnu.tar.gz | tar xz
+          ./elan-init -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+
+      - name: Fetch the mathlib build cache
+        run: lake exe cache get
+
+      - name: Build the library
+        run: lake build PrimeCert.Meta.Polya
+
+      - name: Run the target with the checks
+        run: |
+          set -u
+          export LEAN_PATH=$(lake env printenv LEAN_PATH)
+          /usr/bin/time -v lean PrimeCertTest/PolyaCertFull.lean \
+            > out-target.txt 2> time-target.txt || echo "FAILED"
+          wall=$(grep 'Elapsed (wall clock)' time-target.txt | awk '{print $8}')
+          peak=$(grep 'Maximum resident set size' time-target.txt | awk '{print $6}')
+          echo "wall $wall | peak ${peak} KB"
+          cat out-target.txt
