@@ -4,6 +4,7 @@ import Polya.Complete
 import Polya.Count
 import Polya.Defs
 import Polya.Field
+import Polya.HigherPowers
 import Polya.Identity
 import Polya.LamCorrect
 import Polya.Meta
