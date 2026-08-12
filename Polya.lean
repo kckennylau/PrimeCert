@@ -10,6 +10,7 @@ import Polya.Meta
 import Polya.Ones
 import Polya.Parity
 import Polya.PopCount
+import Polya.PowerPack
 import Polya.PrimePowers
 import Polya.Runs
 import Polya.Summatory
