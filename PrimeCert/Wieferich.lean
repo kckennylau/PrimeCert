@@ -6,8 +6,9 @@ Authors: Kenny Lau
 
 import Mathlib.Data.Nat.Totient
 import Mathlib.Tactic.IntervalCases
+import PrimeCert.ForallB
 import PrimeCert.ForMathlib
-import PrimeCert.Interval
+import PrimeCert.Meta.QuickRfl
 import PrimeCert.PowMod
 
 /-! # Wieferich and Mirimanoff primes
@@ -53,21 +54,14 @@ noncomputable def mirimanoffKR (p : ℕ) : Bool :=
 
 /-! # We check odd numbers up to 6000 in the classes 1%6 and 5%6 -/
 
--- set_option trace.profiler true
--- set_option trace.profiler.threshold 0
+open PrimeCert
 
--- elab: 37 ms
--- kernel: 470 ms
--- 6n+1 to 6000
 theorem wieferich_mirimanoff₁ : ∀ n < 6000, n % 6 = 1 →
-    (wieferichKR n).not'.or' (mirimanoffKR n).not' := by
-  check_interval
+    (wieferichKR n).not'.or' (mirimanoffKR n).not' :=
+  forallB_of_mod _ (r := 1) (len := 1000) (step := 6) (by quickRfl)
 
--- elab: 57 ms
--- kernel: 561 ms
--- 6n+5 to 6000
-theorem wieferich₅ : ∀ n < 6000, n % 6 = 5 → !wieferichKR n := by
-  check_interval
+theorem wieferich₅ : ∀ n < 6000, n % 6 = 5 → !wieferichKR n :=
+  forallB_of_mod _ (r := 5) (len := 1000) (step := 6) (by quickRfl)
 
 theorem wieferich_mirimanoff {p : ℕ} (hp : p.Prime) (p_bound : p < 6000) :
     ¬(2 ^ (p - 1) ≡ 1 [MOD p^2]) ∨ ¬(3 ^ (p - 1) ≡ 1 [MOD p^2]) := by
