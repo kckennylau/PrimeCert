@@ -15,4 +15,5 @@ import Polya.PowerPack
 import Polya.PrimePowers
 import Polya.Runs
 import Polya.Summatory
+import Polya.TableSpec
 import Polya.Tables

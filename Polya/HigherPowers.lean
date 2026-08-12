@@ -136,7 +136,7 @@ theorem hpVal_succ_of_not_testBit {lit M pos v : ℕ} (hbit : lit.testBit pos = 
     · exact Or.inr (Or.inr ⟨t, ht1, by omega, hrest⟩)
 
 /-- What the walk holds: the values named by `HpVal`, each in exactly one field. -/
-theorem hpLoopK_spec {lit M w e st c pw V start : ℕ} (fuel : ℕ) (hsieve : IsSieve M lit)
+public theorem hpLoopK_spec {lit M w e st c pw V start : ℕ} (fuel : ℕ) (hsieve : IsSieve M lit)
     (hstate : IsPowState w st c pw V) (hMw : M < 2 ^ w) (hM64 : M < 2 ^ 64) (hMe : M < 2 ^ e)
     (hroom : c + e * fuel + e + 1 < 2 ^ 64) (hstart : 1 ≤ start)
     (hnum : ∀ t, t < start + fuel → num t ≤ M)
@@ -249,8 +249,8 @@ theorem hpLoopK_spec {lit M w e st c pw V start : ℕ} (fuel : ℕ) (hsieve : Is
 /-! ### The seed -/
 
 /-- The state seeding the walk holds the powers of 2 and of 3 up to `M`, each in one field. -/
-theorem seed_spec {M w e : ℕ} (lit : ℕ) (hMw : M < 2 ^ w) (hM64 : M < 2 ^ 64) (hMe : M < 2 ^ e)
-    (hroom : e + e + 1 < 2 ^ 64) :
+public theorem seed_spec {M w e : ℕ} (lit : ℕ) (hMw : M < 2 ^ w) (hM64 : M < 2 ^ 64)
+    (hMe : M < 2 ^ e) (hroom : e + e + 1 < 2 ^ 64) :
     ∃ c pw V, IsPowState w (powLoopK M w 3 1 (powLoopK M w 2 1 0 e) e) c pw V ∧ c ≤ e + e ∧
       (∀ j < c, HpVal lit M 1 (fieldK V w j)) ∧
         (∀ v, HpVal lit M 1 v → ∃ j < c, fieldK V w j = v) ∧
@@ -311,7 +311,7 @@ theorem seed_spec {M w e : ℕ} (lit : ℕ) (hMw : M < 2 ^ w) (hM64 : M < 2 ^ 64
 
 /-- What a full walk collects: the prime powers up to `M` with base 2 or 3, and those with
 exponent at least two. -/
-theorem hpVal_iff {lit M fuel v : ℕ} (hsieve : IsSieve M lit)
+public theorem hpVal_iff {lit M fuel v : ℕ} (hsieve : IsSieve M lit)
     (hfuel : M < (3 * fuel + 4) * (3 * fuel + 4)) :
     HpVal lit M (1 + fuel) v ↔
       ∃ p k, p.Prime ∧ 1 ≤ k ∧ v = p ^ k ∧ v ≤ M ∧ (p < 5 ∨ 2 ≤ k) := by

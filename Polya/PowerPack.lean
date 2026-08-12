@@ -63,7 +63,8 @@ theorem add_mul_two_pow_lt {V val w c : ℕ} (hV : V < 2 ^ (w * c)) (hval : val 
 @[expose] public def IsPowState (w st c pw V : ℕ) : Prop :=
   st = c + 2 ^ 64 * pw + 2 ^ 128 * V ∧ c < 2 ^ 64 ∧ pw < 2 ^ 64 ∧ V < 2 ^ (w * c)
 
-theorem IsPowState.count_eq {w st c pw V : ℕ} (h : IsPowState w st c pw V) : st % 2 ^ 64 = c := by
+public theorem IsPowState.count_eq {w st c pw V : ℕ} (h : IsPowState w st c pw V) :
+    st % 2 ^ 64 = c := by
   obtain ⟨hst, hc, -, -⟩ := h
   have hst' : st = c + 2 ^ 64 * (pw + 2 ^ 64 * V) := by
     rw [hst]
@@ -79,9 +80,20 @@ theorem IsPowState.pow_eq {w st c pw V : ℕ} (h : IsPowState w st c pw V) :
   rw [hst', Nat.add_mul_div_left _ _ (Nat.two_pow_pos 64), Nat.div_eq_of_lt hc, Nat.zero_add,
     Nat.add_mul_mod_self_left, Nat.mod_eq_of_lt hpw]
 
+/-- The values sit above bit 128, so they read back by one shift. -/
+public theorem IsPowState.vals_eq {w st c pw V : ℕ} (h : IsPowState w st c pw V) :
+    st / 2 ^ 128 = V := by
+  obtain ⟨hst, hc, hpw, -⟩ := h
+  have h128 : (2 : ℕ) ^ 128 = 2 ^ 64 * 2 ^ 64 := by norm_num
+  have hmul : 2 ^ 64 * pw ≤ 2 ^ 64 * (2 ^ 64 - 1) := Nat.mul_le_mul_left _ (by omega)
+  have hlt : c + 2 ^ 64 * pw < 2 ^ 128 := by
+    rw [Nat.mul_sub, Nat.mul_one] at hmul
+    omega
+  rw [hst, Nat.add_mul_div_left _ _ (Nat.two_pow_pos 128), Nat.div_eq_of_lt hlt, Nat.zero_add]
+
 /-! ### One step -/
 
-theorem bool_rec_ble_eq {α : Sort*} (a b : ℕ) (x y : α) :
+public theorem bool_rec_ble_eq {α : Sort*} (a b : ℕ) (x y : α) :
     (Nat.ble a b).rec (motive := fun _ => α) x y = if a ≤ b then y else x := by
   cases h : Nat.ble a b
   · refine (if_neg fun hle => ?_).symm
@@ -145,7 +157,7 @@ theorem powLoopK_zero {M w q seed st c pw V : ℕ} (h : IsPowState w st c pw V)
 
 /-- After `fuel` steps the loop has appended `seed * q ^ 1, …, seed * q ^ m`, where `m` is the
 largest exponent whose power stays below the cutoff, or `fuel` if they all do. -/
-theorem powLoopK_spec {M w q seed st c pw V : ℕ} (fuel : ℕ) (h : IsPowState w st c pw V)
+public theorem powLoopK_spec {M w q seed st c pw V : ℕ} (fuel : ℕ) (h : IsPowState w st c pw V)
     (hq : 2 ≤ q) (hseed : seed < 2 ^ 64) (hM : M < 2 ^ w) (hM64 : M < 2 ^ 64)
     (hroom : c + fuel + 1 < 2 ^ 64) :
     ∃ m ≤ fuel, ∃ V', IsPowState w (powLoopK M w q seed st fuel) (c + m) (seed * q ^ m) V' ∧

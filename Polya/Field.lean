@@ -62,6 +62,11 @@ public theorem fieldK_lor_shiftLeft_of_lt {t val w i j : ℕ} (hij : j < i) :
     simp [hb, Nat.not_le.2 hlt]
   · simp [Nat.not_lt.2 hb]
 
+/-- Shifting a table down by whole fields renumbers them. -/
+public theorem fieldK_shiftRight (qs w n j : ℕ) :
+    fieldK (qs / 2 ^ (w * n)) w j = fieldK qs w (n + j) := by
+  rw [fieldK_eq_div_mod, fieldK_eq_div_mod, Nat.div_div_eq_div_mul, ← Nat.pow_add, Nat.mul_add]
+
 /-- The table with field `i` written stops below position `w * (i + 1)`. -/
 public theorem lor_shiftLeft_lt {t val w i : ℕ} (ht : t < 2 ^ (w * i)) (hv : val < 2 ^ w) :
     (t ||| val <<< (w * i)) < 2 ^ (w * (i + 1)) := by

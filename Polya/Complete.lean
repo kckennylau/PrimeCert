@@ -103,7 +103,7 @@ theorem exists_field_of_testBit {qs w lit cnt chunks : ℕ}
   exact ⟨i, hi, hti⟩
 
 /-- A prime of at least 5 is coprime to 6. -/
-theorem mod_six_of_prime {p : ℕ} (hp : p.Prime) (h5 : 5 ≤ p) : p % 6 = 1 ∨ p % 6 = 5 := by
+public theorem mod_six_of_prime {p : ℕ} (hp : p.Prime) (h5 : 5 ≤ p) : p % 6 = 1 ∨ p % 6 = 5 := by
   have h2 : ¬ (2 ∣ p) := fun hd => by
     rcases (Nat.Prime.eq_one_or_self_of_dvd hp 2 hd) with h | h <;> omega
   have h3 : ¬ (3 ∣ p) := fun hd => by
@@ -117,10 +117,16 @@ public theorem primeBlock_spec {qs w lit M cnt chunks : ℕ} (hsieve : IsSieve M
     (h : bitCheckLoopK qs w lit 1 0 cnt % 2 = 1)
     (htop : 0 < cnt → num (bitCheckLoopK qs w lit 1 0 cnt / 2) ≤ M)
     (hpop : popcLoopK lit 0 0 chunks = cnt) (hchunks : (M - 1) / 3 < 32 * chunks) :
-    (∀ i < cnt, (fieldK qs w i).Prime ∧ fieldK qs w i ≤ M) ∧
+    (∀ i < cnt, (fieldK qs w i).Prime ∧ 5 ≤ fieldK qs w i ∧ fieldK qs w i ≤ M) ∧
       (∀ p, p.Prime → 5 ≤ p → p ≤ M → ∃ i < cnt, fieldK qs w i = p) ∧
         (∀ i j, i < cnt → j < cnt → fieldK qs w i = fieldK qs w j → i = j) := by
   have hbound : ∀ i, i < cnt → fieldK qs w i ≤ M := fun i hi => fieldK_le h htop hi
+  have hfive : ∀ i, i < cnt → 5 ≤ fieldK qs w i := by
+    intro i hi
+    obtain ⟨htests, -, -⟩ := bitCheckLoopK_spec cnt h
+    obtain ⟨hmod, hpos, -⟩ := htests i hi
+    simp only [idx] at hpos
+    omega
   have hidx : ∀ i, i < cnt → idx (fieldK qs w i) < 32 * chunks := by
     intro i hi
     have hnum : num (idx (fieldK qs w i)) ≤ M := by
@@ -128,7 +134,8 @@ public theorem primeBlock_spec {qs w lit M cnt chunks : ℕ} (hsieve : IsSieve M
       exact hbound i hi
     simp only [num] at hnum
     omega
-  refine ⟨fun i hi => ⟨fieldK_prime hsieve h hi (hbound i hi), hbound i hi⟩, fun p hp h5 hpM => ?_,
+  refine ⟨fun i hi => ⟨fieldK_prime hsieve h hi (hbound i hi), hfive i hi, hbound i hi⟩,
+    fun p hp h5 hpM => ?_,
     fun i j hi hj hij => fieldK_injOn h hi hj hij⟩
   have hmod : p % 6 = 1 ∨ p % 6 = 5 := mod_six_of_prime hp h5
   have hnum : num (idx p) = p := num_idx hmod
