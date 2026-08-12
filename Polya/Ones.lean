@@ -27,7 +27,7 @@ theorem land_shiftLeft_shiftRight (x M s : ℕ) : (x &&& (M <<< s)) >>> s = (x >
   simp [Nat.testBit_shiftRight, Nat.testBit_and, Nat.testBit_shiftLeft]
 
 /-- The set bits of one 32-position chunk. -/
-theorem popc32K_chunk (lam i : ℕ) :
+public theorem popc32K_chunk (lam i : ℕ) :
     popc32K ((lam >>> (32 * i)) &&& ((1 <<< 32) - 1)) = bitSum (lam / 2 ^ (32 * i)) 32 := by
   have h1 : (1 : ℕ) <<< 32 - 1 = 2 ^ 32 - 1 := by rw [Nat.one_shiftLeft]
   have h2 : ((lam >>> (32 * i)) &&& (2 ^ 32 - 1)) = (lam / 2 ^ (32 * i)) % 2 ^ 32 := by

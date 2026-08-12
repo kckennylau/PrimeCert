@@ -122,7 +122,7 @@ public theorem bitCheckLoopK_spec {qs w lit : ℕ} (fuel : ℕ)
 open PrimeCert.Sieve (IsSieve num)
 
 /-- The index inverts `num` on the numbers coprime to 6. -/
-theorem num_idx {q : ℕ} (hq : q % 6 = 1 ∨ q % 6 = 5) : num (idx q) = q := by
+public theorem num_idx {q : ℕ} (hq : q % 6 = 1 ∨ q % 6 = 5) : num (idx q) = q := by
   simp only [num, idx]
   omega
 

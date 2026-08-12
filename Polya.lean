@@ -1,5 +1,6 @@
 import Polya.BitCheck
 import Polya.CardFactors
+import Polya.Complete
 import Polya.Count
 import Polya.Defs
 import Polya.Field
