@@ -7,6 +7,7 @@ module
 
 public import PrimeCert.Polya.Parity
 public import PrimeCert.Polya.CardFactors
+public import PrimeCert.Polya.PopCount
 
 /-!
 # The parity table holds the parity of `Ω`
@@ -58,5 +59,36 @@ public theorem testBit_lamK {qs w M r cnt n : ℕ} (htab : IsPrimePowerTable qs 
         by simp⟩
   rw [lamK, testBit_lamLoopK hnM hn hstep, hcard]
   simp
+
+/-- Position `0` of the parity table is clear. -/
+public theorem testBit_lamK_zero {qs w M r cnt : ℕ} (htab : IsPrimePowerTable qs w M cnt) :
+    (lamK qs w M r cnt).testBit 0 = false := by
+  obtain ⟨hspec, -⟩ := htab
+  refine testBit_lamLoopK_zero (by simp) fun i hi => ?_
+  rw [Nat.zero_add]
+  have hpp : IsPrimePow (fieldK qs w i) := ((hspec _).2 ⟨i, hi, rfl⟩).1
+  have := hpp.two_le
+  omega
+
+/-- The set bits of the parity table below `p` count the numbers below `p` with an odd number of
+prime factors. -/
+public theorem bitSum_lamK {qs w M r cnt p : ℕ} (htab : IsPrimePowerTable qs w M cnt)
+    (hr : M < 2 ^ r) (hp : p ≤ M + 1) :
+    bitSum (lamK qs w M r cnt) p = ({n ∈ Finset.Icc 1 (p - 1) | Odd (cardFactors n)}).card := by
+  rw [bitSum_eq_card]
+  congr 1
+  ext i
+  simp only [Finset.mem_filter, Finset.mem_range, Finset.mem_Icc]
+  constructor
+  · rintro ⟨hi, hbit⟩
+    rcases Nat.eq_zero_or_pos i with rfl | hipos
+    · rw [testBit_lamK_zero htab] at hbit
+      exact absurd hbit (by simp)
+    · rw [testBit_lamK htab hr hipos (by omega)] at hbit
+      exact ⟨⟨hipos, by omega⟩, by simpa using hbit⟩
+  · rintro ⟨⟨hi1, hi2⟩, hodd⟩
+    refine ⟨by omega, ?_⟩
+    rw [testBit_lamK htab hr (by omega) (by omega)]
+    simpa using hodd
 
 end PrimeCert.Polya

@@ -238,6 +238,12 @@ theorem shiftRight_mod_two (x i : ℕ) : (x >>> i) % 2 = if x.testBit i then 1 e
   have h : x / 2 ^ i % 2 = 0 ∨ x / 2 ^ i % 2 = 1 := by omega
   rcases h with h | h <;> simp [h]
 
+/-- The count as the size of the set of set positions. -/
+public theorem bitSum_eq_card (v n : ℕ) :
+    bitSum v n = ({i ∈ Finset.range n | v.testBit i}).card := by
+  rw [bitSum, Finset.card_filter]
+  exact Finset.sum_congr rfl fun i _ => shiftRight_mod_two v i
+
 public theorem bitSum_mod (v s : ℕ) : bitSum (v % 2 ^ s) s = bitSum v s := by
   refine Finset.sum_congr rfl fun i hi => ?_
   simp only [Finset.mem_range] at hi

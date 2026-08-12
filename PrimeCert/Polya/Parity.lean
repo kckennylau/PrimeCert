@@ -120,6 +120,13 @@ public theorem testBit_strideMaskK {q M r j : ℕ} (hq : 0 < q) (hjM : j ≤ M)
     by_contra hcon
     exact hd (dvd_of_testBit_strideMaskK hq (by simpa using hcon))
 
+/-- Position `0` is no multiple of a positive stride. -/
+public theorem testBit_strideMaskK_zero {q M r : ℕ} (hq : 0 < q) :
+    (strideMaskK q M r).testBit 0 = false := by
+  rcases Bool.eq_false_or_eq_true ((strideMaskK q M r).testBit 0) with h | h
+  · exact absurd (dvd_of_testBit_strideMaskK hq h).2 (by simp)
+  · exact h
+
 /-! ## One step of the table -/
 
 /-- Inside the table, one step flips the bits at the multiples of the stride. -/
@@ -160,5 +167,16 @@ public theorem testBit_lamLoopK {qs w M r lam start fuel j : ℕ} (hj : j ≤ M)
         simp_all
     · rw [if_neg hdvd]
       simp [hdvd]
+
+/-- Position `0` stays clear: every stride is positive. -/
+public theorem testBit_lamLoopK_zero {qs w M r lam start fuel : ℕ} (h0 : lam.testBit 0 = false)
+    (hfield : ∀ i < fuel, 0 < fieldK qs w (start + i)) :
+    (lamLoopK qs w M r lam start fuel).testBit 0 = false := by
+  induction fuel with
+  | zero => simpa [lamLoopK] using h0
+  | succ f ih =>
+    rw [lamLoopK_succ, testBit_markStrideK (Nat.zero_le M), ih fun i hi => hfield i (by omega),
+      testBit_strideMaskK_zero (hfield f (by omega))]
+    simp
 
 end PrimeCert.Polya
