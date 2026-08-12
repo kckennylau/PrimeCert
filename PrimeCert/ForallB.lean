@@ -22,7 +22,9 @@ theorem List.rec_and {α : Type*} (f : α → Bool) (b : Bool) (l : List α) :
     b = true ∧ ∀ x ∈ l, f x := by
   induction l with
   | nil => simp
-  | cons _ _ ih => simp only [Bool.and_eq_true, ih, List.mem_cons, forall_eq_or_imp]; tauto
+  | cons _ _ ih =>
+    simp only [Bool.and_eq_true, ih, List.mem_cons, forall_eq_or_imp]
+    tauto
 
 namespace PrimeCert
 
@@ -42,7 +44,10 @@ theorem forallB_iff_range' (f : ℕ → Bool) (start len step : ℕ) :
     clear ih _a
     induction len with
     | zero => simp
-    | succ len ih => simp only; rw [ih, eagerReduce, Nat.add_eq]; ring
+    | succ len ih =>
+      simp only
+      rw [ih, eagerReduce, Nat.add_eq]
+      ring
 
 theorem forallB_iff (f : ℕ → Bool) (start len step : ℕ) :
     forallB f start len step ↔ ∀ n < len, f (n * step + start) := by
