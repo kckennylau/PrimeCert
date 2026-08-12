@@ -8,6 +8,7 @@ module
 public import PrimeCert.Polya.PrimePowers
 public import PrimeCert.Polya.Field
 public import PrimeCert.ForLean
+public import PrimeCert.SieveCorrect
 public import Mathlib.Data.Nat.Bitwise
 
 /-!
@@ -115,5 +116,40 @@ public theorem bitCheckLoopK_spec {qs w lit : ℕ} (fuel : ℕ)
           omega
     · simp only [Nat.add_sub_cancel]
       omega
+
+/-! ## Reading the primes off the sieve -/
+
+open PrimeCert.Sieve (IsSieve num)
+
+/-- The index inverts `num` on the numbers coprime to 6. -/
+theorem num_idx {q : ℕ} (hq : q % 6 = 1 ∨ q % 6 = 5) : num (idx q) = q := by
+  simp only [num, idx]
+  omega
+
+/-- A field that passed its tests and sits inside the sieve's range is a prime. -/
+public theorem fieldK_prime {qs w lit M cnt : ℕ} (hsieve : IsSieve M lit)
+    (h : bitCheckLoopK qs w lit 1 0 cnt % 2 = 1)
+    {i : ℕ} (hi : i < cnt) (hbound : fieldK qs w i ≤ M) : (fieldK qs w i).Prime := by
+  obtain ⟨htests, -, -⟩ := bitCheckLoopK_spec cnt h
+  obtain ⟨hmod, hpos, hset⟩ := htests i hi
+  have hnum : num (idx (fieldK qs w i)) = fieldK qs w i := by
+    refine num_idx ?_
+    omega
+  have hbit : lit.testBit (idx (fieldK qs w i)) = true := by
+    rw [Nat.shiftRight_eq_div_pow] at hset
+    rw [Nat.testBit_eq_decide_div_mod_eq]
+    simp only [decide_eq_true_eq]
+    omega
+  exact hnum ▸ (hsieve _ (by omega) (by rw [hnum]; exact hbound)).1 hbit
+
+/-- The fields that passed are distinct: their sieve indices rise. -/
+public theorem fieldK_injOn {qs w lit cnt : ℕ} (h : bitCheckLoopK qs w lit 1 0 cnt % 2 = 1)
+    {i j : ℕ} (hi : i < cnt) (hj : j < cnt) (heq : fieldK qs w i = fieldK qs w j) : i = j := by
+  obtain ⟨-, hmono, -⟩ := bitCheckLoopK_spec cnt h
+  by_contra hne
+  rcases Nat.lt_or_ge i j with hij | hij
+  · exact absurd (congrArg idx heq) (Nat.ne_of_lt (hmono i j hij hj))
+  · have hji : j < i := by omega
+    exact absurd (congrArg idx heq.symm) (Nat.ne_of_lt (hmono j i hji hi))
 
 end PrimeCert.Polya

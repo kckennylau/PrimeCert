@@ -22,21 +22,22 @@ namespace PrimeCert.Polya
 
 open ArithmeticFunction
 
-/-- The `cnt` fields of `qs` are exactly the prime powers at most `M`, each appearing once. -/
+/-- The `cnt` fields of `qs` are prime powers, distinct, and cover every prime power at most `M`.
+A field above `M` divides no number in the table, so the covering direction is the only one that
+needs the bound. -/
 @[expose] public def IsPrimePowerTable (qs w M cnt : ℕ) : Prop :=
-  (∀ q, (IsPrimePow q ∧ q ≤ M) ↔ ∃ i < cnt, fieldK qs w i = q) ∧
-    ∀ i₁ i₂, i₁ < cnt → i₂ < cnt → fieldK qs w i₁ = fieldK qs w i₂ → i₁ = i₂
+  (∀ q, IsPrimePow q → q ≤ M → ∃ i < cnt, fieldK qs w i = q) ∧
+    (∀ i < cnt, IsPrimePow (fieldK qs w i)) ∧
+      ∀ i₁ i₂, i₁ < cnt → i₂ < cnt → fieldK qs w i₁ = fieldK qs w i₂ → i₁ = i₂
 
 /-- Bit `n` of the parity table is set exactly when `Ω n` is odd. -/
 public theorem testBit_lamK {qs w M r cnt n : ℕ} (htab : IsPrimePowerTable qs w M cnt)
     (hr : M < 2 ^ r) (hn : 0 < n) (hnM : n ≤ M) :
     (lamK qs w M r cnt).testBit n = decide (Odd (cardFactors n)) := by
-  obtain ⟨hspec, hinj⟩ := htab
-  have hfield : ∀ i, i < cnt → IsPrimePow (fieldK qs w i) ∧ fieldK qs w i ≤ M :=
-    fun i hi => (hspec _).2 ⟨i, hi, rfl⟩
+  obtain ⟨hcover, hfield, hinj⟩ := htab
   have hstep : ∀ i < cnt, 0 < fieldK qs w (0 + i) ∧ M < fieldK qs w (0 + i) * 2 ^ r := by
     intro i hi
-    obtain ⟨hpp, -⟩ := hfield i hi
+    have hpp := hfield i hi
     rw [Nat.zero_add]
     have h2 : 2 ≤ fieldK qs w i := hpp.two_le
     refine ⟨by omega, lt_of_lt_of_le hr ?_⟩
@@ -46,7 +47,7 @@ public theorem testBit_lamK {qs w M r cnt n : ℕ} (htab : IsPrimePowerTable qs 
     refine Finset.card_bij (fun i _ => fieldK qs w (0 + i)) ?_ ?_ ?_
     · intro i hi
       simp only [Finset.mem_filter, Finset.mem_range, Nat.zero_add] at hi ⊢
-      exact ⟨Nat.mem_divisors.2 ⟨hi.2, by omega⟩, (hfield i hi.1).1⟩
+      exact ⟨Nat.mem_divisors.2 ⟨hi.2, by omega⟩, hfield i hi.1⟩
     · intro i₁ h₁ i₂ h₂ heq
       simp only [Finset.mem_filter, Finset.mem_range, Nat.zero_add] at h₁ h₂
       exact hinj i₁ i₂ h₁.1 h₂.1 (by simpa using heq)
@@ -54,7 +55,7 @@ public theorem testBit_lamK {qs w M r cnt n : ℕ} (htab : IsPrimePowerTable qs 
       simp only [Finset.mem_filter, Nat.mem_divisors] at hq
       obtain ⟨⟨hdvd, -⟩, hpp⟩ := hq
       have hqn : q ≤ n := Nat.le_of_dvd hn hdvd
-      obtain ⟨i, hi, rfl⟩ := (hspec q).1 ⟨hpp, by omega⟩
+      obtain ⟨i, hi, rfl⟩ := hcover q hpp (by omega)
       exact ⟨i, by simp only [Finset.mem_filter, Finset.mem_range, Nat.zero_add]; exact ⟨hi, hdvd⟩,
         by simp⟩
   rw [lamK, testBit_lamLoopK hnM hn hstep, hcard]
@@ -63,11 +64,10 @@ public theorem testBit_lamK {qs w M r cnt n : ℕ} (htab : IsPrimePowerTable qs 
 /-- Position `0` of the parity table is clear. -/
 public theorem testBit_lamK_zero {qs w M r cnt : ℕ} (htab : IsPrimePowerTable qs w M cnt) :
     (lamK qs w M r cnt).testBit 0 = false := by
-  obtain ⟨hspec, -⟩ := htab
+  obtain ⟨-, hfield, -⟩ := htab
   refine testBit_lamLoopK_zero (by simp) fun i hi => ?_
   rw [Nat.zero_add]
-  have hpp : IsPrimePow (fieldK qs w i) := ((hspec _).2 ⟨i, hi, rfl⟩).1
-  have := hpp.two_le
+  have := (hfield i hi).two_le
   omega
 
 /-- The set bits of the parity table below `p` count the numbers below `p` with an odd number of
