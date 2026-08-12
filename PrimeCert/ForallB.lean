@@ -54,6 +54,17 @@ theorem forallB_iff' (f : ℕ → Bool) (start r len step : ℕ) :
   simp_rw [forallB_iff, ← add_assoc, ← add_mul, le_iff_exists_add, exists_imp,
     forall_eq_apply_imp_iff, add_lt_add_iff_left, add_comm]
 
+/-- Read the fold over `r, r + step, …` as a statement about every `n` below `len * step` whose
+remainder mod `step` is `r`. -/
+theorem forallB_of_mod (f : ℕ → Bool) {r len step : ℕ}
+    (h : forallB f r len step) : ∀ n < len * step, n % step = r → f n := by
+  rw [show r = 0 * step + r by simp, forallB_iff'] at h
+  intro n hn hnr
+  have hlt : n / step < 0 + len := by
+    simpa using Nat.div_lt_of_lt_mul (mul_comm len step ▸ hn)
+  have := h (n / step) (Nat.zero_le _) hlt
+  rwa [show n / step * step + r = n by rw [← hnr]; exact Nat.div_add_mod' n step] at this
+
 theorem forallB_one_iff (f : ℕ → Bool) (start len : ℕ) :
     forallB f start len ↔ ∀ n, start ≤ n → n < start + len → f n := by
   simp_rw [forallB_iff_range', List.mem_range'_1, and_imp]
