@@ -171,14 +171,10 @@ private def emitLoopChain (tag : String) (fuel len st0 start0 : Nat)
 
 /-- The certified sieve covering exactly `n`, building one when the registry holds none. Returns the
 declaration holding its bitset and that bitset's value. -/
-private def sieveFor (n len : Nat) : MetaM (Name × Nat) := do
+private def sieveFor (n : Nat) : MetaM (Name × Nat) := do
   let entry ← match (← PrimeCert.Sieve.sieveCaches).find? (·.hi == n) with
     | some c => pure c
-    | none => do
-        PrimeCert.Sieve.runSieve n len
-        match (← PrimeCert.Sieve.sieveCaches).find? (·.hi == n) with
-        | some c => pure c
-        | none => throwError "run_lam: no sieve covering {n}"
+    | none => throwError "run_lam: no sieve at {n}, put `run_sieve {n}` above this command"
   let T := (n - 1) / 3
   return (entry.litName,
     PrimeCert.Sieve.sieveLoop T (PrimeCert.Sieve.initK T) 1 ((Nat.sqrt n + 1 - 1) / 3))
@@ -186,7 +182,7 @@ private def sieveFor (n len : Nat) : MetaM (Name × Nat) := do
 /-- Check the packed primes against the sieve and collect the remaining prime powers from it, both
 in kernel-checked batches. Returns the packed prime powers, in the order the checks certify. -/
 private def emitPowerChecks (n len : Nat) : MetaM Nat := do
-  let (litName, lit) ← sieveFor n len
+  let (litName, lit) ← sieveFor n
   let litE := mkConst litName
   let w := Nat.log2 n + 1
   let e := Nat.log2 n + 1
