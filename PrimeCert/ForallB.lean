@@ -4,6 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kenny Lau, Bhavik Mehta
 -/
 
+module
+
 import PrimeCert.PowMod
 import Mathlib.Data.List.Range
 import Mathlib.Algebra.Order.Monoid.Canonical.Defs
@@ -17,7 +19,7 @@ The `forallB_iff*` lemmas rewrite it as an ordinary `∀`. `List.rec_and` does t
 `List.rec` fold of `&&` over an explicit list.
 -/
 
-theorem List.rec_and {α : Type*} (f : α → Bool) (b : Bool) (l : List α) :
+public theorem List.rec_and {α : Type*} (f : α → Bool) (b : Bool) (l : List α) :
     (List.rec b (fun hd _ ih ↦ f hd && ih) l : Bool) = true ↔
     b = true ∧ ∀ x ∈ l, f x := by
   induction l with
@@ -26,7 +28,7 @@ theorem List.rec_and {α : Type*} (f : α → Bool) (b : Bool) (l : List α) :
 
 namespace PrimeCert
 
-def forallB (f : ℕ → Bool) (start len : ℕ) (step : ℕ := 1) : Bool :=
+public def forallB (f : ℕ → Bool) (start len : ℕ) (step : ℕ := 1) : Bool :=
   (Nat.rec (motive := fun _ ↦ ℕ × Bool) (start, true)
     (fun _ ih ↦ ih.rec fun i b ↦ (eagerReduce (i.add step), f i && b)) len).2
 
@@ -48,7 +50,7 @@ theorem forallB_iff (f : ℕ → Bool) (start len step : ℕ) :
     forallB f start len step ↔ ∀ n < len, f (n * step + start) := by
   simp_rw [add_comm, mul_comm, forallB_iff_range', List.mem_range']; aesop
 
-theorem forallB_iff' (f : ℕ → Bool) (start r len step : ℕ) :
+public theorem forallB_iff' (f : ℕ → Bool) (start r len step : ℕ) :
     forallB f (start * step + r) len step ↔
     ∀ n, start ≤ n → n < start + len → f (n * step + r) := by
   simp_rw [forallB_iff, ← add_assoc, ← add_mul, le_iff_exists_add, exists_imp,
@@ -56,7 +58,7 @@ theorem forallB_iff' (f : ℕ → Bool) (start r len step : ℕ) :
 
 /-- Read the fold over `r, r + step, …` as a statement about every `n` below `len * step` whose
 remainder mod `step` is `r`. -/
-theorem forallB_of_mod (f : ℕ → Bool) {r len step : ℕ}
+public theorem forallB_of_mod (f : ℕ → Bool) {r len step : ℕ}
     (h : forallB f r len step) : ∀ n < len * step, n % step = r → f n := by
   grind [forallB_iff, Nat.div_lt_of_lt_mul, Nat.div_add_mod']
 
