@@ -1,0 +1,186 @@
+/-
+Copyright (c) 2026 Bhavik Mehta. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Bhavik Mehta
+-/
+module
+
+public import Polya.Runs
+public import Polya.Tables
+public import Polya.PowerPack
+
+/-!
+# The block loop accumulates the recurrence
+
+One step of `blockStepK` covers the whole run of indices sharing a quotient, reading that
+quotient's value of `L` off one of the two tables. The state holds the next index and two
+accumulators standing for their difference (`blockLoopK_spec`); a final index of `v + 1` with the
+second accumulator at `off * (v - 1)` says the run covered `2 … v` exactly (`blockLoopK_sum`).
+-/
+
+namespace PrimeCert.Polya
+
+open Nat
+
+set_option maxRecDepth 100000
+
+/-- One block in arithmetic form. -/
+theorem blockStepK_eq (x v rootx low hi wb off st : ℕ) :
+    blockStepK x v rootx low hi wb off st =
+      st - st % 2 ^ 64 + (v / (v / (st % 2 ^ 64)) + 1) +
+        ((v / (v / (st % 2 ^ 64)) - st % 2 ^ 64 + 1) *
+            (if v / (st % 2 ^ 64) ≤ rootx then fieldK low wb (v / (st % 2 ^ 64))
+              else fieldK hi wb (x / (v / (st % 2 ^ 64)))) * 2 ^ 64 +
+          (v / (v / (st % 2 ^ 64)) - st % 2 ^ 64 + 1) * off * 2 ^ 128) := by
+  unfold blockStepK
+  simp only [bool_rec_ble_eq, Nat.land_eq, Nat.shiftLeft_eq', Nat.shiftLeft_eq, Nat.one_mul,
+    Nat.and_two_pow_sub_one_eq_mod, Nat.sub_eq, Nat.add_eq, Nat.mul_eq, Nat.div_eq_div,
+    Nat.succ_eq_add_one]
+
+/-- The tables hold `L` at every quotient of `v`, offset by `off`. -/
+@[expose] public def BlockValues (x v rootx low hi wb off : ℕ) : Prop :=
+  ∀ k, 1 ≤ k → k ≤ v →
+    ((if v / k ≤ rootx then fieldK low wb (v / k) else fieldK hi wb (x / (v / k))) : ℤ)
+      = L (v / k) + off
+
+/-- The loop from a state covering `2 … k₀ - 1`: either it covers an initial segment of the
+indices, or its second accumulator has run past what any such segment allows. -/
+theorem blockLoopK_spec {x v rootx low hi wb off st k₀ A₀ B₀ : ℕ} (hoff : 0 < off) (hv : 0 < v)
+    (hv64 : v + 1 < 2 ^ 64) (hwb : 2 ^ wb ≤ 2 * off)
+    (hvals : BlockValues x v rootx low hi wb off)
+    (hst : st = k₀ + 2 ^ 64 * A₀ + 2 ^ 128 * B₀) (hk₀ : 2 ≤ k₀) (hk₀v : k₀ ≤ v + 1)
+    (hB₀ : B₀ = off * (k₀ - 2)) (hA₀ : A₀ ≤ 2 * B₀)
+    (hsum₀ : (A₀ : ℤ) - B₀ = ∑ j ∈ Finset.Ico 2 k₀, L (v / j)) (fuel : ℕ) :
+    ∃ k A B, blockLoopK x v rootx low hi wb off st fuel = k + 2 ^ 64 * A + 2 ^ 128 * B ∧
+      k ≤ v + 1 ∧ A ≤ 2 * B ∧
+        ((2 ≤ k ∧ B = off * (k - 2) ∧ (A : ℤ) - B = ∑ j ∈ Finset.Ico 2 k, L (v / j)) ∨
+          off * (v - 1) < B) := by
+  induction fuel with
+  | zero => exact ⟨k₀, A₀, B₀, hst, hk₀v, hA₀, Or.inl ⟨hk₀, hB₀, hsum₀⟩⟩
+  | succ f ih =>
+    obtain ⟨k, A, B, hstate, hkv, hA2B, hcase⟩ := ih
+    rw [blockLoopK_succ, hstate, blockStepK_eq]
+    have hmod : (k + 2 ^ 64 * A + 2 ^ 128 * B) % 2 ^ 64 = k := by
+      have hsplit : k + 2 ^ 64 * A + 2 ^ 128 * B = k + 2 ^ 64 * (A + 2 ^ 64 * B) := by
+        ring
+      rw [hsplit, Nat.add_mul_mod_self_left, Nat.mod_eq_of_lt (by omega)]
+    have hsub : k + 2 ^ 64 * A + 2 ^ 128 * B - k = 2 ^ 64 * A + 2 ^ 128 * B := by
+      have hcomm : k + 2 ^ 64 * A + 2 ^ 128 * B = 2 ^ 64 * A + 2 ^ 128 * B + k := by
+        ring
+      rw [hcomm, Nat.add_sub_cancel]
+    rw [hmod, hsub]
+    have hvallt : (if v / k ≤ rootx then fieldK low wb (v / k)
+        else fieldK hi wb (x / (v / k))) < 2 ^ wb := by
+      split <;> exact fieldK_lt _ _ _
+    refine ⟨v / (v / k) + 1,
+      A + (v / (v / k) - k + 1) *
+        (if v / k ≤ rootx then fieldK low wb (v / k) else fieldK hi wb (x / (v / k))),
+      B + (v / (v / k) - k + 1) * off, by ring, ?_, ?_, ?_⟩
+    · have hdle : v / (v / k) ≤ v := Nat.div_le_self _ _
+      omega
+    · have hstep : (v / (v / k) - k + 1) *
+          (if v / k ≤ rootx then fieldK low wb (v / k) else fieldK hi wb (x / (v / k)))
+            ≤ 2 * ((v / (v / k) - k + 1) * off) := by
+        have hle2 : (v / (v / k) - k + 1) *
+            (if v / k ≤ rootx then fieldK low wb (v / k) else fieldK hi wb (x / (v / k)))
+              ≤ (v / (v / k) - k + 1) * (2 * off) :=
+          Nat.mul_le_mul_left _ (by omega)
+        have heq : (v / (v / k) - k + 1) * (2 * off) = 2 * ((v / (v / k) - k + 1) * off) := by
+          ring
+        omega
+      omega
+    · rcases hcase with ⟨hk2, hB, hsum⟩ | hbad
+      · rcases Nat.lt_or_ge v k with hgt | hle
+        · refine Or.inr ?_
+          have hkv1 : k = v + 1 := by omega
+          have hq0 : v / k = 0 := by
+            rw [hkv1]
+            exact Nat.div_eq_of_lt (by omega)
+          have hrun1 : v / (v / k) - k + 1 = 1 := by
+            rw [hq0, Nat.div_zero]
+            omega
+          have hBv : B = off * (v - 1) := by
+            rw [hB, hkv1]
+            have hvv : v + 1 - 2 = v - 1 := by omega
+            rw [hvv]
+          rw [hrun1, hBv, Nat.one_mul]
+          omega
+        · have hkd : k ≤ v / (v / k) := le_div_div (by omega) hle
+          refine Or.inl ⟨by omega, ?_, ?_⟩
+          · rw [hB]
+            have hcnt : v / (v / k) + 1 - 2 = k - 2 + (v / (v / k) - k + 1) := by omega
+            rw [hcnt, Nat.mul_add]
+            ring
+          · have hIcc : Finset.Icc k (v / (v / k)) = Finset.Ico k (v / (v / k) + 1) := by
+              ext a
+              simp only [Finset.mem_Icc, Finset.mem_Ico]
+              omega
+            have hsplit : Finset.Ico 2 k ∪ Finset.Ico k (v / (v / k) + 1)
+                = Finset.Ico 2 (v / (v / k) + 1) :=
+              Finset.Ico_union_Ico_eq_Ico (by omega) (by omega)
+            have hdisj : Disjoint (Finset.Ico 2 k) (Finset.Ico k (v / (v / k) + 1)) := by
+              rw [Finset.disjoint_left]
+              intro a ha ha'
+              simp only [Finset.mem_Ico] at ha ha'
+              omega
+            have hblock : ∑ j ∈ Finset.Icc k (v / (v / k)), L (v / j)
+                = ((v / (v / k) - k + 1 : ℕ) : ℤ) * L (v / k) := sum_run (by omega) hle _
+            rw [hIcc] at hblock
+            rw [← hsplit, Finset.sum_union hdisj, ← hsum, hblock]
+            have hvalL : ((if v / k ≤ rootx then fieldK low wb (v / k)
+                else fieldK hi wb (x / (v / k))) : ℤ) = L (v / k) + off := hvals k (by omega) hle
+            push_cast
+            rw [hvalL]
+            ring
+      · exact Or.inr (by omega)
+
+/-- Reading the three fields back off a state. -/
+theorem state_split {S k A B : ℕ} (h : S = k + 2 ^ 64 * A + 2 ^ 128 * B) (hk : k < 2 ^ 64)
+    (hA : A < 2 ^ 64) : S % 2 ^ 64 = k ∧ S / 2 ^ 64 % 2 ^ 64 = A ∧ S / 2 ^ 128 = B := by
+  have h128 : (2 : ℕ) ^ 128 = 2 ^ 64 * 2 ^ 64 := by
+    norm_num
+  have hs : S = k + 2 ^ 64 * (A + 2 ^ 64 * B) := by
+    rw [h, h128]
+    ring
+  refine ⟨by rw [hs, Nat.add_mul_mod_self_left, Nat.mod_eq_of_lt hk], ?_, ?_⟩
+  · rw [hs, Nat.add_mul_div_left _ _ (Nat.two_pow_pos 64), Nat.div_eq_of_lt hk, Nat.zero_add,
+      Nat.add_mul_mod_self_left, Nat.mod_eq_of_lt hA]
+  · rw [hs, h128, ← Nat.div_div_eq_div_mul, Nat.add_mul_div_left _ _ (Nat.two_pow_pos 64),
+      Nat.div_eq_of_lt hk, Nat.zero_add, Nat.add_mul_div_left _ _ (Nat.two_pow_pos 64),
+      Nat.div_eq_of_lt hA, Nat.zero_add]
+
+/-- A run of blocks ending at index `v + 1` with the second accumulator at `off * (v - 1)` has
+covered `2 … v`, so the accumulators differ by the sum in the recurrence. -/
+public theorem blockLoopK_sum {x v rootx low hi wb off S fuel : ℕ} (hoff : 0 < off) (hv : 0 < v)
+    (hv64 : v + 1 < 2 ^ 64) (hwb : 2 ^ wb ≤ 2 * off)
+    (hvals : BlockValues x v rootx low hi wb off)
+    (hfinal : blockLoopK x v rootx low hi wb off 2 fuel = S)
+    (hbound : 2 * (S / 2 ^ 128) < 2 ^ 64) (hk : S % 2 ^ 64 = v + 1)
+    (hB : S / 2 ^ 128 = off * (v - 1)) :
+    ((S / 2 ^ 64 % 2 ^ 64 : ℕ) : ℤ) - (off * (v - 1) : ℕ) = ∑ j ∈ Finset.Ioc 1 v, L (v / j) := by
+  obtain ⟨k, A, B, hstate, hkv, hA2B, hcase⟩ :=
+    blockLoopK_spec (st := 2) (k₀ := 2) (A₀ := 0) (B₀ := 0) hoff hv hv64 hwb hvals (by ring)
+      (le_refl 2) (by omega) (by simp) (by simp) (by simp) fuel
+  rw [hfinal] at hstate
+  have hBle : B ≤ S / 2 ^ 128 := by
+    rw [hstate, Nat.le_div_iff_mul_le (Nat.two_pow_pos 128)]
+    have heq : B * 2 ^ 128 = 2 ^ 128 * B := by
+      ring
+    omega
+  obtain ⟨hkS, hAS, hBS⟩ := state_split hstate (by omega) (by omega)
+  have hkeq : k = v + 1 := by
+    rw [← hkS]
+    exact hk
+  have hBeq : B = off * (v - 1) := by
+    rw [← hBS]
+    exact hB
+  have hset : Finset.Ico 2 (v + 1) = Finset.Ioc 1 v := by
+    ext a
+    simp only [Finset.mem_Ico, Finset.mem_Ioc]
+    omega
+  rcases hcase with ⟨-, -, hsum⟩ | hbad
+  · rw [hAS, ← hBeq, hsum, hkeq, hset]
+  · rw [hBeq] at hbad
+    omega
+
+end PrimeCert.Polya

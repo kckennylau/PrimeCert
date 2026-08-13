@@ -111,12 +111,13 @@ Polya/Ones.lean        -- onesK holds the running counts
 Polya/Count.lean       -- L from a count of odd Ω
 Polya/Tables.lean      -- lowLoopK and hiLoopK hold values of L
 Polya/Runs.lean        -- the run decomposition of Σ_{k=2}^{v} L(⌊v/k⌋)
+Polya/TableSpec.lean   -- the packed table holds exactly the prime powers
+Polya/BlockCorrect.lean -- the invariant of blockLoopK over its packed state
 ```
 
 To write:
 
 ```
-Polya/BlockCorrect.lean        -- the invariant of blockLoopK over its packed state
 Polya/Main.lean                -- assembly, polya_witness, polya_disproof
 PrimeCertTest/PolyaOracle.lean -- independent compiled implementations, kept untracked for now
 PrimeCertTest/PolyaFull.lean   -- the x = 906150257 run, dispatch-only CI workflow
@@ -128,11 +129,12 @@ The computation runs and prints `L(906150257) = 1`, with every batch equation ch
 The mathematics connecting those numbers to `ArithmeticFunction.liouville` is being written; where
 each of the four gaps stands:
 
-1. **The prime powers come from the sieve, partly proved.** `bitCheckLoopK_spec` in
-   `Polya/BitCheck.lean` says a surviving flag forces every packed field to be `1` or `5` modulo 6,
-   to have a set sieve bit, and to have a strictly rising sieve index. Still to write: the set-bit
-   count from `popcLoopK` leaves no prime out, the collection from `hpLoopK` gives the higher
-   powers, and the two together give `IsPrimePowerTable`.
+1. **The prime powers come from the sieve, proved.** `isPrimePowerTable_of_checks` in
+   `Polya/TableSpec.lean` turns what the three loops check into `IsPrimePowerTable`. It rests on
+   `bitCheckLoopK_spec` (`Polya/BitCheck.lean`, what a surviving flag forces), `primeBlock_spec`
+   (`Polya/Complete.lean`, equal counts leave no prime out), and `hpLoopK_spec` with `hpVal_iff`
+   (`Polya/HigherPowers.lean`, the walk collects the powers with base 2 or 3 and those with
+   exponent at least two), over the packed state of `Polya/PowerPack.lean`.
 2. **The parity table, proved.** `testBit_lamK` in `Polya/LamCorrect.lean`: bit `n` is set exactly
    when `Ω n` is odd, for `1 ≤ n ≤ M`, given `IsPrimePowerTable`. It rests on the stride masks
    marking the multiples (`Polya/Parity.lean`) and on the prime powers dividing `n` numbering `Ω n`
@@ -140,9 +142,10 @@ each of the four gaps stands:
 3. **The counts and the value tables, proved.** `popc32K_eq_bitSum` in `Polya/PopCount.lean`
    (the byte-wise argument, no `decide` over the word), `fieldK_onesK` and `onesBelowK_eq` in
    `Polya/Ones.lean`, `lowLoopK_spec`, `hiLoopK_spec` and `val_eq_L` in `Polya/Tables.lean`.
-4. **The block loop, partly proved.** `Polya/Runs.lean` has the run decomposition: the indices with
-   a given quotient form a contiguous run, so a sum over them collapses to one term. Still to
-   write: the loop invariant over the packed 64-bit state, and the assembly with the recurrence.
+4. **The block loop, proved.** `blockLoopK_sum` in `Polya/BlockCorrect.lean`: a run of blocks
+   ending at index `v + 1` with the second accumulator at `off * (v - 1)` has covered `2 … v`, so
+   the accumulators differ by the sum in the recurrence. It rests on the run decomposition of
+   `Polya/Runs.lean`.
 
 The recurrence itself is proved: `Polya/Summatory.lean` defines `L`, and `Polya/Identity.lean`
 gives `∑_{k=1}^{v} L ⌊v/k⌋ = ⌊√v⌋` and `L_eq_sqrt_sub`, off the divisor sum of `λ` being the

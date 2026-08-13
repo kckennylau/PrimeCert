@@ -1,4 +1,5 @@
 import Polya.BitCheck
+import Polya.BlockCorrect
 import Polya.CardFactors
 import Polya.Complete
 import Polya.Count
