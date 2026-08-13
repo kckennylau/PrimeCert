@@ -39,7 +39,7 @@ public abbrev SetupOK (x M rootx top w r wc chunks off wb qs np cnt chunks2 e fu
     hpSt : ℕ) : Bool :=
   decide (SetupOK x M rootx top w r wc chunks off wb qs np cnt chunks2 e fuel st hpSt)
 
-public theorem of_setupOK {x M rootx top w r wc chunks off wb qs np cnt chunks2 e fuel st
+theorem of_setupOK {x M rootx top w r wc chunks off wb qs np cnt chunks2 e fuel st
     hpSt : ℕ} (h : setupOK x M rootx top w r wc chunks off wb qs np cnt chunks2 e fuel st hpSt
       = true) :
     SetupOK x M rootx top w r wc chunks off wb qs np cnt chunks2 e fuel st hpSt :=
@@ -120,7 +120,7 @@ public abbrev StepOK (x rootx off wb j v s A B S val hi hiNext : ℕ) : Prop :=
 @[expose] public def stepOK (x rootx off wb j v s A B S val hi hiNext : ℕ) : Bool :=
   decide (StepOK x rootx off wb j v s A B S val hi hiNext)
 
-public theorem of_stepOK {x rootx off wb j v s A B S val hi hiNext : ℕ}
+theorem of_stepOK {x rootx off wb j v s A B S val hi hiNext : ℕ}
     (h : stepOK x rootx off wb j v s A B S val hi hiNext = true) :
     StepOK x rootx off wb j v s A B S val hi hiNext :=
   of_decide_eq_true h
@@ -165,7 +165,7 @@ public abbrev FinalOK (x rootx off wb s A B S p q : ℕ) : Prop :=
 @[expose] public def finalOK (x rootx off wb s A B S p q : ℕ) : Bool :=
   decide (FinalOK x rootx off wb s A B S p q)
 
-public theorem of_finalOK {x rootx off wb s A B S p q : ℕ}
+theorem of_finalOK {x rootx off wb s A B S p q : ℕ}
     (h : finalOK x rootx off wb s A B S p q = true) : FinalOK x rootx off wb s A B S p q :=
   of_decide_eq_true h
 
