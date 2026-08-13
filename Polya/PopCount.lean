@@ -61,32 +61,16 @@ theorem land_of_lt {x m t : ℕ} (hm : m < 2 ^ t) : x &&& m = (x % 2 ^ t) &&& m 
 
 /-- The byte-wide split, the form the stages use. -/
 theorem land_split_byte (x m : ℕ) :
-    x &&& m = ((x % 256) &&& (m % 256)) + 256 * ((x / 256) &&& (m / 256)) := by
-  have h : (2 : ℕ) ^ 8 = 256 := rfl
-  have h2 := land_split x m 8
-  rwa [h] at h2
+    x &&& m = ((x % 256) &&& (m % 256)) + 256 * ((x / 256) &&& (m / 256)) :=
+  land_split x m 8
 
-theorem land_85 (x : ℕ) : x &&& 85 = (x % 128) &&& 85 := by
-  have h : (2 : ℕ) ^ 7 = 128 := rfl
-  have h2 := land_of_lt (x := x) (m := 85) (t := 7) (by decide)
-  rwa [h] at h2
+theorem land_85 (x : ℕ) : x &&& 85 = (x % 128) &&& 85 := land_of_lt (t := 7) (by decide)
 
-theorem land_51 (x : ℕ) : x &&& 51 = (x % 64) &&& 51 := by
-  have h : (2 : ℕ) ^ 6 = 64 := rfl
-  have h2 := land_of_lt (x := x) (m := 51) (t := 6) (by decide)
-  rwa [h] at h2
+theorem land_51 (x : ℕ) : x &&& 51 = (x % 64) &&& 51 := land_of_lt (t := 6) (by decide)
 
-theorem land_15 (x : ℕ) : x &&& 15 = x % 16 := by
-  have h : (2 : ℕ) ^ 4 - 1 = 15 := rfl
-  have h2 := Nat.and_two_pow_sub_one_eq_mod x 4
-  rw [h] at h2
-  rw [h2]
+theorem land_15 (x : ℕ) : x &&& 15 = x % 16 := Nat.and_two_pow_sub_one_eq_mod x 4
 
-theorem land_255 (x : ℕ) : x &&& 255 = x % 256 := by
-  have h : (2 : ℕ) ^ 8 - 1 = 255 := rfl
-  have h2 := Nat.and_two_pow_sub_one_eq_mod x 8
-  rw [h] at h2
-  rw [h2]
+theorem land_255 (x : ℕ) : x &&& 255 = x % 256 := Nat.and_two_pow_sub_one_eq_mod x 8
 
 /-! ## The three field stages
 
