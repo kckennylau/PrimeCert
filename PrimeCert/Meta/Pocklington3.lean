@@ -4,8 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kenny Lau, Bhavik Mehta
 -/
 
-import PrimeCert.Pocklington3
-import PrimeCert.Meta.Pocklington
+module
+
+meta import PrimeCert.Pocklington3
+public meta import PrimeCert.Meta.Pocklington
 
 /-! # The `pock3` certificate method
 
@@ -23,9 +25,9 @@ open Lean Meta Qq
 - A numeric literal `0` means `s = 0`
 - A numeric literal `p` (prime, `p > 2`) means `r² - 8s` is a quadratic non-residue mod `p`
 - `<` means `r² < 8s` -/
-syntax pock3_mode := num <|> "<"
+public syntax pock3_mode := num <|> "<"
 
-def parsePock3Mode (stx : TSyntax ``pock3_mode) (dict : PrimeDict) :
+meta def parsePock3Mode (stx : TSyntax ``pock3_mode) (dict : PrimeDict) :
     MetaM Q(Pocklington3CertMode) := match stx with
   | `(pock3_mode| $n:num) =>
     have n := n.getNat
@@ -62,11 +64,11 @@ syntax "(" num "," num "," pock3_mode "," prime_pow "*" factored ")" : pock3_spe
 /-- Legacy `pock3` step with an explicit sieve bound `m` (now computed automatically). -/
 syntax "(" num "," num "," num "," pock3_mode "," prime_pow "*" factored ")" : pock3_spec
 
-def ParsedPrimePow.base : ParsedPrimePow → ℕ
+meta def ParsedPrimePow.base : ParsedPrimePow → ℕ
 | .prime p => p
 | .pow p _ => p
 
-def parsePrimePow' (stx : TSyntax ``prime_pow) (dict : PrimeDict) :
+meta def parsePrimePow' (stx : TSyntax ``prime_pow) (dict : PrimeDict) :
     MetaM Q(PrimeCert.PrimePow) := match stx with
   | `(prime_pow| $p ^ $e) => do
     have p := p.getNat; have pE := mkNatLit p
@@ -79,7 +81,7 @@ def parsePrimePow' (stx : TSyntax ``prime_pow) (dict : PrimeDict) :
     return mkApp4 (mkConst ``PrimeCert.PrimePow.mk) pE (mkNatLit 1) pf eagerReflBoolTrue
   | _ => Elab.throwUnsupportedSyntax
 
-def parseFactored' (stx : TSyntax ``factored) (dict : PrimeDict) :
+meta def parseFactored' (stx : TSyntax ``factored) (dict : PrimeDict) :
     MetaM Q(List PrimeCert.PrimePow) := do
   match stx with
   | `(factored| $pps:prime_pow**) =>
@@ -96,7 +98,7 @@ between the roots of that quadratic. A solution exists iff the discriminant `b²
 positive, and the least one sits just above the lower root `(b - √(b² - 8s + 8)) / 2`. So we
 compute it directly with an integer square root and confirm against a tiny window, rather than
 scanning — the failure case (`F` too small) returns at once instead of iterating. -/
-def minimalSieveBound (twoF r s : ℕ) : ℕ :=
+meta def minimalSieveBound (twoF r s : ℕ) : ℕ :=
   let b := twoF + r
   if b * b + 8 ≤ 8 * s then 0
   else Id.run do
@@ -106,7 +108,7 @@ def minimalSieveBound (twoF r s : ℕ) : ℕ :=
       if 2 * s + m * m < b * m + 2 then return m
     return 0
 
-def parsePock3Spec : PrimeCertMethod `pock3_spec := fun stx dict ↦ do
+meta def parsePock3Spec : PrimeCertMethod `pock3_spec := fun stx dict ↦ do
   -- Both forms share every field except `m`: the new form computes it, the legacy form
   -- supplies it explicitly.
   let (N, root, mOpt, mode, head, F) ←
@@ -143,7 +145,7 @@ def parsePock3Spec : PrimeCertMethod `pock3_spec := fun stx dict ↦ do
     #[NE, rootE, mE, eE, F'E, mode, eagerReflBoolTrue]
   return ⟨N, NE, pf⟩
 
-@[prime_cert pock3] def pock3 : PrimeCertExt where
+@[prime_cert pock3] meta def pock3 : PrimeCertExt where
   syntaxName := `pock3_spec
   methodName := ``parsePock3Spec
 
