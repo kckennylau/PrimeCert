@@ -189,11 +189,11 @@ public theorem L_eq_of_final {x rootx off wb low hi s A B S p q fuel : ℕ}
 /-! ## Pólya's conjecture -/
 
 /-- A positive running total at an argument of at least two is a counterexample. -/
-public theorem exists_pos_L {x : ℕ} (hx : 2 ≤ x) (h : 0 < L x) : ∃ n, 2 ≤ n ∧ 0 < L n :=
+public theorem exists_pos_L (x : ℕ) (hx : 2 ≤ x) (h : 0 < L x) : ∃ n, 2 ≤ n ∧ 0 < L n :=
   ⟨x, hx, h⟩
 
 /-- A positive running total at an argument of at least two refutes the conjecture. -/
-public theorem not_forall_L_nonpos {x : ℕ} (hx : 2 ≤ x) (h : 0 < L x) :
+public theorem not_forall_L_nonpos (x : ℕ) (hx : 2 ≤ x) (h : 0 < L x) :
     ¬ ∀ n, 2 ≤ n → L n ≤ 0 := fun hall => absurd (hall x hx) (by omega)
 
 end PrimeCert.Polya

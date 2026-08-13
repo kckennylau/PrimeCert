@@ -19,10 +19,10 @@ theorem polya_witness : L 906150257 = 1 := by
 
 /-- Pólya's conjecture has a counterexample. -/
 theorem polya_disproof : ∃ n, 2 ≤ n ∧ 0 < L n :=
-  exists_pos_L (x := 906150257) (by norm_num) (by rw [polya_witness]; norm_num)
+  exists_pos_L 906150257 (by norm_num) (by rw [polya_witness]; norm_num)
 
 /-- Pólya's conjecture is false. -/
 theorem polya_conjecture_false : ¬ ∀ n, 2 ≤ n → L n ≤ 0 :=
-  not_forall_L_nonpos (x := 906150257) (by norm_num) (by rw [polya_witness]; norm_num)
+  not_forall_L_nonpos 906150257 (by norm_num) (by rw [polya_witness]; norm_num)
 
 end PrimeCert.Polya
