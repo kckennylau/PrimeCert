@@ -6,7 +6,7 @@ Authors: Kenny Lau, Bhavik Mehta
 
 module
 
-meta import PrimeCert.Pocklington3
+public meta import PrimeCert.Pocklington3
 public meta import PrimeCert.Meta.Pocklington
 
 /-! # The `pock3` certificate method

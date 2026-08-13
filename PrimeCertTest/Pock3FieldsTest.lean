@@ -4,6 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bhavik Mehta
 -/
 
+module
+
 import PrimeCert.Meta.Pocklington3
 import PrimeCert.SmallPrimes
 
@@ -12,6 +14,8 @@ import PrimeCert.SmallPrimes
 `m` is now optional: the 4-field form `(N, root, mode, F)` computes the sieve bound
 automatically; the legacy 5-field form `(N, root, m, mode, F)` still parses and proves.
 -/
+
+set_option linter.privateModule false
 
 open PrimeCert
 
