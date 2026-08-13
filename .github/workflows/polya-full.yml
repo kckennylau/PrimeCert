@@ -1,6 +1,7 @@
 name: Polya at the counterexample
 
 on:
+  push:
   workflow_dispatch:
 
 concurrency:
