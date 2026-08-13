@@ -114,14 +114,17 @@ Polya/Runs.lean        -- the run decomposition of Σ_{k=2}^{v} L(⌊v/k⌋)
 Polya/TableSpec.lean   -- the packed table holds exactly the prime powers
 Polya/BlockCorrect.lean -- the invariant of blockLoopK over its packed state
 Polya/Recursion.lean   -- the two tables answer every read one block makes
+Polya/Main.lean        -- the three lemmas the emitted run applies, one per stage
+PrimeCertTest/PolyaCertCheck.lean -- the run at 10^6, with L_million read off it
+PrimeCertTest/PolyaFull.lean      -- the x = 906150257 run, polya_witness, polya_disproof,
+                                     polya_conjecture_false
 ```
 
 To write:
 
 ```
-Polya/Main.lean                -- assembly, polya_witness, polya_disproof
 PrimeCertTest/PolyaOracle.lean -- independent compiled implementations, kept untracked for now
-PrimeCertTest/PolyaFull.lean   -- the x = 906150257 run, dispatch-only CI workflow
+.github/workflows              -- a dispatch-only job for the run at x
 ```
 
 ## Status
@@ -156,12 +159,14 @@ indicator of the squares.
 (`blockValues_of_tables`), the value a run of blocks produces goes back into the high table one
 index lower (`isHiTable_write`), and `L_eq_of_blockLoopK` reads `L v` off a finished run.
 
-The metaprogram still emits arithmetic equations only; emitting the mathematical statement is the
-last step. It needs the kernel to check four more facts about the emitted literals: the surviving
-flag and the top packed prime's bound, the second block of the packed table against the collected
-powers, the collected count against the table size, and the numeric side conditions of
-`isPrimePowerTable_of_checks`, `blockLoopK_sum` and `blockValues_of_tables`. The assembly then walks
-`j` from `x / cutoff` down to 1, one application per index.
+`Polya/Main.lean` holds the three lemmas a run applies: `tables_of_data` turns the equations of the
+six loops into the two table invariants, `isHiTable_step` extends the high table to one more index,
+and `L_eq_of_final` reads `L x` off the last run of blocks. Each carries its numeric side conditions
+as one decidable predicate over the emitted literals (`SetupOK`, `StepOK`, `FinalOK`), so one
+kernel-checked theorem per stage covers the packing of a block state, the square root of an
+argument, the value written into the table, and the widths and ranges the invariants need.
+`run_polya x` walks `j` from `x / cutoff` down to 1, one application per index, and emits
+`polyaValue : L x = p - q`.
 
 ## Gap 1: the prime powers come from the sieve
 
