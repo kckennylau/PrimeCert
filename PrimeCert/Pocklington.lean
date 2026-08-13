@@ -10,12 +10,8 @@ public import PrimeCert.ForMathlib
 public import PrimeCert.PredMod
 public import PrimeCert.PowMod
 public import Mathlib.Algebra.Field.ZMod
-public import Mathlib.Algebra.Order.Ring.Star
-public import Mathlib.Analysis.Normed.Ring.Lemmas
-public import Mathlib.Data.Int.Star
 public import Mathlib.Data.Nat.ChineseRemainder
 public import Mathlib.Data.Nat.Totient
-public import Mathlib.Tactic.ScopedNS
 public import Mathlib.Data.Finset.Pairwise
 
 /-! # Pocklington's primality certificate
