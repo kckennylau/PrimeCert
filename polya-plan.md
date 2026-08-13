@@ -113,6 +113,7 @@ Polya/Tables.lean      -- lowLoopK and hiLoopK hold values of L
 Polya/Runs.lean        -- the run decomposition of Σ_{k=2}^{v} L(⌊v/k⌋)
 Polya/TableSpec.lean   -- the packed table holds exactly the prime powers
 Polya/BlockCorrect.lean -- the invariant of blockLoopK over its packed state
+Polya/Recursion.lean   -- the two tables answer every read one block makes
 ```
 
 To write:
@@ -151,8 +152,16 @@ The recurrence itself is proved: `Polya/Summatory.lean` defines `L`, and `Polya/
 gives `∑_{k=1}^{v} L ⌊v/k⌋ = ⌊√v⌋` and `L_eq_sqrt_sub`, off the divisor sum of `λ` being the
 indicator of the squares.
 
-Beyond the four gaps, the metaprogram still emits arithmetic equations only; emitting the
-mathematical statement is the last step.
+`Polya/Recursion.lean` joins the last two: the two tables answer every read a block makes
+(`blockValues_of_tables`), the value a run of blocks produces goes back into the high table one
+index lower (`isHiTable_write`), and `L_eq_of_blockLoopK` reads `L v` off a finished run.
+
+The metaprogram still emits arithmetic equations only; emitting the mathematical statement is the
+last step. It needs the kernel to check four more facts about the emitted literals: the surviving
+flag and the top packed prime's bound, the second block of the packed table against the collected
+powers, the collected count against the table size, and the numeric side conditions of
+`isPrimePowerTable_of_checks`, `blockLoopK_sum` and `blockValues_of_tables`. The assembly then walks
+`j` from `x / cutoff` down to 1, one application per index.
 
 ## Gap 1: the prime powers come from the sieve
 
