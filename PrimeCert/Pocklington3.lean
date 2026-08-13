@@ -4,11 +4,13 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kenny Lau, Bhavik Mehta
 -/
 
-import Mathlib.NumberTheory.LegendreSymbol.Basic
-import Mathlib.Algebra.BigOperators.ModEq
-import PrimeCert.ForMathlib
-import PrimeCert.ForallB
-import PrimeCert.Pocklington
+module
+
+public import Mathlib.NumberTheory.LegendreSymbol.Basic
+public import Mathlib.Algebra.BigOperators.ModEq
+public import PrimeCert.ForMathlib
+public import PrimeCert.ForallB
+public import PrimeCert.Pocklington
 
 /-! # Pocklington's primality test, cube-root variant
 
@@ -134,10 +136,11 @@ theorem Pocklington3Cert.of_prime (r s p : Nat) (hp : Nat.Prime p) (h2p : 2 < p)
 - `zero`: `s = 0`
 - `prime p hp`: witness that `r² - 8s` is a quadratic non-residue mod `p`
 - `lt`: `r² < 8s` -/
-inductive Pocklington3CertMode : Type
+public inductive Pocklington3CertMode : Type
   | zero | prime (p : ℕ) (hp : Nat.Prime p) | lt
 
-noncomputable def Pocklington3CertMode.calculate (m : Pocklington3CertMode) (r s : ℕ) : Bool :=
+@[expose] public noncomputable def Pocklington3CertMode.calculate (m : Pocklington3CertMode)
+    (r s : ℕ) : Bool :=
   m.rec (s.beq 0) (fun p _ ↦ (2).blt p && (powModTR (r.pow 2 |>.sub <| s.mul 8) (p.div 2) p).beq
     p.pred) (r.pow 2 |>.blt <| s.mul 8)
 
@@ -151,10 +154,10 @@ theorem Pocklington3CertMode.to_cert (m : Pocklington3CertMode) (r s : ℕ) (h :
     exact .of_prime _ _ p hp h.1 h.2
   | lt => exact .inr <| .inr <| Nat.blt_eq.to_iff.mp <| mul_comm 8 s ▸ h
 
-structure PrimePow : Type where
+public structure PrimePow : Type where
   (prime : ℕ) (pow : ℕ) (pf : prime.Prime) (pow_ne_zero : (0).blt pow)
 
-noncomputable def PrimePow.toNat (pp : PrimePow) : ℕ :=
+@[expose] public noncomputable def PrimePow.toNat (pp : PrimePow) : ℕ :=
   pp.rec fun p v _ _ ↦ p.pow v
 
 @[simp] theorem PrimePow.toNat_def (pp : PrimePow) : pp.toNat = pp.prime ^ pp.pow := rfl
@@ -162,7 +165,7 @@ noncomputable def PrimePow.toNat (pp : PrimePow) : ℕ :=
 theorem PrimePow.prime_dvd_toNat (pp : PrimePow) : pp.prime ∣ pp.toNat :=
   dvd_pow_self _ <| ne_of_gt <| Nat.blt_eq.to_iff.mp pp.pow_ne_zero
 
-noncomputable def pocklington3_calculate (N e root m : ℕ) (F' : List PrimePow)
+@[expose] public noncomputable def pocklington3_calculate (N e root m : ℕ) (F' : List PrimePow)
     (mode : Pocklington3CertMode) : Bool :=
   let F := Nat.mul (F'.rec 1 fun pp _ ih ↦ pp.rec fun p vp _ _ ↦ ih.mul <| p.pow vp) <| (2).pow e
   let two_F := F.mul 2
@@ -214,8 +217,8 @@ Inputs (not all needed):
 * `m`: an arbitrary number (`> 0`), which should be small for better performance.
 * `s, r := divmod(R, 2*F)`, given as literals
 -/
-theorem pocklington3_certKR (N root m e : ℕ) (F' : List PrimePow) (mode : Pocklington3CertMode)
-    (cert : pocklington3_calculate N e root m F' mode) :
+public theorem pocklington3_certKR (N root m e : ℕ) (F' : List PrimePow)
+    (mode : Pocklington3CertMode) (cert : pocklington3_calculate N e root m F' mode) :
     Nat.Prime N := by
   unfold pocklington3_calculate at cert
   extract_lets F two_F R r s at cert
