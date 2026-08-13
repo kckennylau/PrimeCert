@@ -9,6 +9,7 @@ public import Polya.Defs
 public import Mathlib.Data.Nat.Bitwise
 public import Mathlib.Algebra.BigOperators.Intervals
 
+import Mathlib.Algebra.Order.BigOperators.Group.Finset
 import Mathlib.Tactic.NormNum
 import Mathlib.Tactic.Ring
 
@@ -264,6 +265,20 @@ public theorem bitSum_of_lt {y m n : ℕ} (hy : y < 2 ^ m) (hmn : m ≤ n) :
   obtain ⟨d, rfl⟩ := Nat.exists_eq_add_of_le hmn
   rw [bitSum_add, Nat.div_eq_of_lt hy, bitSum_zero_left]
   omega
+
+/-- Each position contributes at most one. -/
+public theorem bitSum_le (v n : ℕ) : bitSum v n ≤ n := by
+  rw [bitSum]
+  calc ∑ i ∈ Finset.range n, (v >>> i) % 2 ≤ ∑ _i ∈ Finset.range n, 1 :=
+        Finset.sum_le_sum fun i _ => Nat.le_of_lt_succ (Nat.mod_lt _ (by omega))
+    _ = n := by simp
+
+/-- A count over any range is bounded by the width of the value. -/
+public theorem bitSum_le_of_lt {v m : ℕ} (hv : v < 2 ^ m) (n : ℕ) : bitSum v n ≤ m := by
+  rcases Nat.le_total m n with h | h
+  · rw [bitSum_of_lt hv h]
+    exact bitSum_le v m
+  · exact le_trans (bitSum_le v n) h
 
 theorem bitSum_byte (e : ℕ) : bitSum e 8 = pop8 e := by
   simp [bitSum, pop8, Finset.sum_range_succ, Nat.shiftRight_eq_div_pow]
