@@ -6,9 +6,9 @@ Authors: Kenny Lau, Bhavik Mehta
 
 module
 
-public import Mathlib.NumberTheory.LegendreSymbol.Basic
-public import Mathlib.Algebra.BigOperators.ModEq
-public import PrimeCert.ForMathlib
+import Mathlib.NumberTheory.LegendreSymbol.Basic
+import Mathlib.Algebra.BigOperators.ModEq
+import PrimeCert.ForMathlib
 public import PrimeCert.ForallB
 public import PrimeCert.Pocklington
 
