@@ -109,6 +109,32 @@ public theorem fieldK_shiftRight (qs w n j : ℕ) :
     fieldK (qs / 2 ^ (w * n)) w j = fieldK qs w (n + j) := by
   rw [fieldK_eq_div_mod, fieldK_eq_div_mod, Nat.div_div_eq_div_mul, ← Nat.pow_add, Nat.mul_add]
 
+/-- A table built one field per step from an empty table at `start`: the fields it covers read back
+the values written, and the fields outside stay clear. -/
+public theorem fieldK_of_lor_chain {wb start : ℕ} {F t : ℕ → ℕ} (h0 : t 0 = 0)
+    (hsucc : ∀ f, t (f + 1) = t f ||| F (start + f) <<< (wb * (start + f))) (fuel : ℕ)
+    (hval : ∀ j, start ≤ j → j < start + fuel → F j < 2 ^ wb) :
+    (∀ j, start ≤ j → j < start + fuel → fieldK (t fuel) wb j = F j) ∧
+      ∀ j, (j < start ∨ start + fuel ≤ j) → fieldK (t fuel) wb j = 0 := by
+  induction fuel with
+  | zero =>
+    refine ⟨by omega, fun j _ => ?_⟩
+    rw [h0, fieldK_eq_div_mod]
+    simp
+  | succ f ih =>
+    obtain ⟨ihfield, ihzero⟩ := ih fun j hj1 hj2 => hval j hj1 (by omega)
+    have hlast : F (start + f) < 2 ^ wb := hval _ (by omega) (by omega)
+    rw [hsucc f]
+    refine ⟨fun j hj1 hj2 => ?_, fun j hj => ?_⟩
+    · rcases Nat.lt_or_ge j (start + f) with h | h
+      · rw [fieldK_lor_shiftLeft_ne hlast (by omega)]
+        exact ihfield j hj1 h
+      · have hjf : j = start + f := by omega
+        subst hjf
+        exact fieldK_lor_shiftLeft_of_zero (ihzero (start + f) (by omega)) hlast
+    · rw [fieldK_lor_shiftLeft_ne hlast (by omega)]
+      exact ihzero j (by omega)
+
 /-- The table with field `i` written stops below position `w * (i + 1)`. -/
 public theorem lor_shiftLeft_lt {t val w i : ℕ} (ht : t < 2 ^ (w * i)) (hv : val < 2 ^ w) :
     (t ||| val <<< (w * i)) < 2 ^ (w * (i + 1)) := by

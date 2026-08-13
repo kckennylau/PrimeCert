@@ -95,7 +95,7 @@ public theorem tables_of_data {x M rootx top w r wc chunks off wb qs np cnt chun
     omega
   obtain ⟨hfields, hzero⟩ := hiLoopK_spec_start (rootx - top) hhibound
   refine ⟨fun q hq => ?_, fun m hm1 hm2 => ?_, fun m hm => ?_⟩
-  · rw [← hlow, (lowLoopK_spec (rootx + 1) hlowbound).1 q (by omega), ← hlam]
+  · rw [← hlow, lowLoopK_spec (rootx + 1) hlowbound q (by omega), ← hlam]
     exact lowVal_eq_L htab hr (hcount (q + 1) (by omega)) (by omega)
       (by have := hbelow q; omega)
   · rw [← hhi, hfields m hm1 (by omega), ← hlam]

@@ -25,33 +25,15 @@ open Nat ArithmeticFunction
 @[expose] public noncomputable def lowVal (lam ones wc off j : ℕ) : ℕ :=
   (j + off) - onesBelowK lam ones wc (j + 1) * 2
 
-/-- The low table after `fuel` steps: field `j` holds `lowVal`, and the table stops below field
-`fuel`. -/
+/-- The low table after `fuel` steps: field `j` holds `lowVal`. -/
 public theorem lowLoopK_spec {lam ones wc off wb : ℕ} (fuel : ℕ)
     (hval : ∀ j < fuel, lowVal lam ones wc off j < 2 ^ wb) :
-    (∀ j < fuel, fieldK (lowLoopK lam ones wc off wb 0 0 fuel) wb j = lowVal lam ones wc off j) ∧
-      lowLoopK lam ones wc off wb 0 0 fuel < 2 ^ (wb * fuel) := by
-  induction fuel with
-  | zero =>
-    refine ⟨by omega, ?_⟩
-    have h0 : lowLoopK lam ones wc off wb 0 0 0 = 0 := rfl
-    rw [h0]
-    exact Nat.two_pow_pos _
-  | succ f ih =>
-    obtain ⟨ihfield, ihlt⟩ := ih fun j hj => hval j (by omega)
-    have hstep : lowLoopK lam ones wc off wb 0 0 (f + 1)
-        = lowLoopK lam ones wc off wb 0 0 f ||| (lowVal lam ones wc off f) <<< (wb * f) := by
-      rw [lowLoopK_succ]
-      simp only [Nat.lor_eq, Nat.shiftLeft_eq', Nat.zero_add, lowVal, Nat.succ_eq_add_one,
-        Nat.sub_eq, Nat.mul_eq]
-    rw [hstep]
-    refine ⟨fun j hj => ?_, ?_⟩
-    · rcases Nat.lt_or_ge j f with h | h
-      · rw [fieldK_lor_shiftLeft_of_lt h, ihfield j h]
-      · have hjf : j = f := by omega
-        subst hjf
-        exact fieldK_lor_shiftLeft_self ihlt (hval j (by omega))
-    · exact lor_shiftLeft_lt ihlt (hval f (by omega))
+    ∀ j < fuel, fieldK (lowLoopK lam ones wc off wb 0 0 fuel) wb j = lowVal lam ones wc off j := by
+  intro j hj
+  refine (fieldK_of_lor_chain (start := 0) (F := lowVal lam ones wc off) rfl (fun f => ?_) fuel
+    (fun i _ hi => hval i (by omega))).1 j (Nat.zero_le j) (by omega)
+  rw [lowLoopK_succ]
+  simp only [Nat.lor_eq, Nat.shiftLeft_eq', lowVal, Nat.succ_eq_add_one, Nat.sub_eq, Nat.mul_eq]
 
 /-- The value written into field `j` of the high table. -/
 @[expose] public noncomputable def hiVal (x lam ones wc off j : ℕ) : ℕ :=
@@ -65,31 +47,9 @@ public theorem hiLoopK_spec_start {x lam ones wc off wb start : ℕ} (fuel : ℕ
         fieldK (hiLoopK x lam ones wc off wb 0 start fuel) wb j = hiVal x lam ones wc off j) ∧
       ∀ j, (j < start ∨ start + fuel ≤ j) →
         fieldK (hiLoopK x lam ones wc off wb 0 start fuel) wb j = 0 := by
-  induction fuel with
-  | zero =>
-    refine ⟨by omega, fun j _ => ?_⟩
-    have h0 : hiLoopK x lam ones wc off wb 0 start 0 = 0 := rfl
-    rw [h0, fieldK_eq_div_mod]
-    simp
-  | succ f ih =>
-    obtain ⟨ihfield, ihzero⟩ := ih fun j hj1 hj2 => hval j hj1 (by omega)
-    have hstep : hiLoopK x lam ones wc off wb 0 start (f + 1)
-        = hiLoopK x lam ones wc off wb 0 start f |||
-            (hiVal x lam ones wc off (start + f)) <<< (wb * (start + f)) := by
-      rw [hiLoopK_succ]
-      simp only [Nat.lor_eq, Nat.shiftLeft_eq', hiVal, Nat.succ_eq_add_one, Nat.sub_eq,
-        Nat.mul_eq]
-    rw [hstep]
-    have hlast : hiVal x lam ones wc off (start + f) < 2 ^ wb := hval _ (by omega) (by omega)
-    refine ⟨fun j hj1 hj2 => ?_, fun j hj => ?_⟩
-    · rcases Nat.lt_or_ge j (start + f) with h | h
-      · rw [fieldK_lor_shiftLeft_ne hlast (by omega)]
-        exact ihfield j hj1 h
-      · have hjf : j = start + f := by omega
-        subst hjf
-        exact fieldK_lor_shiftLeft_of_zero (ihzero (start + f) (by omega)) hlast
-    · rw [fieldK_lor_shiftLeft_ne hlast (by omega)]
-      exact ihzero j (by omega)
+  refine fieldK_of_lor_chain (F := hiVal x lam ones wc off) rfl (fun f => ?_) fuel hval
+  rw [hiLoopK_succ]
+  simp only [Nat.lor_eq, Nat.shiftLeft_eq', hiVal, Nat.succ_eq_add_one, Nat.sub_eq, Nat.mul_eq]
 
 /-! ## The values are `L` -/
 
