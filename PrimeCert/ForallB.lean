@@ -28,7 +28,7 @@ public theorem List.rec_and {α : Type*} (f : α → Bool) (b : Bool) (l : List 
 
 namespace PrimeCert
 
-public def forallB (f : ℕ → Bool) (start len : ℕ) (step : ℕ := 1) : Bool :=
+@[expose] public def forallB (f : ℕ → Bool) (start len : ℕ) (step : ℕ := 1) : Bool :=
   (Nat.rec (motive := fun _ ↦ ℕ × Bool) (start, true)
     (fun _ ih ↦ ih.rec fun i b ↦ (eagerReduce (i.add step), f i && b)) len).2
 
