@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kenny Lau
 -/
 
-import PrimeCert.Meta.PrimeCert
+module
+
+public meta import PrimeCert.Meta.PrimeCert
 
 /-! # The `small` certificate method
 
@@ -25,16 +27,16 @@ prime_cert% [small {2; 3; 5; 7}, ...]
 -- Each number must have a corresponding `PrimeCert.prime_<n>` theorem.
 ```
 -/
-syntax small_spec := num
+public syntax small_spec := num
 
-def mkSmallProof : PrimeCertMethod ``small_spec := fun stx _ ↦ match stx with
+public meta def mkSmallProof : PrimeCertMethod ``small_spec := fun stx _ ↦ match stx with
   | `(small_spec| $n:num) => do
     have n := n.getNat
     have name : Name := (`PrimeCert).str s!"prime_{n}"
     return ⟨n, mkNatLit n, mkConst name⟩
   | _ => throwUnsupportedSyntax
 
-@[prime_cert small] def PrimeCertExt.small : PrimeCertExt where
+@[prime_cert small] public meta def PrimeCertExt.small : PrimeCertExt where
   syntaxName := ``small_spec
   methodName := ``mkSmallProof
 
