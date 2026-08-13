@@ -14,6 +14,7 @@ import Polya.Parity
 import Polya.PopCount
 import Polya.PowerPack
 import Polya.PrimePowers
+import Polya.Recursion
 import Polya.Runs
 import Polya.Summatory
 import Polya.TableSpec

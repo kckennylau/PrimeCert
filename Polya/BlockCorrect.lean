@@ -39,7 +39,7 @@ theorem blockStepK_eq (x v rootx low hi wb off st : ℕ) :
 
 /-- The tables hold `L` at every quotient of `v`, offset by `off`. -/
 @[expose] public def BlockValues (x v rootx low hi wb off : ℕ) : Prop :=
-  ∀ k, 1 ≤ k → k ≤ v →
+  ∀ k, 2 ≤ k → k ≤ v →
     ((if v / k ≤ rootx then fieldK low wb (v / k) else fieldK hi wb (x / (v / k))) : ℤ)
       = L (v / k) + off
 

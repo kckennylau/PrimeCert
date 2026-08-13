@@ -62,6 +62,48 @@ public theorem fieldK_lor_shiftLeft_of_lt {t val w i j : ℕ} (hij : j < i) :
     simp [hb, Nat.not_le.2 hlt]
   · simp [Nat.not_lt.2 hb]
 
+/-- Writing a field leaves the other fields alone, wherever it is written. -/
+public theorem fieldK_lor_shiftLeft_ne {t val w i j : ℕ} (hv : val < 2 ^ w) (hij : j ≠ i) :
+    fieldK (t ||| val <<< (w * i)) w j = fieldK t w j := by
+  refine Nat.eq_of_testBit_eq fun b => ?_
+  rw [testBit_fieldK, testBit_fieldK]
+  rcases lt_or_ge b w with hb | hb
+  · have hne : val.testBit (b + w * j - w * i) = false ∨ b + w * j < w * i := by
+      rcases Nat.lt_or_ge j i with h | h
+      · refine Or.inr ?_
+        have h1 : w * j + w ≤ w * i := by
+          rw [← Nat.mul_succ]
+          exact Nat.mul_le_mul_left w h
+        omega
+      · have hji : i < j := by omega
+        refine Or.inl (Nat.testBit_lt_two_pow (lt_of_lt_of_le hv (Nat.pow_le_pow_right ?_ ?_)))
+        · omega
+        · have h1 : w * i + w ≤ w * j := by
+            rw [← Nat.mul_succ]
+            exact Nat.mul_le_mul_left w hji
+          omega
+    rcases hne with h | h
+    · simp [hb, Nat.testBit_shiftLeft, h]
+    · simp [hb, Nat.testBit_shiftLeft, Nat.not_le.2 h]
+  · simp [Nat.not_lt.2 hb]
+
+/-- Writing over a clear field reads the value back. -/
+public theorem fieldK_lor_shiftLeft_of_zero {t val w i : ℕ} (ht : fieldK t w i = 0)
+    (hv : val < 2 ^ w) : fieldK (t ||| val <<< (w * i)) w i = val := by
+  refine Nat.eq_of_testBit_eq fun b => ?_
+  rw [testBit_fieldK]
+  rcases lt_or_ge b w with hb | hb
+  · have htb : t.testBit (b + w * i) = false := by
+      have h0 : (fieldK t w i).testBit b = false := by
+        rw [ht]
+        simp
+      rw [testBit_fieldK] at h0
+      simpa [hb] using h0
+    simp [hb, Nat.testBit_shiftLeft, htb]
+  · have : val.testBit b = false :=
+      Nat.testBit_lt_two_pow (lt_of_lt_of_le hv (Nat.pow_le_pow_right (by omega) hb))
+    simp [Nat.not_lt.2 hb, this]
+
 /-- Shifting a table down by whole fields renumbers them. -/
 public theorem fieldK_shiftRight (qs w n j : ℕ) :
     fieldK (qs / 2 ^ (w * n)) w j = fieldK qs w (n + j) := by
