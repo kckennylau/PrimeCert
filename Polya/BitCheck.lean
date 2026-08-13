@@ -79,22 +79,19 @@ public theorem bitCheckLoopK_spec {qs w lit : ℕ} (fuel : ℕ)
         (if fieldK qs w f % 6 % 4 = 1 then 1 else 0) *
         (if bitCheckLoopK qs w lit 1 0 f / 2 + 1 ≤ idx (fieldK qs w f) then 1 else 0) *
         ((lit >>> idx (fieldK qs w f)) % 2) = 1 := by omega
-    have hok : bitCheckLoopK qs w lit 1 0 f % 2 = 1 := by
-      by_contra hne
-      have h0 : bitCheckLoopK qs w lit 1 0 f % 2 = 0 := by omega
-      simp [h0] at hprod
+    have hfac : ∀ {a b : ℕ}, a * b = 1 → a = 1 ∧ b = 1 := fun hab =>
+      ⟨Nat.eq_one_of_mul_eq_one_right hab, Nat.eq_one_of_mul_eq_one_left hab⟩
+    obtain ⟨habc, hset⟩ := hfac hprod
+    obtain ⟨hab, hriseif⟩ := hfac habc
+    obtain ⟨hok, hmodif⟩ := hfac hab
     have hmod : fieldK qs w f % 6 % 4 = 1 := by
       by_contra hne
-      rw [if_neg hne] at hprod
-      simp at hprod
+      rw [if_neg hne] at hmodif
+      omega
     have hrise : bitCheckLoopK qs w lit 1 0 f / 2 + 1 ≤ idx (fieldK qs w f) := by
       by_contra hne
-      rw [if_neg hne] at hprod
-      simp at hprod
-    have hset : (lit >>> idx (fieldK qs w f)) % 2 = 1 := by
-      by_contra hne
-      have h0 : (lit >>> idx (fieldK qs w f)) % 2 = 0 := by omega
-      simp [h0] at hprod
+      rw [if_neg hne] at hriseif
+      omega
     rw [hprod] at h ⊢
     obtain ⟨ihtests, ihmono, ihtop⟩ := ih hok
     refine ⟨fun i hi => ?_, fun i j hij hj => ?_, fun _ => ?_⟩

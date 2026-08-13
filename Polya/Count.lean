@@ -22,10 +22,8 @@ open ArithmeticFunction Finset
 /-- The Liouville function reads off the parity of the prime factor count. -/
 public theorem liouville_eq_ite {n : ℕ} (hn : n ≠ 0) :
     liouville n = if Odd (cardFactors n) then -1 else 1 := by
-  rw [liouville_apply hn]
-  rcases Nat.even_or_odd (cardFactors n) with h | h
-  · rw [if_neg (by simpa [Nat.not_odd_iff_even] using h), h.neg_one_pow]
-  · rw [if_pos h, h.neg_one_pow]
+  rcases Nat.even_or_odd (cardFactors n) with h | h <;>
+    simp [liouville_apply hn, h.neg_one_pow, h, Nat.not_odd_iff_even]
 
 /-- `L v` counts the numbers up to `v` with an even number of prime factors against those with an
 odd number. -/
