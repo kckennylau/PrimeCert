@@ -35,7 +35,7 @@ theorem div_div_div {x d : ℕ} (hd : 0 < d) (hdx : d ≤ x) : x / (x / (x / d))
   div_eq_of_run hd hdx (le_div_div hd hdx) le_rfl
 
 /-- Between them the tables answer every read a block makes at `v = x / j`. -/
-theorem blockValues_of_tables {x rootx off wb low hi j : ℕ} (hj : 0 < j) (hjr : j ≤ rootx)
+public theorem blockValues_of_tables {x rootx off wb low hi j : ℕ} (hj : 0 < j) (hjr : j ≤ rootx)
     (hroot : x < (rootx + 1) * (rootx + 1))
     (hlow : IsLowTable rootx off wb low) (hhi : IsHiTable x rootx off wb hi (j + 1)) :
     BlockValues x (x / j) rootx low hi wb off := by
@@ -75,7 +75,7 @@ theorem blockValues_of_tables {x rootx off wb low hi j : ℕ} (hj : 0 < j) (hjr 
     exact hlow _ hle
 
 /-- Writing the value at index `j` extends the high table by one index. -/
-theorem isHiTable_write {x rootx off wb hi j val : ℕ} (hj : 0 < j) (hjr : j ≤ rootx)
+public theorem isHiTable_write {x rootx off wb hi j val : ℕ} (hj : 0 < j) (hjr : j ≤ rootx)
     (h : IsHiTable x rootx off wb hi (j + 1)) (hval : (val : ℤ) = L (x / j) + off)
     (hvlt : val < 2 ^ wb) : IsHiTable x rootx off wb (hi ||| val <<< (wb * j)) j := by
   obtain ⟨hfields, hzero⟩ := h

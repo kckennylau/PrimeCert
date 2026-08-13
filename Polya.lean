@@ -8,6 +8,7 @@ import Polya.Field
 import Polya.HigherPowers
 import Polya.Identity
 import Polya.LamCorrect
+import Polya.Main
 import Polya.Meta
 import Polya.Ones
 import Polya.Parity

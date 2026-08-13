@@ -135,7 +135,7 @@ theorem blockLoopK_spec {x v rootx low hi wb off st k₀ A₀ B₀ : ℕ} (hoff 
       · exact Or.inr (by omega)
 
 /-- Reading the three fields back off a state. -/
-theorem state_split {S k A B : ℕ} (h : S = k + 2 ^ 64 * A + 2 ^ 128 * B) (hk : k < 2 ^ 64)
+public theorem state_split {S k A B : ℕ} (h : S = k + 2 ^ 64 * A + 2 ^ 128 * B) (hk : k < 2 ^ 64)
     (hA : A < 2 ^ 64) : S % 2 ^ 64 = k ∧ S / 2 ^ 64 % 2 ^ 64 = A ∧ S / 2 ^ 128 = B := by
   have h128 : (2 : ℕ) ^ 128 = 2 ^ 64 * 2 ^ 64 := by
     norm_num
