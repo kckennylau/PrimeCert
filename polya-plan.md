@@ -129,9 +129,10 @@ PrimeCertTest/PolyaOracle.lean -- independent compiled implementations, kept unt
 
 ## Status
 
-The computation runs and prints `L(906150257) = 1`, with every batch equation checked by the kernel.
-The mathematics connecting those numbers to `ArithmeticFunction.liouville` is being written; where
-each of the four gaps stands:
+Done: `PrimeCertTest/PolyaFull.lean` builds on CI, printing `L(906150257) = 1` and proving
+`polya_witness`, `polya_disproof` and `polya_conjecture_false` over `ArithmeticFunction.liouville`,
+on `propext`, `Classical.choice` and `Quot.sound` alone. Where each of the four gaps it rests on
+stands:
 
 1. **The prime powers come from the sieve, proved.** `isPrimePowerTable_of_checks` in
    `Polya/TableSpec.lean` turns what the three loops check into `IsPrimePowerTable`. It rests on
@@ -145,7 +146,7 @@ each of the four gaps stands:
    (`Polya/CardFactors.lean`).
 3. **The counts and the value tables, proved.** `popc32K_eq_bitSum` in `Polya/PopCount.lean`
    (the byte-wise argument, no `decide` over the word), `fieldK_onesK` and `onesBelowK_eq` in
-   `Polya/Ones.lean`, `lowLoopK_spec`, `hiLoopK_spec` and `val_eq_L` in `Polya/Tables.lean`.
+   `Polya/Ones.lean`, `lowLoopK_spec`, `hiLoopK_spec_start` and `val_eq_L` in `Polya/Tables.lean`.
 4. **The block loop, proved.** `blockLoopK_sum` in `Polya/BlockCorrect.lean`: a run of blocks
    ending at index `v + 1` with the second accumulator at `off * (v - 1)` has covered `2 … v`, so
    the accumulators differ by the sum in the recurrence. It rests on the run decomposition of
@@ -262,9 +263,9 @@ correctness proof reaching `master`.
   proposed speed changes; four of the six are merged.
 - **M2** [metaprogramming]: done. The value at 10⁶, 10⁷, 10⁸ matches published tables and the run at
   x gives 1.
-- **M1** [math, next]: `Summatory.lean`, `Identity.lean`.
-- **M3** [math]: the table correctness chain, the run decomposition, assembly, `polya_witness` at
-  10⁵ first and then at x.
+- **M1** [math]: done. `Summatory.lean`, `Identity.lean`.
+- **M3** [math]: done. The table correctness chain, the run decomposition, the assembly, and
+  `polya_witness` at 10⁶ locally and at x on CI.
 
 ## Risks
 
