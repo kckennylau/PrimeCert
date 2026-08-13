@@ -3,8 +3,9 @@ Copyright (c) 2026 Bhavik Mehta. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bhavik Mehta
 -/
-import Lean
+import Lean.Elab.Command
 import Polya.Defs
+import Polya.Main
 import Polya.PrimePowers
 import PrimeCert.Meta.Sieve
 
@@ -15,17 +16,20 @@ so the computational core stays free of metaprogramming.
 
 The prime powers are packed here into `w`-bit fields and handed to the table builder. The emitted
 equation holds for that packing whatever it contains; tying its fields to the prime powers is
-`PolyaCorrect`.
+`Polya.TableSpec`.
 -/
 
 namespace PrimeCert.Polya
 
 open Lean Elab Command Meta
 
+/-- The statement `b = true`. -/
+private def mkBoolTrue (b : Expr) : Expr :=
+  mkApp3 (mkConst ``Eq [Level.succ Level.zero]) (mkConst ``Bool) b (mkConst ``Bool.true)
+
 /-- The statement `Nat.beq a b = true`. -/
 private def mkBeqTrue (a b : Expr) : Expr :=
-  mkApp3 (mkConst ``Eq [Level.succ Level.zero]) (mkConst ``Bool)
-    (mkApp2 (mkConst ``Nat.beq) a b) (mkConst ``Bool.true)
+  mkBoolTrue (mkApp2 (mkConst ``Nat.beq) a b)
 
 /-- The statement `a = b` for naturals. -/
 private def mkNatEqual (a b : Expr) : Expr :=
@@ -169,20 +173,42 @@ private def emitLoopChain (tag : String) (fuel len st0 start0 : Nat)
     remaining := rest
   return (st, ← mkExpectedTypeHint proof (mkNatEqual lhsLoop stE))
 
-/-- The certified sieve covering exactly `n`, building one when the registry holds none. Returns the
-declaration holding its bitset and that bitset's value. -/
-private def sieveFor (n : Nat) : MetaM (Name × Nat) := do
+/-- The certified sieve covering exactly `n`. Returns the declarations holding its bitset and its
+`IsSieve` statement, with that bitset's value. -/
+private def sieveFor (n : Nat) : MetaM (Name × Name × Nat) := do
   let entry ← match (← PrimeCert.Sieve.sieveCaches).find? (·.hi == n) with
     | some c => pure c
     | none => throwError "run_lam: no sieve at {n}, put `run_sieve {n}` above this command"
   let T := (n - 1) / 3
-  return (entry.litName,
+  return (entry.litName, entry.isSieveName,
     PrimeCert.Sieve.sieveLoop T (PrimeCert.Sieve.initK T) 1 ((Nat.sqrt n + 1 - 1) / 3))
 
+/-- What the checks against the sieve leave for the assembly. -/
+structure PowerData where
+  /-- The packed prime powers. -/
+  qs : Nat
+  /-- Fields in the first block, the primes from 5 upward. -/
+  np : Nat
+  /-- Final state of the bit checks: the top sieve position and the flag. -/
+  st : Nat
+  /-- Final state of the power collection: its count, its running power and its fields. -/
+  hpSt : Nat
+  /-- Blocks of 32 sieve positions counted. -/
+  chunks : Nat
+  /-- Fields the collection may append at one sieve position. -/
+  e : Nat
+  /-- Sieve positions the collection walks. -/
+  fuel : Nat
+  /-- Declaration holding the sieve bitset. -/
+  litName : Name
+  /-- Declaration holding `IsSieve` for that bitset. -/
+  isSieveName : Name
+
 /-- Check the packed primes against the sieve and collect the remaining prime powers from it, both
-in kernel-checked batches. Returns the packed prime powers, in the order the checks certify. -/
-private def emitPowerChecks (n len : Nat) : MetaM Nat := do
-  let (litName, lit) ← sieveFor n
+in kernel-checked batches. Returns the packed prime powers, in the order the checks certify, with
+what the assembly reads off the checks. -/
+private def emitPowerChecks (n len : Nat) : MetaM PowerData := do
+  let (litName, isSieveName, lit) ← sieveFor n
   let litE := mkConst litName
   let w := Nat.log2 n + 1
   let e := Nat.log2 n + 1
@@ -242,7 +268,7 @@ private def emitPowerChecks (n len : Nat) : MetaM Nat := do
   addThm `PrimeCert.Polya.hpData (mkNatEqual (mkHp seedE 1 hpFuel) (mkRawNatLit hpSt)) full
   if hpSt >>> 128 != packFields others w || hpSt &&& ((1 <<< 64) - 1) != others.size then
     throwError "run_lam: the collected powers differ from the packed ones"
-  return qs
+  return { qs, np := primes.size, st, hpSt, chunks, e, fuel := hpFuel, litName, isSieveName }
 
 private def mkOnesLoopK (lamE wE tblE : Expr) (start len : Nat) : Expr :=
   mkAppN (mkConst ``onesLoopK) #[lamE, wE, tblE, mkRawNatLit start, mkRawNatLit len]
@@ -274,18 +300,37 @@ private def emitOnesChain (n fuel len w lam : Nat) : MetaM (Nat × Expr) := do
     remaining := rest
   return (tbl, ← mkExpectedTypeHint proof (mkNatEqual lhsLoop tblE))
 
+/-- What the parity table and the running counts leave for the assembly. -/
+structure TableData where
+  /-- The parity table. -/
+  lam : Nat
+  /-- The running counts of its set bits. -/
+  ones : Nat
+  /-- Width of a packed prime power and of a count. -/
+  w : Nat
+  /-- Doubling rounds in a stride mask. -/
+  rounds : Nat
+  /-- Fields in the packed prime powers. -/
+  cnt : Nat
+  /-- Blocks of 32 positions the counts cover. -/
+  chunks : Nat
+  /-- What the checks against the sieve left, absent when they were skipped. -/
+  powers : Option PowerData
+
 /-- Build the parity table and the running counts for numbers up to `n`, in batches of `len` steps,
 each kernel-checked separately. The tables and their equations are held by generated declarations;
-the two literals and the field width are returned. -/
-def buildTables (n len : Nat) (check : Bool := true) : MetaM (Nat × Nat × Nat) := do
+their literals and the arguments the assembly needs are returned. -/
+def buildTables (n len : Nat) (check : Bool := true) : MetaM TableData := do
   let qsName := `PrimeCert.Polya.lamQs
   let litName := `PrimeCert.Polya.lamLit
   let dataName := `PrimeCert.Polya.lamData
   if (← getEnv).contains litName then
     throwError "run_lam: a parity table already exists"
   let w := Nat.log2 n + 1
-  let qs ← if check then emitPowerChecks n len
-    else pure (packFields (sievedPrimes n ++ collectedPowers n) w)
+  let powers ← if check then (some <$> emitPowerChecks n len) else pure none
+  let qs := match powers with
+    | some p => p.qs
+    | none => packFields (sievedPrimes n ++ collectedPowers n) w
   let fuel := (sievedPrimes n).size + (collectedPowers n).size
   addDecl <| Declaration.defnDecl
     { name := qsName, levelParams := [], type := mkConst ``Nat,
@@ -311,7 +356,7 @@ def buildTables (n len : Nat) (check : Bool := true) : MetaM (Nat × Nat × Nat)
     #[mkRawNatLit lit, mkRawNatLit w, mkRawNatLit chunks]
   addThm `PrimeCert.Polya.onesData
     (mkNatEqual onesLhs (mkConst `PrimeCert.Polya.onesLit)) onesProof
-  return (lit, ones, w)
+  return { lam := lit, ones, w, rounds, cnt := fuel, chunks, powers }
 
 /-- Build the tables for numbers up to `n`, in batches of `defaultBatchLen` steps, or in `K`
 batches when `K?` is given. -/
@@ -442,6 +487,65 @@ private def emitBlockChain (x v rootx low hi fuel len : Nat) : MetaM (Nat × Exp
     remaining := rest
   return (st, ← mkExpectedTypeHint proof (mkNatEqual lhsLoop stE))
 
+/-! ### The assembly
+
+Each of the three lemmas below takes its numeric side conditions as one decidable predicate over
+the emitted literals, so one kernel-checked theorem carries them all. -/
+
+/-- Emit the checks of the setup and the two table invariants they give. Returns the declarations
+holding `IsLowTable` and `IsHiTable`. -/
+private def emitTables (x cutoff rootx top low hi : Nat) (d : TableData) (p : PowerData) :
+    MetaM (Name × Name) := do
+  let nats := (#[x, cutoff, rootx, top, d.w, d.rounds, d.w, d.chunks, bigOffset, bigWidth, p.qs,
+    p.np, d.cnt, p.chunks, p.e, p.fuel, p.st, p.hpSt]).map mkRawNatLit
+  let okName := `PrimeCert.Polya.setupCheck
+  addThm okName (mkBoolTrue (mkAppN (mkConst ``setupOK) nats)) Lean.reflBoolTrue
+  let proof := mkAppN (mkConst ``tables_of_data)
+    (nats ++ #[mkConst p.litName, mkRawNatLit d.lam, mkRawNatLit d.ones, mkRawNatLit low,
+      mkRawNatLit hi, mkConst p.isSieveName, mkConst `PrimeCert.Polya.bitData,
+      mkConst `PrimeCert.Polya.popcData, mkConst `PrimeCert.Polya.hpData,
+      mkConst `PrimeCert.Polya.lamData, mkConst `PrimeCert.Polya.onesData,
+      mkConst `PrimeCert.Polya.lowData, mkConst `PrimeCert.Polya.hiData, mkConst okName])
+  let bothName := `PrimeCert.Polya.tablesData
+  let ty ← inferType proof
+  addThm bothName ty proof
+  let parts := ty.getAppArgs
+  let lowName := `PrimeCert.Polya.lowTable
+  let hiName := Name.mkSimple s!"hi_table_{top + 1}"
+  addThm lowName parts[0]! (mkAppN (mkConst ``And.left) #[parts[0]!, parts[1]!, mkConst bothName])
+  addThm hiName parts[1]! (mkAppN (mkConst ``And.right) #[parts[0]!, parts[1]!, mkConst bothName])
+  return (lowName, hiName)
+
+/-- Emit the checks of one index and the high table extended to it. Returns the declaration holding
+the extended table. -/
+private def emitStep (x rootx low hi hiNext j v s A B S val fuel : Nat)
+    (lowName hiName blockName : Name) : MetaM Name := do
+  let okName := Name.mkSimple s!"step_ok_{j}"
+  addThm okName
+    (mkBoolTrue (mkAppN (mkConst ``stepOK)
+      ((#[x, rootx, bigOffset, bigWidth, j, v, s, A, B, S, val, hi, hiNext]).map mkRawNatLit)))
+    Lean.reflBoolTrue
+  let proof := mkAppN (mkConst ``isHiTable_step)
+    (((#[x, rootx, bigOffset, bigWidth, low, hi, hiNext, j, v, s, A, B, S, val,
+        fuel]).map mkRawNatLit) ++
+      #[mkConst lowName, mkConst hiName, mkConst blockName, mkConst okName])
+  let out := Name.mkSimple s!"hi_table_{j}"
+  addThm out (← inferType proof) proof
+  return out
+
+/-- Emit the checks of the last index and the value of `L x` they give. -/
+private def emitFinal (x rootx low hi s A B S p q fuel : Nat)
+    (lowName hiName blockName : Name) : MetaM Unit := do
+  let okName := `PrimeCert.Polya.finalCheck
+  addThm okName
+    (mkBoolTrue (mkAppN (mkConst ``finalOK)
+      ((#[x, rootx, bigOffset, bigWidth, s, A, B, S, p, q]).map mkRawNatLit)))
+    Lean.reflBoolTrue
+  let proof := mkAppN (mkConst ``L_eq_of_final)
+    (((#[x, rootx, bigOffset, bigWidth, low, hi, s, A, B, S, p, q, fuel]).map mkRawNatLit) ++
+      #[mkConst lowName, mkConst hiName, mkConst blockName, mkConst okName])
+  addThm `PrimeCert.Polya.polyaValue (← inferType proof) proof
+
 /-- The largest `r` with `r ^ 3 ≤ n`, by bisection. -/
 def cbrt (n : Nat) : Nat := Id.run do
   let mut hi := 1
@@ -458,13 +562,18 @@ def cbrt (n : Nat) : Nat := Id.run do
 def defaultCutoff (x : Nat) : Nat := cbrt (x * x)
 
 /-- Compute the running total of the Liouville values at `x`, from the tables below `cutoff` and
-the recurrence at each larger argument `x / j`, taken in increasing order. -/
+the recurrence at each larger argument `x / j`, taken in increasing order. With the prime powers
+checked against the sieve, the run also emits `polyaValue : L x = p - q`. -/
 def runPolya (x cutoff : Nat) (K? : Option Nat := none) (check : Bool := true) : MetaM Unit := do
   let len := match K? with
     | some K => Nat.max 1 K
     | none => defaultBatchLen
-  let (lam, ones, w) ← buildTables cutoff len check
+  let d ← buildTables cutoff len check
+  let lam := d.lam
+  let ones := d.ones
+  let w := d.w
   let top := x / cutoff
+  if top == 0 then throwError "run_polya: the cutoff must be below the target"
   let rootx := Nat.sqrt x
   -- `L q` for every `q ≤ √x`, and `L (x / m)` for the `m ≤ √x` whose quotient is below the cutoff:
   -- together these cover every argument the recurrence reads other than the ones it computes itself
@@ -479,6 +588,9 @@ def runPolya (x cutoff : Nat) (K? : Option Nat := none) (check : Bool := true) :
   addThm `PrimeCert.Polya.hiData
     (mkNatEqual (mkHiLoopK (mkRawNatLit x) (mkRawNatLit lam) (mkRawNatLit ones) (mkRawNatLit w)
       (mkRawNatLit 0) (top + 1) (rootx - top)) (mkRawNatLit hi0)) hiProof
+  let mut names? ← match d.powers with
+    | some p => some <$> emitTables x cutoff rootx top low hi0 d p
+    | none => pure none
   let mut hi := hi0
   let mut last : Int := 0
   for jj in [0:top] do
@@ -491,8 +603,22 @@ def runPolya (x cutoff : Nat) (K? : Option Nat := none) (check : Bool := true) :
       (mkNatEqual (mkBlockLoopK (mkRawNatLit x) (mkRawNatLit v) (mkRawNatLit rootx)
         (mkRawNatLit low) (mkRawNatLit hi) (mkRawNatLit 2) fuel) (mkRawNatLit st)) proof
     -- L v is the whole part of the square root of v, minus the two halves of the sum
-    last := (Nat.sqrt v : Int) - (stField st 1 : Int) + (stField st 2 : Int)
-    hi := hi ||| ((last + bigOffset).toNat <<< (bigWidth * j))
+    let s := Nat.sqrt v
+    let A := stField st 1
+    let B := stField st 2
+    last := (s : Int) - A + B
+    if j == 1 then
+      if let some (lowName, hiName) := names? then
+        let p := if last ≥ 0 then last.toNat else 0
+        let q := if last ≥ 0 then 0 else (-last).toNat
+        emitFinal x rootx low hi s A B st p q fuel lowName hiName dataName
+    else
+      let val := (last + bigOffset).toNat
+      let next := hi ||| (val <<< (bigWidth * j))
+      if let some (lowName, hiName) := names? then
+        names? := some (lowName,
+          ← emitStep x rootx low hi next j v s A B st val fuel lowName hiName dataName)
+      hi := next
   logInfo m!"L({x}) = {last}"
 
 /-- Command wrapper for `runPolya`: `run_polya x` computes the running total at `x`, `run_polya x c`
