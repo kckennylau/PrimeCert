@@ -4,8 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kenny Lau, Bhavik Mehta
 -/
 
-import PrimeCert.Pocklington
-import PrimeCert.Meta.SmallPrime
+module
+
+meta import PrimeCert.Pocklington
+public meta import PrimeCert.Meta.SmallPrime
 
 /-! # The `pock` certificate method
 
@@ -19,17 +21,17 @@ namespace PrimeCert.Meta
 open Lean Meta Qq
 
 /-- A prime power is represented by either `p ^ e` or `p`. -/
-syntax prime_pow := num (" ^ " num)?
+public syntax prime_pow := num (" ^ " num)?
 
-inductive ParsedPrimePow : Type
+public inductive ParsedPrimePow : Type
   | prime (p : ℕ) | pow (p e : ℕ)
 
-instance : ToMessageData ParsedPrimePow where
+meta instance : ToMessageData ParsedPrimePow where
   toMessageData x := match x with
     | .prime p => m!"{p}"
     | .pow p e => m!"{p}^{e}"
 
-def parsePrimePow (stx : TSyntax ``prime_pow) : Q(Nat) × ParsedPrimePow :=
+public meta def parsePrimePow (stx : TSyntax ``prime_pow) : Q(Nat) × ParsedPrimePow :=
   match stx with
   | `(prime_pow| $p:num^$e:num) =>
       have p := p.getNat
@@ -41,9 +43,9 @@ def parsePrimePow (stx : TSyntax ``prime_pow) : Q(Nat) × ParsedPrimePow :=
   | _ => (mkNatLit 0, .prime 0)
 
 /-- A full factorisation of a number, written like `3 ^ 4 * 29 * 41`. -/
-syntax factored := sepBy1(prime_pow," * ")
+public syntax factored := sepBy1(prime_pow," * ")
 
-def parseFactored (stx : TSyntax ``factored) : Q(Nat) × Array ParsedPrimePow :=
+public meta def parseFactored (stx : TSyntax ``factored) : Q(Nat) × Array ParsedPrimePow :=
   match stx with
   | `(factored| $head * $body**) =>
     have head := parsePrimePow head
@@ -57,11 +59,11 @@ def parseFactored (stx : TSyntax ``factored) : Q(Nat) × Array ParsedPrimePow :=
 
 /-- The `Nat` expression for a single factor `p` or `p ^ e`, matching how `parseFactored`
 builds the product `F₁`. -/
-def ParsedPrimePow.toExpr : ParsedPrimePow → Q(Nat)
+meta def ParsedPrimePow.toExpr : ParsedPrimePow → Q(Nat)
   | .prime p => mkNatLit p
   | .pow p e => mkApp2 (mkConst ``Nat.pow) (mkNatLit p) (mkNatLit e)
 
-def mkPockPred (N a F₁ : Q(Nat)) (steps : Array ParsedPrimePow) (dict : PrimeDict) :
+meta def mkPockPred (N a F₁ : Q(Nat)) (steps : Array ParsedPrimePow) (dict : PrimeDict) :
     MetaM Q(PocklingtonPred $N $a $F₁) := do
   if h : steps.size = 0 then return mkConst ``PocklingtonPred.one
   else
@@ -103,9 +105,9 @@ pock (339392917, 2, 3 ^ 4 * 29 * 41)
 pock (16290860017, 5, 339392917)
 ```
 -/
-syntax pock_spec := num <|> ("(" num ", " num ", " factored ")")
+public syntax pock_spec := num <|> ("(" num ", " num ", " factored ")")
 
-def parsePockSpec : PrimeCertMethod ``pock_spec := fun stx dict ↦ do
+meta def parsePockSpec : PrimeCertMethod ``pock_spec := fun stx dict ↦ do
   match stx with
   | `(pock_spec| ($N:num, $a:num, $F₁:factored)) =>
       have Nnat := N.getNat
@@ -119,7 +121,7 @@ def parsePockSpec : PrimeCertMethod ``pock_spec := fun stx dict ↦ do
       return ⟨Nnat, N, pf⟩
   | _ => Elab.throwUnsupportedSyntax
 
-@[prime_cert pock] def PrimeCertExt.pock : PrimeCertExt where
+@[prime_cert pock] meta def PrimeCertExt.pock : PrimeCertExt where
   syntaxName := ``pock_spec
   methodName := ``parsePockSpec
 
