@@ -67,10 +67,8 @@ public theorem blockValues_of_tables {x rootx off wb low hi j : ℕ} (hj : 0 < j
         have : j * 2 ≤ j * k := Nat.mul_le_mul_left j hk
         omega
       omega
-    rw [hread]
-    have hqq : x / (x / (x / j / k)) = x / j / k := by
-      rw [hjk, hminv]
-    rw [hqq]
+    have hqq : x / (x / (x / j / k)) = x / j / k := by rw [hjk, hminv]
+    rw [hread, hqq]
   · rw [if_pos hle]
     exact hlow _ hle
 
@@ -85,8 +83,7 @@ public theorem isHiTable_write {x rootx off wb hi j val : ℕ} (hj : 0 < j) (hjr
       exact hfields m (by omega) hmr
     · have hmj : m = j := by omega
       subst hmj
-      rw [fieldK_lor_shiftLeft_of_zero (hzero m (by omega)) hvlt]
-      exact hval
+      rwa [fieldK_lor_shiftLeft_of_zero (hzero m (by omega)) hvlt]
   · rw [fieldK_lor_shiftLeft_ne hvlt (by omega)]
     exact hzero m (by omega)
 

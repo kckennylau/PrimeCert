@@ -63,23 +63,16 @@ public theorem isPrimePowerTable_of_checks {qs w lit M np cnt chunks e fuel st h
     (hroom : e + e + e * fuel + e + 1 < 2 ^ 64)
     (hlink : qs / 2 ^ (w * np) = hpSt / 2 ^ 128) (hcnt : np + hpSt % 2 ^ 64 = cnt) :
     IsPrimePowerTable qs w M cnt := by
-  have hflag' : bitCheckLoopK qs w lit 1 0 np % 2 = 1 := by
-    rw [hbitData]
-    exact hflag
-  have htop' : 0 < np → num (bitCheckLoopK qs w lit 1 0 np / 2) ≤ M := by
-    rw [hbitData]
-    exact hnumtop
+  have hflag' : bitCheckLoopK qs w lit 1 0 np % 2 = 1 := by rwa [hbitData]
+  have htop' : 0 < np → num (bitCheckLoopK qs w lit 1 0 np / 2) ≤ M := by rwa [hbitData]
   obtain ⟨hp1, hp2, hp3⟩ := primeBlock_spec hsieve hflag' htop' hpop hchunks
   obtain ⟨c0, pw0, V0, hst0, hc0, hs0, hcp0, hi0⟩ := seed_spec lit hMw hM64 hMe (by omega)
   obtain ⟨c1, pw1, V1, hst1, hcc1, hc1le, hs1, hcp1, hi1⟩ :=
     hpLoopK_spec fuel hsieve hst0 hMw hM64 hMe (by omega) (le_refl 1)
       (fun t ht => num_le_of_lt_fuel hfueldn ht) hs0 hcp0 hi0
   rw [hhp] at hst1
-  have hV1 : V1 = qs / 2 ^ (w * np) := by
-    rw [hlink, hst1.vals_eq]
-  have hc1eq : np + c1 = cnt := by
-    rw [← hst1.count_eq]
-    exact hcnt
+  have hV1 : V1 = qs / 2 ^ (w * np) := by rw [hlink, hst1.vals_eq]
+  have hc1eq : np + c1 = cnt := by rwa [← hst1.count_eq]
   have hfield : ∀ j, fieldK V1 w j = fieldK qs w (np + j) := by
     intro j
     rw [hV1, fieldK_shiftRight]
@@ -97,8 +90,7 @@ public theorem isPrimePowerTable_of_checks {qs w lit M np cnt chunks e fuel st h
       exact ⟨i, by omega, hiq⟩
     · obtain ⟨j, hj, hjq⟩ := hcp1 q ((hval q).2 ⟨p, k, hp, by omega, hpk.symm, hqM, by omega⟩)
       refine ⟨np + j, by omega, ?_⟩
-      rw [← hfield j]
-      exact hjq
+      rwa [← hfield j]
   · rcases Nat.lt_or_ge i np with hin | hin
     · obtain ⟨hprime, -, -⟩ := hp1 i hin
       exact (isPrimePow_nat_iff _).2 ⟨fieldK qs w i, 1, hprime, by omega, Nat.pow_one _⟩

@@ -24,10 +24,7 @@ open PrimeCert.Sieve (IsSieve num)
 public theorem popcLoopK_eq_bitSum (b acc fuel : ℕ) :
     popcLoopK b acc 0 fuel = acc + bitSum b (32 * fuel) := by
   induction fuel with
-  | zero =>
-    have h : popcLoopK b acc 0 0 = acc := rfl
-    rw [h, Nat.mul_zero]
-    simp [bitSum]
+  | zero => simp [popcLoopK, bitSum]
   | succ f ih =>
     rw [popcLoopK_succ]
     simp only [Nat.add_eq, Nat.mul_eq, Nat.sub_eq, Nat.land_eq, Nat.shiftRight_eq',
@@ -96,11 +93,8 @@ theorem exists_field_of_testBit {qs w lit cnt chunks : ℕ}
     Finset.eq_of_subset_of_card_le hsub (by omega)
   have hmem : t ∈ (Finset.range cnt).image (fun i => idx (fieldK qs w i)) := by
     rw [heq]
-    simp only [Finset.mem_filter, Finset.mem_range]
-    exact ⟨htlt, ht⟩
-  simp only [Finset.mem_image, Finset.mem_range] at hmem
-  obtain ⟨i, hi, hti⟩ := hmem
-  exact ⟨i, hi, hti⟩
+    exact Finset.mem_filter.2 ⟨Finset.mem_range.2 htlt, ht⟩
+  simpa only [Finset.mem_image, Finset.mem_range] using hmem
 
 /-- A prime of at least 5 is coprime to 6. -/
 public theorem mod_six_of_prime {p : ℕ} (hp : p.Prime) (h5 : 5 ≤ p) : p % 6 = 1 ∨ p % 6 = 5 := by
@@ -129,9 +123,7 @@ public theorem primeBlock_spec {qs w lit M cnt chunks : ℕ} (hsieve : IsSieve M
     omega
   have hidx : ∀ i, i < cnt → idx (fieldK qs w i) < 32 * chunks := by
     intro i hi
-    have hnum : num (idx (fieldK qs w i)) ≤ M := by
-      rw [num_idx_fieldK h hi]
-      exact hbound i hi
+    have hnum : num (idx (fieldK qs w i)) ≤ M := by rw [num_idx_fieldK h hi]; exact hbound i hi
     simp only [num] at hnum
     omega
   refine ⟨fun i hi => ⟨fieldK_prime hsieve h hi (hbound i hi), hfive i hi, hbound i hi⟩,
@@ -139,14 +131,9 @@ public theorem primeBlock_spec {qs w lit M cnt chunks : ℕ} (hsieve : IsSieve M
     fun i j hi hj hij => fieldK_injOn h hi hj hij⟩
   have hmod : p % 6 = 1 ∨ p % 6 = 5 := mod_six_of_prime hp h5
   have hnum : num (idx p) = p := num_idx hmod
-  have hidxpos : idx p ≠ 0 := by
-    simp only [idx]
-    omega
-  have hbit : lit.testBit (idx p) :=
-    (hsieve _ hidxpos (by rw [hnum]; exact hpM)).2 (by rw [hnum]; exact hp)
-  have hltp : idx p < 32 * chunks := by
-    simp only [idx]
-    omega
+  have hidxpos : idx p ≠ 0 := by simp only [idx]; omega
+  have hbit : lit.testBit (idx p) := (hsieve _ hidxpos (by rwa [hnum])).2 (by rwa [hnum])
+  have hltp : idx p < 32 * chunks := by simp only [idx]; omega
   obtain ⟨i, hi, hti⟩ := exists_field_of_testBit h hpop hidx hbit hltp
   exact ⟨i, hi, by rw [← num_idx_fieldK h hi, hti, hnum]⟩
 

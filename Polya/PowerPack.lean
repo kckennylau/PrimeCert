@@ -148,9 +148,7 @@ theorem powLoopK_zero {M w q seed st c pw V : ℕ} (h : IsPowState w st c pw V)
   obtain ⟨hst, hc64, hpw64, hV⟩ := h
   have harith : st - st / 2 ^ 64 % 2 ^ 64 * 2 ^ 64 = c + 2 ^ 128 * V := by
     rw [IsPowState.pow_eq ⟨hst, hc64, hpw64, hV⟩]
-    have hsplit : st = c + 2 ^ 128 * V + pw * 2 ^ 64 := by
-      rw [hst]
-      ring
+    have hsplit : st = c + 2 ^ 128 * V + pw * 2 ^ 64 := by rw [hst]; ring
     rw [hsplit, Nat.add_sub_cancel]
   rw [powLoopK_zero_eq, harith]
   exact ⟨by ring, hc64, hseed, hV⟩
@@ -172,9 +170,7 @@ public theorem powLoopK_spec {M w q seed st c pw V : ℕ} (fuel : ℕ) (h : IsPo
     obtain ⟨m, hmf, V', hstate, hbelow, hfields, hle, htop⟩ := ih (by omega)
     rw [powLoopK_succ_eq]
     obtain ⟨hst', hc', hpw', hV'⟩ := hstate
-    have hpow : seed * q ^ m * q = seed * q ^ (m + 1) := by
-      rw [Nat.pow_succ]
-      ring
+    have hpow : seed * q ^ m * q = seed * q ^ (m + 1) := by rw [Nat.pow_succ]; ring
     rcases Nat.lt_or_ge M (seed * q ^ m * q) with hgt | hnext
     · refine ⟨m, by omega, V', ?_, hbelow, hfields, hle, fun _ => ?_⟩
       · rw [powStepK_of_gt ⟨hst', hc', hpw', hV'⟩ hgt]
@@ -199,8 +195,7 @@ public theorem powLoopK_spec {M w q seed st c pw V : ℕ} (fuel : ℕ) (h : IsPo
         · exact hle j hjm
         · have hjm' : j = m := by omega
           subst hjm'
-          rw [← hpow]
-          exact hnext
+          rwa [← hpow]
       · exact absurd (htop (by omega)) (by rw [← hpow]; omega)
 
 end PrimeCert.Polya

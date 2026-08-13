@@ -110,8 +110,7 @@ public theorem testBit_strideMaskK_of_dvd {q M r j : ℕ} (hq : 0 < q) (hdvd : q
       simp [hge]
 
 /-- Inside the table, a stride mask marks exactly the positive multiples of `q`. -/
-public theorem testBit_strideMaskK {q M r j : ℕ} (hq : 0 < q) (hjM : j ≤ M)
-    (hM : M < q * 2 ^ r) :
+public theorem testBit_strideMaskK {q M r j : ℕ} (hq : 0 < q) (hjM : j ≤ M) (hM : M < q * 2 ^ r) :
     (strideMaskK q M r).testBit j = decide (q ∣ j ∧ j ≠ 0) := by
   by_cases hd : q ∣ j ∧ j ≠ 0
   · rw [decide_eq_true hd]

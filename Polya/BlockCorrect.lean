@@ -61,17 +61,14 @@ theorem blockLoopK_spec {x v rootx low hi wb off st k₀ A₀ B₀ : ℕ} (hoff 
     obtain ⟨k, A, B, hstate, hkv, hA2B, hcase⟩ := ih
     rw [blockLoopK_succ, hstate, blockStepK_eq]
     have hmod : (k + 2 ^ 64 * A + 2 ^ 128 * B) % 2 ^ 64 = k := by
-      have hsplit : k + 2 ^ 64 * A + 2 ^ 128 * B = k + 2 ^ 64 * (A + 2 ^ 64 * B) := by
-        ring
+      have hsplit : k + 2 ^ 64 * A + 2 ^ 128 * B = k + 2 ^ 64 * (A + 2 ^ 64 * B) := by ring
       rw [hsplit, Nat.add_mul_mod_self_left, Nat.mod_eq_of_lt (by omega)]
     have hsub : k + 2 ^ 64 * A + 2 ^ 128 * B - k = 2 ^ 64 * A + 2 ^ 128 * B := by
-      have hcomm : k + 2 ^ 64 * A + 2 ^ 128 * B = 2 ^ 64 * A + 2 ^ 128 * B + k := by
-        ring
+      have hcomm : k + 2 ^ 64 * A + 2 ^ 128 * B = 2 ^ 64 * A + 2 ^ 128 * B + k := by ring
       rw [hcomm, Nat.add_sub_cancel]
     rw [hmod, hsub]
     have hvallt : (if v / k ≤ rootx then fieldK low wb (v / k)
-        else fieldK hi wb (x / (v / k))) < 2 ^ wb := by
-      split <;> exact fieldK_lt _ _ _
+        else fieldK hi wb (x / (v / k))) < 2 ^ wb := by split <;> exact fieldK_lt _ _ _
     refine ⟨v / (v / k) + 1,
       A + (v / (v / k) - k + 1) *
         (if v / k ≤ rootx then fieldK low wb (v / k) else fieldK hi wb (x / (v / k))),
@@ -85,8 +82,7 @@ theorem blockLoopK_spec {x v rootx low hi wb off st k₀ A₀ B₀ : ℕ} (hoff 
             (if v / k ≤ rootx then fieldK low wb (v / k) else fieldK hi wb (x / (v / k)))
               ≤ (v / (v / k) - k + 1) * (2 * off) :=
           Nat.mul_le_mul_left _ (by omega)
-        have heq : (v / (v / k) - k + 1) * (2 * off) = 2 * ((v / (v / k) - k + 1) * off) := by
-          ring
+        have heq : (v / (v / k) - k + 1) * (2 * off) = 2 * ((v / (v / k) - k + 1) * off) := by ring
         omega
       omega
     · rcases hcase with ⟨hk2, hB, hsum⟩ | hbad
@@ -137,8 +133,7 @@ theorem blockLoopK_spec {x v rootx low hi wb off st k₀ A₀ B₀ : ℕ} (hoff 
 /-- Reading the three fields back off a state. -/
 public theorem state_split {S k A B : ℕ} (h : S = k + 2 ^ 64 * A + 2 ^ 128 * B) (hk : k < 2 ^ 64)
     (hA : A < 2 ^ 64) : S % 2 ^ 64 = k ∧ S / 2 ^ 64 % 2 ^ 64 = A ∧ S / 2 ^ 128 = B := by
-  have h128 : (2 : ℕ) ^ 128 = 2 ^ 64 * 2 ^ 64 := by
-    norm_num
+  have h128 : (2 : ℕ) ^ 128 = 2 ^ 64 * 2 ^ 64 := by norm_num
   have hs : S = k + 2 ^ 64 * (A + 2 ^ 64 * B) := by
     rw [h, h128]
     ring
@@ -164,16 +159,11 @@ public theorem blockLoopK_sum {x v rootx low hi wb off S fuel : ℕ} (hoff : 0 <
   rw [hfinal] at hstate
   have hBle : B ≤ S / 2 ^ 128 := by
     rw [hstate, Nat.le_div_iff_mul_le (Nat.two_pow_pos 128)]
-    have heq : B * 2 ^ 128 = 2 ^ 128 * B := by
-      ring
+    have heq : B * 2 ^ 128 = 2 ^ 128 * B := by ring
     omega
   obtain ⟨hkS, hAS, hBS⟩ := state_split hstate (by omega) (by omega)
-  have hkeq : k = v + 1 := by
-    rw [← hkS]
-    exact hk
-  have hBeq : B = off * (v - 1) := by
-    rw [← hBS]
-    exact hB
+  have hkeq : k = v + 1 := by rwa [← hkS]
+  have hBeq : B = off * (v - 1) := by rwa [← hBS]
   have hset : Finset.Ico 2 (v + 1) = Finset.Ioc 1 v := by
     ext a
     simp only [Finset.mem_Ico, Finset.mem_Ioc]

@@ -131,8 +131,7 @@ set_option maxRecDepth 100000 in
 count. -/
 theorem byte_pipeline : ∀ e < 256,
     stageA 1 e < 256 ∧ stageB 1 e ≤ 68 ∧ stageB 1 e % 16 ≤ 4 ∧ stageC 1 e ≤ 8 ∧
-      stageC 1 e = pop8 e := by
-  decide
+      stageC 1 e = pop8 e := by decide
 
 /-! ## Peeling one byte -/
 
@@ -165,10 +164,8 @@ theorem stageB_succ (k v : ℕ) :
     stageB (k + 1) v = stageB 1 (v % 256) + 256 * stageB k (v / 256) := by
   have hA := stageA_succ k v
   have hAlt : stageA 1 (v % 256) < 256 := (byte_pipeline _ (Nat.mod_lt _ (by omega))).1
-  have h3 : (stageA 1 (v % 256) + 256 * stageA k (v / 256)) % 256 = stageA 1 (v % 256) := by
-    omega
-  have h4 : (stageA 1 (v % 256) + 256 * stageA k (v / 256)) / 256 = stageA k (v / 256) := by
-    omega
+  have h3 : (stageA 1 (v % 256) + 256 * stageA k (v / 256)) % 256 = stageA 1 (v % 256) := by omega
+  have h4 : (stageA 1 (v % 256) + 256 * stageA k (v / 256)) / 256 = stageA k (v / 256) := by omega
   have hand1 : stageA (k + 1) v &&& rep 51 (k + 1)
       = (stageA 1 (v % 256) &&& 51) + 256 * (stageA k (v / 256) &&& rep 51 k) := by
     rw [hA, land_split_byte, rep_mod_byte (by omega), rep_div_byte (by omega), h3, h4]

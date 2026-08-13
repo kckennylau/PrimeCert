@@ -25,15 +25,7 @@ open ArithmeticFunction Finset
 /-- Alternating signs over an interval of even length cancel in pairs. -/
 private lemma sum_neg_one_pow (k : ℕ) :
     ∑ i ∈ Finset.range (k + 1), (-1 : ℤ) ^ i = if Even k then 1 else 0 := by
-  induction k with
-  | zero => simp
-  | succ k ih =>
-    rw [Finset.sum_range_succ, ih]
-    rcases Nat.even_or_odd k with h | h
-    · rw [if_pos h, if_neg (by simp [Nat.even_add_one, h]), (Even.add_one h).neg_one_pow]
-      ring
-    · rw [if_neg (by simpa using h), if_pos (Odd.add_one h), (Odd.add_one h).neg_one_pow]
-      ring
+  by_cases h : Even k <;> simp [neg_one_geom_sum, Nat.even_add_one, h]
 
 /-- A positive natural number is a square exactly when every exponent in its factorization is
 even. -/

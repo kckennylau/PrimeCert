@@ -56,8 +56,9 @@ public theorem testBit_lamK {qs w M r cnt n : ℕ} (htab : IsPrimePowerTable qs 
       obtain ⟨⟨hdvd, -⟩, hpp⟩ := hq
       have hqn : q ≤ n := Nat.le_of_dvd hn hdvd
       obtain ⟨i, hi, rfl⟩ := hcover q hpp (by omega)
-      exact ⟨i, by simp only [Finset.mem_filter, Finset.mem_range, Nat.zero_add]; exact ⟨hi, hdvd⟩,
-        by simp⟩
+      refine ⟨i, ?_, by simp⟩
+      simp only [Finset.mem_filter, Finset.mem_range, Nat.zero_add]
+      exact ⟨hi, hdvd⟩
   rw [lamK, testBit_lamLoopK hnM hn hstep, hcard]
   simp
 

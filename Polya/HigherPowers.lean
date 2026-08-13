@@ -206,12 +206,11 @@ public theorem hpLoopK_spec {lit M w e st c pw V start : ℕ} (fuel : ℕ) (hsie
               rw [← Nat.pow_succ']
               congr 1
               omega
-            have hkm : k - 1 ≤ m := hall (k - 1) (by omega) (by rw [hk1, ← hvk]; exact hvM)
+            have hkm : k - 1 ≤ m := hall (k - 1) (by omega) (by rwa [hk1, ← hvk])
             refine ⟨c' + (k - 2), by omega, ?_⟩
             rw [hfields (k - 2) (by omega), hvk]
             have hexp : k - 2 + 1 = k - 1 := by omega
-            rw [hexp]
-            exact hk1
+            rwa [hexp]
       · -- injectivity
         rcases Nat.lt_or_ge j₁ c' with h₁ | h₁ <;> rcases Nat.lt_or_ge j₂ c' with h₂ | h₂
         · rw [hbelow j₁ h₁, hbelow j₂ h₂] at heq
@@ -273,12 +272,12 @@ public theorem seed_spec {M w e : ℕ} (lit : ℕ) (hMw : M < 2 ^ w) (hM64 : M <
       rw [hf₃ d (by omega)]
       exact Or.inr (Or.inl ⟨d + 1, by omega, rfl, hle₃ d (by omega)⟩)
   · rcases hv with ⟨k, hk, hvk, hvM⟩ | ⟨k, hk, hvk, hvM⟩ | ⟨t, ht1, htlt, -⟩
-    · have hkm : k ≤ m₂ := hall₂ k hk (by rw [← hvk]; exact hvM)
+    · have hkm : k ≤ m₂ := hall₂ k hk (by rwa [← hvk])
       refine ⟨k - 1, by omega, ?_⟩
       rw [hb₃ (k - 1) (by omega), hf₂ (k - 1) (by omega), hvk]
       congr 1
       omega
-    · have hkm : k ≤ m₃ := hall₃ k hk (by rw [← hvk]; exact hvM)
+    · have hkm : k ≤ m₃ := hall₃ k hk (by rwa [← hvk])
       refine ⟨m₂ + (k - 1), by omega, ?_⟩
       rw [hf₃ (k - 1) (by omega), hvk]
       congr 1
@@ -352,9 +351,7 @@ public theorem hpVal_iff {lit M fuel v : ℕ} (hsieve : IsSieve M lit)
       have hidxle : idx p ≤ fuel := by
         simp only [idx]
         omega
-      have hprime : (num (idx p)).Prime := by
-        rw [hnumidx]
-        exact hp
+      have hprime : (num (idx p)).Prime := by rwa [hnumidx]
       have hpM : p ≤ M := by
         have h1 : p ≤ p ^ k := Nat.le_self_pow (by omega) p
         omega
