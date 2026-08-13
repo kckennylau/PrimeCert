@@ -127,30 +127,11 @@ end Meta
 
 open Meta
 
-/-- Convenience elaborator combining `small` and `pock` steps into a single term.
-
-Syntax: `pock% [small_primes; pock_steps]`
-
-- Before the `;`: comma-separated small prime literals whose primality is already known
-  (looked up as `PrimeCert.prime_<n>` declarations, e.g. `PrimeCert.prime_31`).
-- After the `;`: comma-separated Pocklington steps `(N, root, F₁)` where:
-  - `N` is the number to certify
-  - `root` is a pseudo-primitive root of `N`
-  - `F₁` is a factored divisor of `N - 1` with `F₁ > √N`, written as `p₁ ^ e₁ * p₂ * ...`
-
-Steps are processed in order; each step can reference primes certified by earlier steps.
-The last step's `N` becomes the certified prime.
-
-```lean
--- Certify 31: declare small primes 2, 3; then one Pocklington step
-theorem prime_31 : Nat.Prime 31 := pock% [2, 3; (31, 3, 2 * 3)]
-
--- Multi-step ladder: small primes, then intermediate, then target
-theorem prime_16290860017 : Nat.Prime 16290860017 :=
-  pock% [3, 29, 41; (339392917, 2, 3 ^ 4 * 29 * 41), (16290860017, 5, 339392917)]
-```
--/
-scoped elab "pock%" "[" heads:small_spec,+ ";" steps:pock_spec,+ "]" : term => do
+/-- Deprecated in favour of the `prime_cert` tactic, and warns at each use.
+`pock% [heads; steps]` expands to `prime_cert% [small {heads}, pock {steps}]`. -/
+scoped elab tk:"pock%" "[" heads:small_spec,+ ";" steps:pock_spec,+ "]" : term => do
+  Lean.logWarningAt tk "`pock%` is deprecated: write \
+    `by prime_cert [small {...}, pock {...}]`."
   Lean.Elab.Term.elabTerm (← `(prime_cert% [small {$heads;*}, pock {$steps;*}])) none
 
 end PrimeCert
