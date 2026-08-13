@@ -14,7 +14,7 @@ This file builds the whole table by one exclusive-or per prime power: the state 
 number used as a bitset holding bits `0 … M`, and bit `n` records the parity for `n`.
 
 The prime powers arrive packed into one natural number as `w`-bit fields, lowest first, one field
-per step of the loop; `PolyaCorrect` derives that packing from the certified sieve.
+per step of the loop; `Polya.TableSpec` derives that packing from the certified sieve.
 
 The `rounds` argument is the number of doubling rounds in `strideMaskK`, so strides up to
 `2 ^ rounds` times the table width are covered.
@@ -26,7 +26,7 @@ each, and glues them into an equation `lamK qs w M cnt = <literal>`.
 namespace PrimeCert.Polya
 
 /-- The natural number whose bits at positions `0 … M` are set exactly at the positive multiples of
-`q`, namely `q, 2q, 3q, …`; see `testBit_strideMaskK` in `PolyaCorrect`. Positions above `M` are
+`q`, namely `q, 2q, 3q, …`; see `testBit_strideMaskK` in `Polya.Parity`. Positions above `M` are
 cleared by `markStrideK`. -/
 @[expose] public noncomputable def strideMaskK (q M rounds : Nat) : Nat :=
   Nat.rec
@@ -53,14 +53,14 @@ table. -/
 
 /-- The full parity table for numbers up to `M`: bit `n` is set iff `n` has an odd number of prime
 factors counted with multiplicity, given that the `cnt` fields of `qs` are exactly the prime powers
-`q ≤ M` (`lamK_testBit_iff` in `PolyaCorrect`). -/
+`q ≤ M` (`testBit_lamK` in `Polya.LamCorrect`). -/
 @[expose] public noncomputable def lamK (qs w M rounds cnt : Nat) : Nat :=
   lamLoopK qs w M rounds (nat_lit 0) (nat_lit 0) cnt
 
 /-- The number of set bits of `v`, for `v < 2 ^ 32`, summing bit counts within fields of 2, 4, 8 and
-then 32 bits (`popc32K_eq_count` in `PolyaCorrect`). The constants are the repeating masks `0101…`,
-`00110011…` and `00001111…`, and `0x01010101`, whose product with a byte-per-field value places the
-sum of the four bytes in the top byte. -/
+then 32 bits (`popc32K_eq_bitSum` in `Polya.PopCount`). The constants are the repeating masks
+`0101…`, `00110011…` and `00001111…`, and `0x01010101`, whose product with a byte-per-field value
+places the sum of the four bytes in the top byte. -/
 @[expose] public def popc32K (v : Nat) : Nat :=
   let a := v.sub ((v.shiftRight (nat_lit 1)).land (nat_lit 1431655765))
   let b := (a.land (nat_lit 858993459)).add ((a.shiftRight (nat_lit 2)).land (nat_lit 858993459))
@@ -80,7 +80,7 @@ holding the single field `0`. -/
         (w.mul (Nat.succ (start.add i))))
 
 /-- Running counts of the set bits of `lam` at every multiple of 32, covering positions below
-`32 * cnt` (`onesK_field_eq` in `PolyaCorrect`). -/
+`32 * cnt` (`fieldK_onesK` in `Polya.Ones`). -/
 @[expose] public noncomputable def onesK (lam w cnt : Nat) : Nat :=
   onesLoopK lam w (nat_lit 0) (nat_lit 0) cnt
 
