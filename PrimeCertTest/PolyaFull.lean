@@ -25,4 +25,10 @@ theorem polya_disproof : ∃ n, 2 ≤ n ∧ 0 < L n :=
 theorem polya_conjecture_false : ¬ ∀ n, 2 ≤ n → L n ≤ 0 :=
   not_forall_L_nonpos 906150257 (by norm_num) (by rw [polya_witness]; norm_num)
 
+/--
+info: 'PrimeCert.Polya.polya_conjecture_false' depends on axioms: [propext, Classical.choice, Quot.sound]
+-/
+#guard_msgs in
+#print axioms polya_conjecture_false
+
 end PrimeCert.Polya
