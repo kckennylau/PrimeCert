@@ -4,12 +4,13 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kenny Lau
 -/
 
-import Mathlib.Data.Nat.Totient
-import Mathlib.Tactic.IntervalCases
+module
+
+public import Mathlib.Data.Nat.Totient
 import PrimeCert.ForallB
 import PrimeCert.ForMathlib
-import PrimeCert.Meta.QuickRfl
-import PrimeCert.PowMod
+meta import PrimeCert.Meta.QuickRfl
+public import PrimeCert.PowMod
 
 /-! # Wieferich and Mirimanoff primes
 
@@ -63,7 +64,7 @@ theorem wieferich_mirimanoff₁ : ∀ n < 6000, n % 6 = 1 →
 theorem wieferich₅ : ∀ n < 6000, n % 6 = 5 → !wieferichKR n :=
   forallB_of_mod _ (r := 5) (len := 1000) (step := 6) (by quickRfl)
 
-theorem wieferich_mirimanoff {p : ℕ} (hp : p.Prime) (p_bound : p < 6000) :
+public theorem wieferich_mirimanoff {p : ℕ} (hp : p.Prime) (p_bound : p < 6000) :
     ¬(2 ^ (p - 1) ≡ 1 [MOD p^2]) ∨ ¬(3 ^ (p - 1) ≡ 1 [MOD p^2]) := by
   obtain hp₄ | hp₄ := lt_or_ge p 4
   · clear p_bound
@@ -74,12 +75,12 @@ theorem wieferich_mirimanoff {p : ℕ} (hp : p.Prime) (p_bound : p < 6000) :
   · simpa [hp₁] using! wieferich_mirimanoff₁ p p_bound h₁
   · simpa [hp₁] using! Or.inl <| wieferich₅ p p_bound h₅
 
-theorem _root_.pow_eq_one_of_dvd {M : Type*} [Monoid M] {x : M} {m n : ℕ}
+public theorem _root_.pow_eq_one_of_dvd {M : Type*} [Monoid M] {x : M} {m n : ℕ}
     (h₁ : x ^ m = 1) (h₂ : m ∣ n) : x ^ n = 1 := by
   obtain ⟨k, rfl⟩ := h₂
   rw [pow_mul, h₁, one_pow]
 
-theorem miller_rabin_squarefree {n : ℕ} (hn₀ : n ≠ 0) (hn : n < 36000000)
+public theorem miller_rabin_squarefree {n : ℕ} (hn₀ : n ≠ 0) (hn : n < 36000000)
     (h₂ : 2 ^ (n - 1) ≡ 1 [MOD n]) (h₃ : 3 ^ (n - 1) ≡ 1 [MOD n])
     {p : ℕ} (hp : p.Prime) (hpn : p ^ 2 ∣ n) : False := by
   have hn₁ : n ≠ 1 := by
