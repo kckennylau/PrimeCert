@@ -143,6 +143,18 @@ public theorem markStrideK_lt (lam q M r : ℕ) : markStrideK lam q M r < 2 ^ (M
     Nat.one_shiftLeft, Nat.and_two_pow_sub_one_eq_mod]
   exact Nat.mod_lt _ (Nat.two_pow_pos _)
 
+/-- The whole table is `M + 1` bits wide. -/
+public theorem lamK_lt (qs w M r cnt : ℕ) : lamK qs w M r cnt < 2 ^ (M + 1) := by
+  rw [lamK]
+  cases cnt with
+  | zero =>
+    have h0 : lamLoopK qs w M r 0 0 0 = 0 := rfl
+    rw [h0]
+    exact Nat.two_pow_pos _
+  | succ c =>
+    rw [lamLoopK_succ]
+    exact markStrideK_lt _ _ _ _
+
 /-! ## The parity table -/
 
 /-- Bit `j` of the table after `fuel` steps flips once per field dividing `j`. -/
