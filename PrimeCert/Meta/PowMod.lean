@@ -36,13 +36,19 @@ meta def provePowModNe' (a b n m : Nat) (aE bE nE mE : Expr) : MetaM Expr := do
   if m = m' then throwError "attempted to prove {a} ^ {b} % {n} ≠ {m} but it is {m'}"
   return mkApp5 (mkConst ``powMod_ne_of_powModK) aE bE nE mE eagerReflBoolFalse
 
+/-- Split `a ^ b % n` into its three arguments. -/
+meta def matchPowMod? (e : Expr) : Option (Expr × Expr × Expr) := do
+  let_expr HMod.hMod _ _ _ _ powE nE := e | none
+  let_expr HPow.hPow _ _ _ _ aE bE := powE | none
+  some (aE, bE, nE)
+
 meta def prove_pow_mod_tac (g : MVarId) : MetaM Unit := do
   let t : Expr ← g.getType
   match_expr t with
   | Eq ty lhsE rhsE =>
     unless (← whnfR ty).isConstOf ``Nat do throwError "not an equality of naturals"
     let some rhs := rhsE.nat? | throwError "rhs is not a numeral"
-    let some (aE, bE, nE) := lhsE.app3? ``powMod | throwError "lhs is not a pow-mod"
+    let some (aE, bE, nE) := matchPowMod? lhsE | throwError "lhs is not a pow-mod"
     let some a := aE.nat? | throwError "base is not a numeral"
     let some b := bE.nat? | throwError "exponent is not a numeral"
     let some n := nE.nat? | throwError "modulus is not a numeral"
@@ -51,7 +57,7 @@ meta def prove_pow_mod_tac (g : MVarId) : MetaM Unit := do
   | Ne ty lhsE rhsE =>
     unless (← whnfR ty).isConstOf ``Nat do throwError "not an equality of naturals"
     let some rhs := rhsE.nat? | throwError "rhs is not a numeral"
-    let some (aE, bE, nE) := lhsE.app3? ``powMod | throwError "lhs is not a pow-mod"
+    let some (aE, bE, nE) := matchPowMod? lhsE | throwError "lhs is not a pow-mod"
     let some a := aE.nat? | throwError "base is not a numeral"
     let some b := bE.nat? | throwError "exponent is not a numeral"
     let some n := nE.nat? | throwError "modulus is not a numeral"
@@ -61,8 +67,8 @@ meta def prove_pow_mod_tac (g : MVarId) : MetaM Unit := do
 
 /-- Tactic to close goals about modular exponentiation. Handles two goal shapes:
 
-- `powMod a b n = m` — proves the equality by computing `a ^ b % n` at elaboration time
-- `powMod a b n ≠ m` — proves the disequality similarly
+- `a ^ b % n = m` — proves the equality by computing the value at elaboration time
+- `a ^ b % n ≠ m` — proves the disequality similarly
 
 All of `a`, `b`, `n`, `m` must be numeric literals. The computation uses `powMod`
 (the `partial_fixpoint` version) at elaboration time, then produces a kernel proof via
