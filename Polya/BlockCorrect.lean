@@ -45,7 +45,7 @@ theorem blockStepK_eq (x v rootx low hi wb off st : ℕ) :
 
 /-- The loop from a state covering `2 … k₀ - 1`: either it covers an initial segment of the
 indices, or its second accumulator has run past what any such segment allows. -/
-theorem blockLoopK_spec {x v rootx low hi wb off st k₀ A₀ B₀ : ℕ} (hoff : 0 < off) (hv : 0 < v)
+theorem blockLoopK_spec {x v rootx low hi wb off st k₀ A₀ B₀ : ℕ} (hv : 0 < v)
     (hv64 : v + 1 < 2 ^ 64) (hwb : 2 ^ wb ≤ 2 * off)
     (hvals : BlockValues x v rootx low hi wb off)
     (hst : st = k₀ + 2 ^ 64 * A₀ + 2 ^ 128 * B₀) (hk₀ : 2 ≤ k₀) (hk₀v : k₀ ≤ v + 1)
@@ -60,10 +60,8 @@ theorem blockLoopK_spec {x v rootx low hi wb off st k₀ A₀ B₀ : ℕ} (hoff 
   | succ f ih =>
     obtain ⟨k, A, B, hstate, hkv, hA2B, hcase⟩ := ih
     rw [blockLoopK_succ, hstate, blockStepK_eq]
-    have hmod : (k + 2 ^ 64 * A + 2 ^ 128 * B) % 2 ^ 64 = k := by
-      have hsplit : k + 2 ^ 64 * A + 2 ^ 128 * B = k + 2 ^ 64 * (A + 2 ^ 64 * B) := by ring
-      rw [hsplit, Nat.add_mul_mod_self_left, Nat.mod_eq_of_lt (by omega)]
-    rw [hmod, (by omega : k + 2 ^ 64 * A + 2 ^ 128 * B - k = 2 ^ 64 * A + 2 ^ 128 * B)]
+    rw [(by omega : (k + 2 ^ 64 * A + 2 ^ 128 * B) % 2 ^ 64 = k),
+      (by omega : k + 2 ^ 64 * A + 2 ^ 128 * B - k = 2 ^ 64 * A + 2 ^ 128 * B)]
     have hvallt : (if v / k ≤ rootx then fieldK low wb (v / k)
         else fieldK hi wb (x / (v / k))) < 2 ^ wb := by split <;> exact fieldK_lt _ _ _
     refine ⟨v / (v / k) + 1,
@@ -107,21 +105,11 @@ theorem blockLoopK_spec {x v rootx low hi wb off st k₀ A₀ B₀ : ℕ} (hoff 
 
 /-- Reading the three fields back off a state. -/
 public theorem state_split {S k A B : ℕ} (h : S = k + 2 ^ 64 * A + 2 ^ 128 * B) (hk : k < 2 ^ 64)
-    (hA : A < 2 ^ 64) : S % 2 ^ 64 = k ∧ S / 2 ^ 64 % 2 ^ 64 = A ∧ S / 2 ^ 128 = B := by
-  have h128 : (2 : ℕ) ^ 128 = 2 ^ 64 * 2 ^ 64 := by norm_num
-  have hs : S = k + 2 ^ 64 * (A + 2 ^ 64 * B) := by
-    rw [h, h128]
-    ring
-  refine ⟨by rw [hs, Nat.add_mul_mod_self_left, Nat.mod_eq_of_lt hk], ?_, ?_⟩
-  · rw [hs, Nat.add_mul_div_left _ _ (Nat.two_pow_pos 64), Nat.div_eq_of_lt hk, Nat.zero_add,
-      Nat.add_mul_mod_self_left, Nat.mod_eq_of_lt hA]
-  · rw [hs, h128, ← Nat.div_div_eq_div_mul, Nat.add_mul_div_left _ _ (Nat.two_pow_pos 64),
-      Nat.div_eq_of_lt hk, Nat.zero_add, Nat.add_mul_div_left _ _ (Nat.two_pow_pos 64),
-      Nat.div_eq_of_lt hA, Nat.zero_add]
+    (hA : A < 2 ^ 64) : S % 2 ^ 64 = k ∧ S / 2 ^ 64 % 2 ^ 64 = A ∧ S / 2 ^ 128 = B := by omega
 
 /-- A run of blocks ending at index `v + 1` with the second accumulator at `off * (v - 1)` has
 covered `2 … v`, so the accumulators differ by the sum in the recurrence. -/
-public theorem blockLoopK_sum {x v rootx low hi wb off S fuel : ℕ} (hoff : 0 < off) (hv : 0 < v)
+public theorem blockLoopK_sum {x v rootx low hi wb off S fuel : ℕ} (hv : 0 < v)
     (hv64 : v + 1 < 2 ^ 64) (hwb : 2 ^ wb ≤ 2 * off)
     (hvals : BlockValues x v rootx low hi wb off)
     (hfinal : blockLoopK x v rootx low hi wb off 2 fuel = S)
@@ -129,13 +117,10 @@ public theorem blockLoopK_sum {x v rootx low hi wb off S fuel : ℕ} (hoff : 0 <
     (hB : S / 2 ^ 128 = off * (v - 1)) :
     ((S / 2 ^ 64 % 2 ^ 64 : ℕ) : ℤ) - (off * (v - 1) : ℕ) = ∑ j ∈ Finset.Ioc 1 v, L (v / j) := by
   obtain ⟨k, A, B, hstate, hkv, hA2B, hcase⟩ :=
-    blockLoopK_spec (st := 2) (k₀ := 2) (A₀ := 0) (B₀ := 0) hoff hv hv64 hwb hvals (by ring)
+    blockLoopK_spec (st := 2) (k₀ := 2) (A₀ := 0) (B₀ := 0) hv hv64 hwb hvals (by ring)
       (le_refl 2) (by omega) (by simp) (by simp) (by simp) fuel
   rw [hfinal] at hstate
-  have hBle : B ≤ S / 2 ^ 128 := by
-    rw [hstate, Nat.le_div_iff_mul_le (Nat.two_pow_pos 128)]
-    have heq : B * 2 ^ 128 = 2 ^ 128 * B := by ring
-    omega
+  have hBle : B ≤ S / 2 ^ 128 := by omega
   obtain ⟨hkS, hAS, hBS⟩ := state_split hstate (by omega) (by omega)
   have hkeq : k = v + 1 := by rwa [← hkS]
   have hBeq : B = off * (v - 1) := by rwa [← hBS]
