@@ -53,11 +53,8 @@ public theorem blockValues_of_tables {x rootx off wb low hi j : ℕ} (hj : 0 < j
     have hmle : x / (x / j / k) ≤ rootx := by
       rw [hjk]
       by_contra hgt'
-      have h1 : rootx + 1 ≤ x / (x / (j * k)) := by omega
-      have h2 : (rootx + 1) * (x / (j * k)) ≤ x := Nat.le_div_iff_mul_le (by omega) |>.1 h1
-      have h3 : (rootx + 1) * (rootx + 1) ≤ (rootx + 1) * (x / (j * k)) :=
-        Nat.mul_le_mul_left _ (by omega)
-      omega
+      have h2 : (rootx + 1) * (x / (j * k)) ≤ x := (Nat.le_div_iff_mul_le (by omega)).1 (by omega)
+      nlinarith
     obtain ⟨hval, -⟩ := hhi
     have hread : ((fieldK hi wb (x / (x / j / k)) : ℕ) : ℤ)
         = L (x / (x / (x / j / k))) + off := by
