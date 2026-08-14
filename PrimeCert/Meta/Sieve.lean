@@ -74,7 +74,8 @@ meta def runSieve (n : Nat) (len? : Option Nat := none) : MetaM Unit := do
   let fuel := (sq - 1) / 3
   let len := Nat.max 1 (len?.getD 16)
   let (lit, proof) ← emitChain dataName ((n - 1) / 3) fuel len
-  addDecl <| Declaration.defnDecl
+  -- `forceExpose` keeps the literal readable from a module consumer, which `sieve_lookup` needs
+  addDecl (forceExpose := true) <| Declaration.defnDecl
     { name := litName, levelParams := [], type := Nat.mkType,
       value := mkRawNatLit lit, hints := .regular 0, safety := .safe }
   -- `proof` ends at a zero-step loop on the final bitset, which is definitionally both the

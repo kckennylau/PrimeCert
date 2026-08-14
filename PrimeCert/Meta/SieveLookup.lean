@@ -7,8 +7,8 @@ module
 
 public meta import PrimeCert.Meta.PrimeCert
 public meta import PrimeCert.Meta.SieveCache
-import PrimeCert.SieveCorrect
-meta import PrimeCert.SieveBase
+public import PrimeCert.SieveCorrect
+public meta import PrimeCert.SieveBase
 
 /-! # Reading a prime off the sieve cache
 
