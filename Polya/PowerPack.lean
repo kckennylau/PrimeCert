@@ -65,9 +65,7 @@ theorem add_mul_two_pow_lt {V val w c : ℕ} (hV : V < 2 ^ (w * c)) (hval : val 
 
 /-- The state regrouped, so that everything above the count sits in one factor. -/
 theorem IsPowState.eq_regroup {w st c pw V : ℕ} (h : IsPowState w st c pw V) :
-    st = c + 2 ^ 64 * (pw + 2 ^ 64 * V) := by
-  rw [h.1]
-  ring
+    st = c + 2 ^ 64 * (pw + 2 ^ 64 * V) := by rw [h.1]; ring
 
 public theorem IsPowState.count_eq {w st c pw V : ℕ} (h : IsPowState w st c pw V) :
     st % 2 ^ 64 = c := by
