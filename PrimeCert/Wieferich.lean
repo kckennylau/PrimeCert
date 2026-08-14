@@ -6,6 +6,7 @@ Authors: Kenny Lau
 
 module
 
+public import Mathlib.Data.Nat.Squarefree
 public import Mathlib.Data.Nat.Totient
 import PrimeCert.ForallB
 import PrimeCert.ForMathlib
@@ -81,8 +82,10 @@ public theorem _root_.pow_eq_one_of_dvd {M : Type*} [Monoid M] {x : M} {m n : �
   rw [pow_mul, h₁, one_pow]
 
 public theorem miller_rabin_squarefree {n : ℕ} (hn₀ : n ≠ 0) (hn : n < 36000000)
-    (h₂ : 2 ^ (n - 1) ≡ 1 [MOD n]) (h₃ : 3 ^ (n - 1) ≡ 1 [MOD n])
-    {p : ℕ} (hp : p.Prime) (hpn : p ^ 2 ∣ n) : False := by
+    (h₂ : 2 ^ (n - 1) ≡ 1 [MOD n]) (h₃ : 3 ^ (n - 1) ≡ 1 [MOD n]) : Squarefree n := by
+  rw [Nat.squarefree_iff_prime_squarefree]
+  intro p hp hpn
+  rw [← sq] at hpn
   have hn₁ : n ≠ 1 := by
     rintro rfl
     rw [Nat.dvd_one, sq, mul_eq_one, and_self] at hpn
