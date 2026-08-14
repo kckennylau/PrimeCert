@@ -58,21 +58,14 @@ theorem powLoopK_base {M w q seed st c pw V e : ℕ} (h : IsPowState w st c pw V
       ∃ k, 2 ≤ k ∧ v = num t ^ k ∧ v ≤ M
 
 /-- The number at a positive index is at least 5. -/
-theorem five_le_num {t : ℕ} (ht : 1 ≤ t) : 5 ≤ num t := by
-  simp only [num]
-  omega
+theorem five_le_num {t : ℕ} (ht : 1 ≤ t) : 5 ≤ num t := by grind [num]
 
-theorem num_inj {t t' : ℕ} (h : num t = num t') : t = t' := by
-  simp only [num] at h
-  omega
+theorem num_inj {t t' : ℕ} (h : num t = num t') : t = t' := by grind [num]
 
 /-- Prime powers with the same value have the same base. -/
 theorem prime_base_eq {p r a b : ℕ} (hp : p.Prime) (hr : r.Prime) (ha : 1 ≤ a)
     (h : p ^ a = r ^ b) : p = r := by
-  have hdvd : p ∣ r ^ b := by
-    rw [← h]
-    exact dvd_pow_self p (by omega)
-  exact (Nat.prime_dvd_prime_iff_eq hp hr).1 (hp.dvd_of_dvd_pow hdvd)
+  grind [Nat.prime_dvd_prime_iff_eq, Nat.Prime.dvd_of_dvd_pow, dvd_pow_self]
 
 /-- A value collected before position `t` is none of the powers of the prime at `t`. -/
 theorem HpVal.ne_pow {lit M pos t k v : ℕ} (h : HpVal lit M pos v) (ht : pos ≤ t) (h1 : 1 ≤ t)
@@ -193,8 +186,7 @@ public theorem hpLoopK_spec {lit M w e st c pw V start : ℕ} (fuel : ℕ) (hsie
             have hkm : k - 1 ≤ m := hall (k - 1) (by omega) (by rwa [hk1, ← hvk])
             refine ⟨c' + (k - 2), by omega, ?_⟩
             rw [hfields (k - 2) (by omega), hvk]
-            have hexp : k - 2 + 1 = k - 1 := by omega
-            rwa [hexp]
+            rwa [(by omega : k - 2 + 1 = k - 1)]
       · -- injectivity
         have hcross : ∀ a b, a < c' → c' ≤ b → b < c' + m →
             fieldK V'' w a ≠ fieldK V'' w b := by
@@ -294,10 +286,7 @@ public theorem hpVal_iff {lit M fuel v : ℕ} (hsieve : IsSieve M lit)
       rcases hp23 with rfl | rfl
       · exact Or.inl ⟨k, hk, hvk, hvM⟩
       · exact Or.inr (Or.inl ⟨k, hk, hvk, hvM⟩)
-    · have hk2 : 2 ≤ k := by
-        rcases hcase with h | h
-        · omega
-        · exact h
+    · have hk2 : 2 ≤ k := by omega
       have hsq : p * p ≤ M := by
         have hmono : p ^ 2 ≤ p ^ k := Nat.pow_le_pow_right (by omega) hk2
         rw [Nat.pow_two] at hmono
@@ -307,10 +296,7 @@ public theorem hpVal_iff {lit M fuel v : ℕ} (hsieve : IsSieve M lit)
         have hsqge : (3 * fuel + 4) * (3 * fuel + 4) ≤ p * p := Nat.mul_le_mul (by omega) (by omega)
         omega
       have hnumidx : num (idx p) = p := num_idx (mod_six_of_prime hp (by omega))
-      have hidx1 : 1 ≤ idx p := by
-        simp only [idx]
-        omega
-      have hidxle : idx p ≤ fuel := by
+      have hidx : 1 ≤ idx p ∧ idx p ≤ fuel := by
         simp only [idx]
         omega
       have hprime : (num (idx p)).Prime := by rwa [hnumidx]
@@ -319,7 +305,7 @@ public theorem hpVal_iff {lit M fuel v : ℕ} (hsieve : IsSieve M lit)
         omega
       have hbit : lit.testBit (idx p) :=
         (hsieve _ (by omega) (by rw [hnumidx]; omega)).2 hprime
-      exact Or.inr (Or.inr ⟨idx p, hidx1, by omega, hbit, hprime, k, hk2,
+      exact Or.inr (Or.inr ⟨idx p, hidx.1, by omega, hbit, hprime, k, hk2,
         by rw [hnumidx]; exact hvk, hvM⟩)
 
 end PrimeCert.Polya
