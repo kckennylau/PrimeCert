@@ -31,7 +31,7 @@ jobs:
               lake build PrimeCert > "build-$arm-$round.txt" 2>&1 \
                 || { echo "BUILD FAILED $arm round $round"; tail -40 "build-$arm-$round.txt"; exit 1; }
               export LEAN_PATH=$(lake env printenv LEAN_PATH)
-              for target in PrimeCertTest/PrimeListTest.lean PrimeCert/Wieferich.lean; do
+              for target in PrimeCertTest/EagerBench.lean PrimeCertTest/PrimeListTest.lean PrimeCert/Wieferich.lean; do
                 name=$(basename "$target" .lean)
                 /usr/bin/time -v lean -Dtrace.profiler=true -Dtrace.profiler.threshold=1 "$target" \
                   > "out-$arm-$name-$round.txt" 2> "time-$arm-$name-$round.txt" \
