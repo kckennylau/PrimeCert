@@ -63,17 +63,13 @@ theorem exists_field_of_testBit {qs w lit cnt chunks : ℕ}
     intro x hx
     simp only [Finset.mem_image, Finset.mem_range] at hx
     obtain ⟨i, hi, rfl⟩ := hx
-    obtain ⟨-, -, hset⟩ := htests i hi
     simp only [Finset.mem_filter, Finset.mem_range]
-    exact ⟨hlt i hi, testBit_iff_shiftRight_mod_two.2 hset⟩
+    exact ⟨hlt i hi, testBit_iff_shiftRight_mod_two.2 (htests i hi).2.2⟩
   have himg : ((Finset.range cnt).image (fun i => idx (fieldK qs w i))).card = cnt := by
     rw [Finset.card_image_of_injOn, Finset.card_range]
     exact fun a ha b hb hab => eq_of_mono hmono (by simpa using ha) (by simpa using hb) hab
-  have heq : (Finset.range cnt).image (fun i => idx (fieldK qs w i))
-      = {i ∈ Finset.range (32 * chunks) | lit.testBit i} :=
-    Finset.eq_of_subset_of_card_le hsub (by omega)
   have hmem : t ∈ (Finset.range cnt).image (fun i => idx (fieldK qs w i)) := by
-    rw [heq]
+    rw [Finset.eq_of_subset_of_card_le hsub (by omega)]
     exact Finset.mem_filter.2 ⟨Finset.mem_range.2 htlt, ht⟩
   simpa only [Finset.mem_image, Finset.mem_range] using hmem
 
