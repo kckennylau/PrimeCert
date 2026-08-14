@@ -1,0 +1,120 @@
+diff --git a/PrimeCert/ForallB.lean b/PrimeCert/ForallB.lean
+index 80b6705..d289d11 100644
+--- a/PrimeCert/ForallB.lean
++++ b/PrimeCert/ForallB.lean
+@@ -30,7 +30,7 @@ namespace PrimeCert
+ 
+ @[expose] public def forallB (f : ℕ → Bool) (start len : ℕ) (step : ℕ := 1) : Bool :=
+   (Nat.rec (motive := fun _ ↦ ℕ × Bool) (start, true)
+-    (fun _ ih ↦ ih.rec fun i b ↦ (eagerReduce (i.add step), f i && b)) len).2
++    (fun _ ih ↦ ih.rec fun i b ↦ (i.add step, f i && b)) len).2
+ 
+ theorem forallB_iff_range' (f : ℕ → Bool) (start len step : ℕ) :
+     forallB f start len step ↔ ∀ n ∈ List.range' start len step, f n := by
+@@ -44,7 +44,7 @@ theorem forallB_iff_range' (f : ℕ → Bool) (start len step : ℕ) :
+     clear ih _a
+     induction len with
+     | zero => simp
+-    | succ len ih => simp only; rw [ih, eagerReduce, Nat.add_eq]; ring
++    | succ len ih => simp only; rw [ih, Nat.add_eq]; ring
+ 
+ theorem forallB_iff (f : ℕ → Bool) (start len step : ℕ) :
+     forallB f start len step ↔ ∀ n < len, f (n * step + start) := by
+diff --git a/PrimeCert/Meta/Pocklington.lean b/PrimeCert/Meta/Pocklington.lean
+index 1edb60f..1987258 100644
+--- a/PrimeCert/Meta/Pocklington.lean
++++ b/PrimeCert/Meta/Pocklington.lean
+@@ -74,16 +74,16 @@ meta def mkPockPred (N a F₁ : Q(Nat)) (steps : Array ParsedPrimePow) (dict : P
+       match step, ih? with
+       | .prime p, none =>
+         return (mkAppN (mkConst ``PocklingtonPred.base) #[N, a, mkNatLit p, ← dict.getM p,
+-          eagerReflBoolTrue, eagerReflBoolTrue], mkNatLit p)
++          reflBoolTrue, reflBoolTrue], mkNatLit p)
+       | .pow p e, none =>
+         return (mkAppN (mkConst ``PocklingtonPred.base_pow) #[N, a, mkNatLit p, mkNatLit e,
+-          ← dict.getM p, eagerReflBoolTrue, eagerReflBoolTrue], step.toExpr)
++          ← dict.getM p, reflBoolTrue, reflBoolTrue], step.toExpr)
+       | .prime p, some (ih, F₂) =>
+         return (mkAppN (mkConst ``PocklingtonPred.step) #[N, a, F₂, mkNatLit p, ← dict.getM p, ih,
+-          eagerReflBoolTrue, eagerReflBoolTrue], mkApp2 (mkConst ``Nat.mul) F₂ (mkNatLit p))
++          reflBoolTrue, reflBoolTrue], mkApp2 (mkConst ``Nat.mul) F₂ (mkNatLit p))
+       | .pow p e, some (ih, F₂) =>
+         return (mkAppN (mkConst ``PocklingtonPred.step_pow) #[N, a, F₂, mkNatLit p, mkNatLit e,
+-          ← dict.getM p, ih, eagerReflBoolTrue, eagerReflBoolTrue],
++          ← dict.getM p, ih, reflBoolTrue, reflBoolTrue],
+           mkApp2 (mkConst ``Nat.mul) F₂ step.toExpr)
+     let mut acc ← mkStep steps[0] none
+     for step in steps.drop 1 do
+@@ -116,8 +116,8 @@ meta def parsePockSpec : PrimeCertMethod ``pock_spec := fun stx dict ↦ do
+       have (F₁, steps) := parseFactored F₁
+       have pred := ← mkPockPred N a F₁ steps dict
+       have pf : Q(Nat.Prime $N) := mkAppN (mkConst ``pocklington_certifyK)
+-        #[N, a, F₁, pred, eagerReflBoolTrue, eagerReflBoolTrue,
+-          eagerReflBoolTrue, eagerReflBoolTrue]
++        #[N, a, F₁, pred, reflBoolTrue, reflBoolTrue,
++          reflBoolTrue, reflBoolTrue]
+       return ⟨Nnat, N, pf⟩
+   | _ => Elab.throwUnsupportedSyntax
+ 
+diff --git a/PrimeCert/Meta/Pocklington3.lean b/PrimeCert/Meta/Pocklington3.lean
+index 6d5299d..7b2f23e 100644
+--- a/PrimeCert/Meta/Pocklington3.lean
++++ b/PrimeCert/Meta/Pocklington3.lean
+@@ -74,11 +74,11 @@ meta def parsePrimePow' (stx : TSyntax ``prime_pow) (dict : PrimeDict) :
+     have p := p.getNat; have pE := mkNatLit p
+     have e := e.getNat; have eE := mkNatLit e
+     let pf ← dict.getM p
+-    return mkApp4 (mkConst ``PrimeCert.PrimePow.mk) pE eE pf eagerReflBoolTrue
++    return mkApp4 (mkConst ``PrimeCert.PrimePow.mk) pE eE pf reflBoolTrue
+   | `(prime_pow| $p:num) => do
+     have p := p.getNat; have pE := mkNatLit p
+     let pf ← dict.getM p
+-    return mkApp4 (mkConst ``PrimeCert.PrimePow.mk) pE (mkNatLit 1) pf eagerReflBoolTrue
++    return mkApp4 (mkConst ``PrimeCert.PrimePow.mk) pE (mkNatLit 1) pf reflBoolTrue
+   | _ => Elab.throwUnsupportedSyntax
+ 
+ meta def parseFactored' (stx : TSyntax ``factored) (dict : PrimeDict) :
+@@ -142,7 +142,7 @@ meta def parsePock3Spec : PrimeCertMethod `pock3_spec := fun stx dict ↦ do
+   have mE : Q(ℕ) := mkNatLit m
+   let mode ← parsePock3Mode mode dict
+   have pf : Q(Nat.Prime $NE) := mkAppN (mkConst ``pocklington3_certK)
+-    #[NE, rootE, mE, eE, F'E, mode, eagerReflBoolTrue]
++    #[NE, rootE, mE, eE, F'E, mode, reflBoolTrue]
+   return ⟨N, NE, pf⟩
+ 
+ @[prime_cert pock3] meta def pock3 : PrimeCertExt where
+diff --git a/PrimeCert/Meta/PowMod.lean b/PrimeCert/Meta/PowMod.lean
+index 9b51772..52286a8 100644
+--- a/PrimeCert/Meta/PowMod.lean
++++ b/PrimeCert/Meta/PowMod.lean
+@@ -22,7 +22,7 @@ open Lean Meta Elab Tactic
+ meta def mkPowModEq' (a b n : Nat) (aE bE nE : Expr) : MetaM (Nat × Expr × Expr) := do
+   let m := powMod a b n
+   let mE := mkNatLit m
+-  return (m, mE, mkApp5 (mkConst ``powMod_eq_of_powModK) aE bE nE mE eagerReflBoolTrue)
++  return (m, mE, mkApp5 (mkConst ``powMod_eq_of_powModK) aE bE nE mE reflBoolTrue)
+ 
+ /-- Given `a, b, n, m : ℕ`, if `powMod a b n = m` then return a proof of that fact. -/
+ meta def provePowModEq' (a b n m : Nat) (aE bE nE : Expr) : MetaM Expr := do
+@@ -34,7 +34,7 @@ meta def provePowModEq' (a b n m : Nat) (aE bE nE : Expr) : MetaM Expr := do
+ meta def provePowModNe' (a b n m : Nat) (aE bE nE mE : Expr) : MetaM Expr := do
+   let m' := powMod a b n
+   if m = m' then throwError "attempted to prove {a} ^ {b} % {n} ≠ {m} but it is {m'}"
+-  return mkApp5 (mkConst ``powMod_ne_of_powModK) aE bE nE mE eagerReflBoolFalse
++  return mkApp5 (mkConst ``powMod_ne_of_powModK) aE bE nE mE reflBoolFalse
+ 
+ /-- Split `a ^ b % n` into its three arguments. -/
+ meta def matchPowMod? (e : Expr) : Option (Expr × Expr × Expr) := do
+diff --git a/PrimeCert/PowMod.lean b/PrimeCert/PowMod.lean
+index 9ff784c..cfb0f26 100644
+--- a/PrimeCert/PowMod.lean
++++ b/PrimeCert/PowMod.lean
+@@ -22,8 +22,6 @@ open Nat
+ /-- The pow-mod auxiliary function, named explicitly to allow more precise control of reduction. -/
+ def powModAux (a b c n : ℕ) : ℕ := (a ^ b * c) % n
+ 
+-def Nat.eager (k : Nat → Nat) (n : Nat) : Nat := k (eagerReduce n)
+-
+ /-- Kernel-reducible tail-recursive modular exponentiation: computes `a ^ b % n`.
+ Uses `Nat.rec` with bounded fuel so the kernel can reduce it via `eagerReduce`. -/
+ @[expose] public noncomputable def powModK (a b n : Nat) : Nat :=

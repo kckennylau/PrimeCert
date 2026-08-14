@@ -1,0 +1,44 @@
+name: Eager reduction, present against removed
+
+on:
+  push:
+    branches:
+      - 'ci/eager-ab'
+
+jobs:
+  ab:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install elan
+        run: |
+          curl -sSfL https://github.com/leanprover/elan/releases/download/v4.1.2/elan-x86_64-unknown-linux-gnu.tar.gz | tar xz
+          ./elan-init -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+
+      - name: Fetch the mathlib build cache
+        run: lake exe cache get
+
+      - name: Alternate the two arms, three rounds
+        run: |
+          set -u
+          for round in 1 2 3; do
+            for arm in eager noeager; do
+              git checkout -- PrimeCert
+              if [ "$arm" = noeager ]; then git apply bench/no-eager.patch; fi
+              lake build PrimeCert > "build-$arm-$round.txt" 2>&1 \
+                || { echo "BUILD FAILED $arm round $round"; tail -40 "build-$arm-$round.txt"; exit 1; }
+              export LEAN_PATH=$(lake env printenv LEAN_PATH)
+              for target in PrimeCertTest/EagerBench.lean PrimeCert/Wieferich.lean; do
+                name=$(basename "$target" .lean)
+                /usr/bin/time -v lean "$target" \
+                  > "out-$arm-$name-$round.txt" 2> "time-$arm-$name-$round.txt" \
+                  || echo "RUN FAILED $arm $name round $round"
+                wall=$(grep 'Elapsed (wall clock)' "time-$arm-$name-$round.txt" | awk '{print $8}')
+                peak=$(grep 'Maximum resident set size' "time-$arm-$name-$round.txt" | awk '{print $6}')
+                echo "round $round | $arm | $name | wall $wall | peak ${peak} KB"
+              done
+            done
+          done
