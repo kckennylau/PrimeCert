@@ -64,6 +64,10 @@ theorem land_split_byte (x m : ℕ) :
     x &&& m = ((x % 256) &&& (m % 256)) + 256 * ((x / 256) &&& (m / 256)) :=
   land_split x m 8
 
+/-- Masking a shifted value stays below the value shifted. -/
+theorem and_shiftRight_le (x m s : ℕ) : (x >>> s) &&& m ≤ x :=
+  le_trans Nat.and_le_left (by rw [Nat.shiftRight_eq_div_pow]; exact Nat.div_le_self _ _)
+
 theorem land_85 (x : ℕ) : x &&& 85 = (x % 128) &&& 85 := land_of_lt (t := 7) (by decide)
 
 theorem land_51 (x : ℕ) : x &&& 51 = (x % 64) &&& 51 := land_of_lt (t := 6) (by decide)
@@ -132,14 +136,8 @@ theorem stageA_succ (k v : ℕ) :
   have hand : (v >>> 1) &&& rep 85 (k + 1)
       = (((v % 256) >>> 1) &&& 85) + 256 * (((v / 256) >>> 1) &&& rep 85 k) := by
     rw [land_split_byte, rep_mod_byte (by omega), rep_div_byte (by omega), hlow, hhigh]
-  have hle1 : ((v % 256) >>> 1) &&& 85 ≤ v % 256 := by
-    refine le_trans Nat.and_le_left ?_
-    simp only [Nat.shiftRight_eq_div_pow, Nat.reducePow]
-    omega
-  have hle2 : ((v / 256) >>> 1) &&& rep 85 k ≤ v / 256 := by
-    refine le_trans Nat.and_le_left ?_
-    simp only [Nat.shiftRight_eq_div_pow, Nat.reducePow]
-    omega
+  have hle1 : ((v % 256) >>> 1) &&& 85 ≤ v % 256 := and_shiftRight_le _ _ _
+  have hle2 : ((v / 256) >>> 1) &&& rep 85 k ≤ v / 256 := and_shiftRight_le _ _ _
   simp only [stageA, rep_one]
   rw [hand]
   omega
