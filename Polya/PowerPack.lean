@@ -93,14 +93,6 @@ public theorem IsPowState.vals_eq {w st c pw V : ℕ} (h : IsPowState w st c pw 
 
 /-! ### One step -/
 
-public theorem bool_rec_ble_eq {α : Sort*} (a b : ℕ) (x y : α) :
-    (Nat.ble a b).rec (motive := fun _ => α) x y = if a ≤ b then y else x := by
-  cases h : Nat.ble a b
-  · refine (if_neg fun hle => ?_).symm
-    rw [Nat.ble_eq_true_of_le hle] at h
-    exact Bool.noConfusion h
-  · rw [if_pos (Nat.le_of_ble_eq_true h)]
-
 /-- One step in arithmetic form. -/
 theorem powStepK_eq (M w q st : ℕ) :
     powStepK M w q st =

@@ -23,6 +23,22 @@ namespace PrimeCert.Polya
 
 open Nat
 
+/-- A comparison of naturals scrutinised by `Bool.rec`, in `if` form. -/
+public theorem bool_rec_beq_eq {α : Sort*} (a b : ℕ) (x y : α) :
+    (Nat.beq a b).rec (motive := fun _ => α) x y = if a = b then y else x := by
+  cases h : Nat.beq a b
+  · rw [if_neg (Nat.ne_of_beq_eq_false h)]
+  · rw [if_pos (Nat.eq_of_beq_eq_true h)]
+
+/-- An order test of naturals scrutinised by `Bool.rec`, in `if` form. -/
+public theorem bool_rec_ble_eq {α : Sort*} (a b : ℕ) (x y : α) :
+    (Nat.ble a b).rec (motive := fun _ => α) x y = if a ≤ b then y else x := by
+  cases h : Nat.ble a b
+  · refine (if_neg fun hle => ?_).symm
+    rw [Nat.ble_eq_true_of_le hle] at h
+    exact Bool.noConfusion h
+  · rw [if_pos (Nat.le_of_ble_eq_true h)]
+
 /-- `fieldK qs w i` is `w` bits of `qs` read at position `w * i`. -/
 public theorem fieldK_eq_div_mod (qs w i : ℕ) : fieldK qs w i = qs / 2 ^ (w * i) % 2 ^ w := by
   simp [fieldK, Nat.shiftRight_eq_div_pow, Nat.one_shiftLeft, Nat.and_two_pow_sub_one_eq_mod]

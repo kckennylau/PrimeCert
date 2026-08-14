@@ -27,20 +27,6 @@ open Nat
 /-- The sieve index of a number coprime to 6. -/
 @[expose] public def idx (q : ℕ) : ℕ := (q - 1) / 3
 
-theorem bool_rec_beq (a b : ℕ) :
-    (Nat.beq a b).rec (motive := fun _ => ℕ) 0 1 = if a = b then 1 else 0 := by
-  cases h : Nat.beq a b
-  · rw [if_neg (Nat.ne_of_beq_eq_false h)]
-  · rw [if_pos (Nat.eq_of_beq_eq_true h)]
-
-theorem bool_rec_ble (a b : ℕ) :
-    (Nat.ble a b).rec (motive := fun _ => ℕ) 0 1 = if a ≤ b then 1 else 0 := by
-  cases h : Nat.ble a b
-  · refine (if_neg fun hle => ?_).symm
-    rw [Nat.ble_eq_true_of_le hle] at h
-    exact Bool.noConfusion h
-  · rw [if_pos (Nat.le_of_ble_eq_true h)]
-
 /-- One test in arithmetic form: the state becomes twice the index plus the flag. -/
 theorem bitCheckStepK_eq (qs w lit st i : ℕ) :
     bitCheckStepK qs w lit st i
@@ -50,7 +36,7 @@ theorem bitCheckStepK_eq (qs w lit st i : ℕ) :
           ((lit >>> idx (fieldK qs w i)) % 2) := by
   simp only [bitCheckStepK, idx, Nat.land_eq, Nat.shiftRight_eq', Nat.shiftLeft_eq', Nat.sub_eq,
     Nat.add_eq, Nat.mul_eq, Nat.div_eq_div, Nat.mod_eq_mod, Nat.shiftLeft_eq, Nat.pow_one,
-    Nat.and_one_is_mod, Nat.shiftRight_eq_div_pow, bool_rec_beq, bool_rec_ble,
+    Nat.and_one_is_mod, Nat.shiftRight_eq_div_pow, bool_rec_beq_eq, bool_rec_ble_eq,
     Nat.succ_eq_add_one]
   rfl
 
