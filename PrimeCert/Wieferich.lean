@@ -20,8 +20,8 @@ A Wieferich prime satisfies `2^(p-1) ≡ 1 [MOD p²]`; a Mirimanoff prime satisf
 the only known Mirimanoff primes are 11 and 1006003.
 
 The main result `wieferich_mirimanoff` shows that no prime below 6000 is simultaneously
-Wieferich and Mirimanoff. This is used in `miller_rabin_squarefree` to rule out
-squarefree pseudoprimes below 36 million (to bases 2 and 3).
+Wieferich and Mirimanoff. `miller_rabin_squarefree` applies it to prove that a number below
+36 million passing the Fermat test to bases 2 and 3 is squarefree.
 -/
 
 def Wieferich (p : ℕ) : Prop :=
