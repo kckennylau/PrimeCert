@@ -18,7 +18,6 @@ Helpful links:
 -/
 
 set_option linter.style.longLine false
-set_option linter.privateModule false
 
 example : Nat.Prime 16290860017 := prime_cert%
   [small {3; 29},

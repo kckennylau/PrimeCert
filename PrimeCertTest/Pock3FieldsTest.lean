@@ -15,14 +15,12 @@ import PrimeCert.SmallPrimes
 automatically; the legacy 5-field form `(N, root, m, mode, F)` still parses and proves.
 -/
 
-set_option linter.privateModule false
-
 open PrimeCert
 
 -- new 4-field form: `m` computed automatically
-theorem pock3_no_m : Nat.Prime 73471 := prime_cert%
+example : Nat.Prime 73471 := prime_cert%
   [small {2; 7; 31}, pock3 (73471, 3, 7, 2 * 31)]
 
 -- legacy 5-field form still parses and proves
-theorem pock3_legacy_m : Nat.Prime 73471 := prime_cert%
+example : Nat.Prime 73471 := prime_cert%
   [small {2; 7; 31}, pock3 (73471, 3, 1, 7, 2 * 31)]
