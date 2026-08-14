@@ -25,37 +25,26 @@ open Nat
 
 /-! ### Writing a field by addition -/
 
-/-- Fields below the one being written keep their values. -/
-theorem fieldK_add_mul_of_lt {V val w c j : ℕ} (hj : j < c) :
-    fieldK (V + val * 2 ^ (w * c)) w j = fieldK V w j := by
-  obtain ⟨d, hd⟩ : ∃ d, w * c = w * j + (w + d) := by
-    have h := Nat.mul_le_mul_left w (Nat.succ_le_of_lt hj)
-    rw [Nat.mul_succ] at h
-    exact ⟨w * c - (w * j + w), by omega⟩
-  have key : V + val * 2 ^ (w * c) = V + val * 2 ^ d * 2 ^ w * 2 ^ (w * j) := by
-    rw [hd]
-    ring
-  rw [fieldK_eq_div_mod, fieldK_eq_div_mod, key,
-    Nat.add_mul_div_right _ _ (Nat.two_pow_pos (w * j)), Nat.add_mul_mod_self_right]
+/-- Writing above a table adds, since the two parts share no bits. -/
+theorem add_mul_eq_lor {V val w c : ℕ} (hV : V < 2 ^ (w * c)) :
+    V + val * 2 ^ (w * c) = V ||| val <<< (w * c) := by
+  rw [Nat.add_comm, ← Nat.shiftLeft_eq, Nat.shiftLeft_add_eq_or_of_lt hV, Nat.lor_comm]
+
+/-- Fields other than the one being written keep their values. -/
+theorem fieldK_add_mul_ne {V val w c j : ℕ} (hV : V < 2 ^ (w * c)) (hval : val < 2 ^ w)
+    (hj : j ≠ c) : fieldK (V + val * 2 ^ (w * c)) w j = fieldK V w j := by
+  rw [add_mul_eq_lor hV, fieldK_lor_shiftLeft_ne hval hj]
 
 /-- The value written reads back from its own field. -/
 theorem fieldK_add_mul_self {V val w c : ℕ} (hV : V < 2 ^ (w * c)) (hval : val < 2 ^ w) :
     fieldK (V + val * 2 ^ (w * c)) w c = val := by
-  rw [fieldK_eq_div_mod, Nat.add_mul_div_right _ _ (Nat.two_pow_pos (w * c)),
-    Nat.div_eq_of_lt hV, Nat.zero_add, Nat.mod_eq_of_lt hval]
+  rw [add_mul_eq_lor hV, fieldK_lor_shiftLeft_of_zero (fieldK_eq_zero_of_lt hV) hval]
 
 /-- The table with one more value written stops below position `w * (c + 1)`. -/
 theorem add_mul_two_pow_lt {V val w c : ℕ} (hV : V < 2 ^ (w * c)) (hval : val < 2 ^ w) :
     V + val * 2 ^ (w * c) < 2 ^ (w * (c + 1)) := by
-  have hpos : 0 < 2 ^ (w * c) := Nat.two_pow_pos _
-  have hstep : (val + 1) * 2 ^ (w * c) ≤ 2 ^ w * 2 ^ (w * c) :=
-    Nat.mul_le_mul_right _ hval
-  have hsplit : 2 ^ (w * (c + 1)) = 2 ^ w * 2 ^ (w * c) := by
-    rw [Nat.mul_succ, Nat.pow_add, Nat.mul_comm]
-  have : V + val * 2 ^ (w * c) < (val + 1) * 2 ^ (w * c) := by
-    rw [Nat.succ_mul]
-    omega
-  omega
+  rw [add_mul_eq_lor hV]
+  exact lor_shiftLeft_lt hV hval
 
 /-! ### The state -/
 
@@ -169,10 +158,10 @@ public theorem powLoopK_spec {M w q seed st c pw V : ℕ} (fuel : ℕ) (h : IsPo
         fun j hj => ?_, fun j hj => ?_, fun hlt => ?_⟩
       · rw [← Nat.add_assoc]
         exact hstep
-      · rw [fieldK_add_mul_of_lt (by omega)]
+      · rw [fieldK_add_mul_ne hV' (by rw [← hpow]; omega) (by omega)]
         exact hbelow j hj
       · rcases Nat.lt_or_ge j m with hjm | hjm
-        · rw [fieldK_add_mul_of_lt (by omega)]
+        · rw [fieldK_add_mul_ne hV' (by rw [← hpow]; omega) (by omega)]
           exact hfields j hjm
         · have hjm' : j = m := by omega
           subst hjm'
