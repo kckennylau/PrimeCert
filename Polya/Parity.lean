@@ -59,11 +59,8 @@ public theorem dvd_of_testBit_strideMaskK {q M r j : ℕ} (hq : 0 < q)
         have hspos : 0 < q <<< r := by
           rw [Nat.shiftLeft_eq]
           exact Nat.mul_pos hq (Nat.two_pow_pos r)
-        have hs : q ∣ q <<< r := by
-          rw [Nat.shiftLeft_eq]
-          exact ⟨2 ^ r, rfl⟩
-        obtain ⟨hd, _⟩ := ih h2
-        have hsum := Nat.dvd_add hd hs
+        have hs : q ∣ q <<< r := by rw [Nat.shiftLeft_eq]; exact ⟨2 ^ r, rfl⟩
+        have hsum := Nat.dvd_add (ih h2).1 hs
         rw [Nat.sub_add_cancel hge'] at hsum
         exact ⟨hsum, by omega⟩
     · rw [strideMaskK_succ_of_gt hgt] at h
@@ -77,11 +74,9 @@ public theorem testBit_strideMaskK_of_dvd {q M r j : ℕ} (hq : 0 < q) (hdvd : q
   | zero =>
     obtain ⟨c, rfl⟩ := hdvd
     have hc : c = 1 := by
-      have h1 : q * c ≤ q * 1 := by simpa using hjr
-      have h2 := Nat.le_of_mul_le_mul_left h1 hq
-      rcases Nat.eq_zero_or_pos c with rfl | h3
-      · simp at hj
-      · omega
+      have h2 := Nat.le_of_mul_le_mul_left (by simpa using hjr : q * c ≤ q * 1) hq
+      have h3 : c ≠ 0 := by rintro rfl; simp at hj
+      omega
     rw [hc, Nat.mul_one, strideMaskK_zero, Nat.testBit_two_pow]
     simp
   | succ r ih =>
@@ -97,13 +92,9 @@ public theorem testBit_strideMaskK_of_dvd {q M r j : ℕ} (hq : 0 < q) (hdvd : q
         exact hprev
     · have hsM : q <<< r ≤ M := by omega
       rw [strideMaskK_succ_of_le hsM, Nat.testBit_or, Nat.testBit_shiftLeft]
-      have hsub : (strideMaskK q M r).testBit (j - q <<< r) = true := by
-        refine ih (Nat.dvd_sub hdvd ?_) (by omega) (by omega) (by omega)
-        rw [hs]
-        exact ⟨2 ^ r, rfl⟩
-      have hge : q <<< r ≤ j := by omega
-      rw [hsub]
-      simp [hge]
+      have hsub : (strideMaskK q M r).testBit (j - q <<< r) = true :=
+        ih (Nat.dvd_sub hdvd (by rw [hs]; exact ⟨2 ^ r, rfl⟩)) (by omega) (by omega) (by omega)
+      simp [hsub, (by omega : q <<< r ≤ j)]
 
 /-- Inside the table, a stride mask marks exactly the positive multiples of `q`. -/
 public theorem testBit_strideMaskK {q M r j : ℕ} (hq : 0 < q) (hjM : j ≤ M) (hM : M < q * 2 ^ r) :
@@ -167,11 +158,7 @@ public theorem testBit_lamLoopK {qs w M r lam start fuel j : ℕ} (hj : j ≤ M)
     have hnot : f ∉ {i ∈ Finset.range f | fieldK qs w (start + i) ∣ j} := by simp
     by_cases hdvd : fieldK qs w (start + f) ∣ j
     · rw [if_pos hdvd, Finset.card_insert_of_notMem hnot]
-      simp only [hdvd, ne_eq, hjpos.ne', not_false_eq_true, and_self, decide_true,
-        Nat.odd_add_one]
-      cases lam.testBit j <;>
-        cases Decidable.em (Odd ({i ∈ Finset.range f | fieldK qs w (start + i) ∣ j}).card) <;>
-        simp_all
+      simp [hdvd, hjpos.ne', Nat.odd_add_one, -Nat.not_odd_iff_even]
     · rw [if_neg hdvd]
       simp [hdvd]
 
