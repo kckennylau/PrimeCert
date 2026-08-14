@@ -29,39 +29,39 @@ def Wieferich (p : ℕ) : Prop :=
 def Mirimanoff (p : ℕ) : Prop :=
   3 ^ (p - 1) ≡ 1 [MOD p^2]
 
-noncomputable def wieferichKR (p : ℕ) : Bool :=
-  powModTR 2 p.pred (p.pow 2) |>.beq 1
+noncomputable def wieferichK (p : ℕ) : Bool :=
+  powModK 2 p.pred (p.pow 2) |>.beq 1
 
-noncomputable def mirimanoffKR (p : ℕ) : Bool :=
-  powModTR 3 p.pred (p.pow 2) |>.beq 1
+noncomputable def mirimanoffK (p : ℕ) : Bool :=
+  powModK 3 p.pred (p.pow 2) |>.beq 1
 
-@[simp] theorem wieferichKR_eq_true_iff (p : ℕ) (hp : p ≠ 1) : wieferichKR p ↔ Wieferich p := by
+@[simp] theorem wieferichK_eq_true_iff (p : ℕ) (hp : p ≠ 1) : wieferichK p ↔ Wieferich p := by
   have hp2 : p ^ 2 ≠ 1 := by rwa [ne_eq, sq, mul_eq_one, and_self]
-  rw [Wieferich, wieferichKR, Nat.beq_eq, Nat.ModEq, Nat.one_mod_eq_one.mpr hp2,
-    powModTR_eq, powMod, Nat.pow_eq, Nat.pred_eq_sub_one]
+  rw [Wieferich, wieferichK, Nat.beq_eq, Nat.ModEq, Nat.one_mod_eq_one.mpr hp2,
+    powModK_eq, powMod, Nat.pow_eq, Nat.pred_eq_sub_one]
 
-@[simp] theorem wieferichKR_eq_false_iff (p : ℕ) (hp : p ≠ 1) :
-    wieferichKR p = false ↔ ¬Wieferich p := by
-  rw [← Bool.not_eq_true, wieferichKR_eq_true_iff p hp]
+@[simp] theorem wieferichK_eq_false_iff (p : ℕ) (hp : p ≠ 1) :
+    wieferichK p = false ↔ ¬Wieferich p := by
+  rw [← Bool.not_eq_true, wieferichK_eq_true_iff p hp]
 
-@[simp] theorem mirimanoffKR_eq_true_iff (p : ℕ) (hp : p ≠ 1) : mirimanoffKR p ↔ Mirimanoff p := by
+@[simp] theorem mirimanoffK_eq_true_iff (p : ℕ) (hp : p ≠ 1) : mirimanoffK p ↔ Mirimanoff p := by
   have hp2 : p ^ 2 ≠ 1 := by rwa [ne_eq, sq, mul_eq_one, and_self]
-  rw [Mirimanoff, mirimanoffKR, Nat.beq_eq, Nat.ModEq, Nat.one_mod_eq_one.mpr hp2,
-    powModTR_eq, powMod, Nat.pow_eq, Nat.pred_eq_sub_one]
+  rw [Mirimanoff, mirimanoffK, Nat.beq_eq, Nat.ModEq, Nat.one_mod_eq_one.mpr hp2,
+    powModK_eq, powMod, Nat.pow_eq, Nat.pred_eq_sub_one]
 
-@[simp] theorem mirimanoffKR_eq_false_iff (p : ℕ) (hp : p ≠ 1) :
-    mirimanoffKR p = false ↔ ¬Mirimanoff p := by
-  rw [← Bool.not_eq_true, mirimanoffKR_eq_true_iff p hp]
+@[simp] theorem mirimanoffK_eq_false_iff (p : ℕ) (hp : p ≠ 1) :
+    mirimanoffK p = false ↔ ¬Mirimanoff p := by
+  rw [← Bool.not_eq_true, mirimanoffK_eq_true_iff p hp]
 
 /-! # We check odd numbers up to 6000 in the classes 1%6 and 5%6 -/
 
 open PrimeCert
 
 theorem wieferich_mirimanoff₁ : ∀ n < 6000, n % 6 = 1 →
-    (wieferichKR n).not'.or' (mirimanoffKR n).not' :=
+    (wieferichK n).not'.or' (mirimanoffK n).not' :=
   forallB_of_mod _ (r := 1) (len := 1000) (step := 6) (by quickRfl)
 
-theorem wieferich₅ : ∀ n < 6000, n % 6 = 5 → !wieferichKR n :=
+theorem wieferich₅ : ∀ n < 6000, n % 6 = 5 → !wieferichK n :=
   forallB_of_mod _ (r := 5) (len := 1000) (step := 6) (by quickRfl)
 
 public theorem wieferich_mirimanoff {p : ℕ} (hp : p.Prime) (p_bound : p < 6000) :

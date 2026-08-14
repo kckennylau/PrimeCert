@@ -141,7 +141,7 @@ public inductive Pocklington3CertMode : Type
 
 @[expose] public noncomputable def Pocklington3CertMode.calculate (m : Pocklington3CertMode)
     (r s : ℕ) : Bool :=
-  m.rec (s.beq 0) (fun p _ ↦ (2).blt p && (powModTR (r.pow 2 |>.sub <| s.mul 8) (p.div 2) p).beq
+  m.rec (s.beq 0) (fun p _ ↦ (2).blt p && (powModK (r.pow 2 |>.sub <| s.mul 8) (p.div 2) p).beq
     p.pred) (r.pow 2 |>.blt <| s.mul 8)
 
 theorem Pocklington3CertMode.to_cert (m : Pocklington3CertMode) (r s : ℕ) (h : m.calculate r s) :
@@ -150,7 +150,7 @@ theorem Pocklington3CertMode.to_cert (m : Pocklington3CertMode) (r s : ℕ) (h :
   | zero => exact .inl <| Nat.beq_eq.to_iff.mp h
   | prime p hp =>
     simp only [calculate, Nat.pow_eq, Nat.mul_eq, Nat.sub_eq, Nat.div_eq_div, Nat.pred_eq_sub_one,
-      Bool.and_eq_true, Nat.blt_eq, Nat.beq_eq, mul_comm s, powModTR_eq] at h
+      Bool.and_eq_true, Nat.blt_eq, Nat.beq_eq, mul_comm s, powModK_eq] at h
     exact .of_prime _ _ p hp h.1 h.2
   | lt => exact .inr <| .inr <| Nat.blt_eq.to_iff.mp <| mul_comm 8 s ▸ h
 
@@ -172,13 +172,13 @@ theorem PrimePow.prime_dvd_toNat (pp : PrimePow) : pp.prime ∣ pp.toNat :=
   let R := N.div F
   let r := R.mod two_F
   let s := R.div two_F
-  F'.rec (powModTR root (N.div 2) N |>.pred.gcd N |>.beq 1)
-    (fun pp _ ih ↦ pp.rec fun p _ _ _ ↦ powModTR root (N.div p) N |>.pred.gcd N |>.beq 1 && ih) &&
+  F'.rec (powModK root (N.div 2) N |>.pred.gcd N |>.beq 1)
+    (fun pp _ ih ↦ pp.rec fun p _ _ _ ↦ powModK root (N.div p) N |>.pred.gcd N |>.beq 1 && ih) &&
   (0).blt e &&
   (mode.calculate r s) &&
   (N.mod F |>.beq 1) &&
   (R.mod 2 |>.beq 1) &&
-  (powModTR root N.pred N |>.beq 1) &&
+  (powModK root N.pred N |>.beq 1) &&
   (forallB (fun l ↦ Nat.blt 0 (N.mod l)) F.succ m.pred F) &&
   (s.mul 2 |>.add (m.pow 2) |>.blt (two_F.add r |>.mul m |>.add 2))
 
@@ -217,12 +217,12 @@ Inputs (not all needed):
 * `m`: an arbitrary number (`> 0`), which should be small for better performance.
 * `s, r := divmod(R, 2*F)`, given as literals
 -/
-public theorem pocklington3_certKR (N root m e : ℕ) (F' : List PrimePow)
+public theorem pocklington3_certK (N root m e : ℕ) (F' : List PrimePow)
     (mode : Pocklington3CertMode) (cert : pocklington3_calculate N e root m F' mode) :
     Nat.Prime N := by
   unfold pocklington3_calculate at cert
   extract_lets F two_F R r s at cert
-  simp only [Nat.div_eq_div, powModTR_eq, Nat.pred_eq_sub_one, Nat.mod_eq_mod, Nat.succ_eq_add_one,
+  simp only [Nat.div_eq_div, powModK_eq, Nat.pred_eq_sub_one, Nat.mod_eq_mod, Nat.succ_eq_add_one,
     Nat.mul_eq, Nat.pow_eq, Nat.add_eq, Bool.and_eq_true, Nat.blt_eq, Nat.beq_eq] at cert
   obtain ⟨⟨⟨⟨⟨⟨⟨primitive, e_pos⟩, cert⟩, hnf⟩, odd_R⟩, psp⟩, divisors⟩, bound⟩ := cert
   have R_def : F * R + 1 = N := by

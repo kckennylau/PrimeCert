@@ -7,17 +7,17 @@ module
 
 /-! # Efficient computation of `(a - 1) % N`
 
-`predModKR` computes `(a + (N - 1)) % N` using `Nat.rec` so the kernel can reduce it
+`predModK` computes `(a + (N - 1)) % N` using `Nat.rec` so the kernel can reduce it
 via `eagerReduce`, avoiding the overhead of general modular arithmetic.
 -/
 
 /-- Kernel-reducible predecessor mod: computes `(a + (N - 1)) % N` for `a ≤ N`. -/
-@[expose] public def predModKR (a N : Nat) : Nat :=
+@[expose] public def predModK (a N : Nat) : Nat :=
   a.rec N.pred fun a _ ↦ a
 
-public theorem predModKR_eq {a N : Nat} (hn : N ≠ 0) (ha : a ≤ N) :
-    predModKR a N = (a + (N - 1)) % N := by
-  delta predModKR
+public theorem predModK_eq {a N : Nat} (hn : N ≠ 0) (ha : a ≤ N) :
+    predModK a N = (a + (N - 1)) % N := by
+  delta predModK
   cases a with
   | zero => rw [Nat.zero_add, Nat.mod_eq_of_lt (by grind)]; rfl
   | succ a =>
