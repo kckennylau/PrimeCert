@@ -29,12 +29,8 @@ theorem land_shiftLeft_shiftRight (x M s : ℕ) : (x &&& (M <<< s)) >>> s = (x >
 /-- The set bits of one 32-position chunk. -/
 public theorem popc32K_chunk (lam i : ℕ) :
     popc32K ((lam >>> (32 * i)) &&& ((1 <<< 32) - 1)) = bitSum (lam / 2 ^ (32 * i)) 32 := by
-  have h1 : (1 : ℕ) <<< 32 - 1 = 2 ^ 32 - 1 := by rw [Nat.one_shiftLeft]
-  have h2 : ((lam >>> (32 * i)) &&& (2 ^ 32 - 1)) = (lam / 2 ^ (32 * i)) % 2 ^ 32 := by
-    rw [Nat.and_two_pow_sub_one_eq_mod, Nat.shiftRight_eq_div_pow]
-  have h3 : bitSum ((lam / 2 ^ (32 * i)) % 2 ^ 32) 32 = bitSum (lam / 2 ^ (32 * i)) 32 :=
-    bitSum_mod _ 32
-  rw [h1, h2, popc32K_eq_bitSum _, h3]
+  rw [Nat.one_shiftLeft, Nat.and_two_pow_sub_one_eq_mod, Nat.shiftRight_eq_div_pow,
+    popc32K_eq_bitSum, bitSum_mod]
 
 /-- The counts table after `fuel` steps: field `i` holds the set bits below position `32 * i`, and
 the table stops below field `fuel + 1`. -/
@@ -71,10 +67,10 @@ theorem onesLoopK_spec {lam w : ℕ} (hw : ∀ n, bitSum lam n < 2 ^ w) (fuel : 
     constructor
     · intro i hi
       rcases Nat.lt_or_ge i (f + 1) with h | h
-      · rw [fieldK_lor_shiftLeft_of_lt h, ihfield i (by omega)]
+      · rw [fieldK_lor_shiftLeft_ne hlt (by omega), ihfield i (by omega)]
       · have hif : i = f + 1 := by omega
         subst hif
-        rw [fieldK_lor_shiftLeft_self ihlt hlt]
+        rw [fieldK_lor_shiftLeft_of_zero (fieldK_eq_zero_of_lt ihlt) hlt]
     · exact lor_shiftLeft_lt ihlt hlt
 
 /-- Field `i` of the counts table holds the set bits of `lam` below position `32 * i`. -/
