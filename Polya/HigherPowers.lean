@@ -44,18 +44,9 @@ theorem powLoopK_base {M w q seed st c pw V e : ℕ} (h : IsPowState w st c pw V
     · exfalso
       have hme' : m = e := by omega
       subst hme'
-      rcases Nat.eq_zero_or_pos m with hm0 | hm0
-      · subst hm0
-        have hqk : 1 ≤ q ^ k := Nat.one_le_pow k q (by omega)
-        have hone : 1 ≤ seed * q ^ k :=
-          Nat.one_le_iff_ne_zero.2 (Nat.mul_ne_zero (by omega) (by omega))
-        have h2 : (2 : ℕ) ^ 0 = 1 := rfl
-        omega
-      · have hlast : seed * q ^ m ≤ M := by
-          have := hle (m - 1) (by omega)
-          rwa [Nat.sub_add_cancel hm0] at this
-        have : q ^ m ≤ seed * q ^ m := Nat.le_mul_of_pos_left _ (by omega)
-        omega
+      have hlt : q ^ m < q ^ k := Nat.pow_lt_pow_right (by omega) (by omega)
+      have hmul : q ^ k ≤ seed * q ^ k := Nat.le_mul_of_pos_left _ (by omega)
+      omega
   have hmono : seed * q ^ (m + 1) ≤ seed * q ^ k :=
     Nat.mul_le_mul_left seed (Nat.pow_le_pow_right (by omega) (by omega))
   have := htop hmlt
