@@ -39,12 +39,6 @@ public abbrev SetupOK (x M rootx top w r wc chunks off wb qs np cnt chunks2 e fu
     hpSt : ℕ) : Bool :=
   decide (SetupOK x M rootx top w r wc chunks off wb qs np cnt chunks2 e fuel st hpSt)
 
-theorem of_setupOK {x M rootx top w r wc chunks off wb qs np cnt chunks2 e fuel st
-    hpSt : ℕ} (h : setupOK x M rootx top w r wc chunks off wb qs np cnt chunks2 e fuel st hpSt
-      = true) :
-    SetupOK x M rootx top w r wc chunks off wb qs np cnt chunks2 e fuel st hpSt :=
-  of_decide_eq_true h
-
 /-- The two tables of the recursion, from the equations of the six loops that build them. -/
 public theorem tables_of_data {x M rootx top w r wc chunks off wb qs np cnt chunks2 e fuel st hpSt
     lit lam ones low hi : ℕ} (hsieve : IsSieve M lit)
@@ -58,7 +52,7 @@ public theorem tables_of_data {x M rootx top w r wc chunks off wb qs np cnt chun
     (hok : setupOK x M rootx top w r wc chunks off wb qs np cnt chunks2 e fuel st hpSt = true) :
     IsLowTable rootx off wb low ∧ IsHiTable x rootx off wb hi (top + 1) := by
   obtain ⟨hflag, hnum, hchunks2, hfuelup, hfueldn, hMw, hM64, hMe, hroom, hlink, hcnt, hr, hwc,
-    hchunk, hroot, hMoff, hwbM, htop, hcut⟩ := of_setupOK hok
+    hchunk, hroot, hMoff, hwbM, htop, hcut⟩ := of_decide_eq_true hok
   rw [Nat.shiftRight_eq_div_pow, Nat.shiftRight_eq_div_pow] at hlink
   have htab : IsPrimePowerTable qs w M cnt :=
     isPrimePowerTable_of_checks hsieve hbit hflag (fun _ => hnum) hpop hchunks2 hhp hfuelup
@@ -120,11 +114,6 @@ public abbrev StepOK (x rootx off wb j v s A B S val hi hiNext : ℕ) : Prop :=
 @[expose] public def stepOK (x rootx off wb j v s A B S val hi hiNext : ℕ) : Bool :=
   decide (StepOK x rootx off wb j v s A B S val hi hiNext)
 
-theorem of_stepOK {x rootx off wb j v s A B S val hi hiNext : ℕ}
-    (h : stepOK x rootx off wb j v s A B S val hi hiNext = true) :
-    StepOK x rootx off wb j v s A B S val hi hiNext :=
-  of_decide_eq_true h
-
 /-- The square root the checks pin down. -/
 theorem sqrt_eq_of_le_of_lt {v s : ℕ} (h1 : s * s ≤ v) (h2 : v < (s + 1) * (s + 1)) :
     Nat.sqrt v = s := by
@@ -139,7 +128,7 @@ public theorem isHiTable_step {x rootx off wb low hi hiNext j v s A B S val fuel
     (hok : stepOK x rootx off wb j v s A B S val hi hiNext = true) :
     IsHiTable x rootx off wb hiNext j := by
   obtain ⟨hj, hjr, hxj, hS, hA, hB2, hB, hv, hv64, hs1, hs2, hval, hvlt, hnext, hoff, hwb,
-    hroot⟩ := of_stepOK hok
+    hroot⟩ := of_decide_eq_true hok
   obtain ⟨hk, hA', hB'⟩ := state_split hS (by omega) hA
   have hvals : BlockValues x v rootx low hi wb off := by
     rw [← hxj]
@@ -165,17 +154,14 @@ public abbrev FinalOK (x rootx off wb s A B S p q : ℕ) : Prop :=
 @[expose] public def finalOK (x rootx off wb s A B S p q : ℕ) : Bool :=
   decide (FinalOK x rootx off wb s A B S p q)
 
-theorem of_finalOK {x rootx off wb s A B S p q : ℕ}
-    (h : finalOK x rootx off wb s A B S p q = true) : FinalOK x rootx off wb s A B S p q :=
-  of_decide_eq_true h
-
 /-- The run of blocks at `x` itself gives the running total. -/
 public theorem L_eq_of_final {x rootx off wb low hi s A B S p q fuel : ℕ}
     (hlow : IsLowTable rootx off wb low) (hhi : IsHiTable x rootx off wb hi 2)
     (hblock : blockLoopK x x rootx low hi wb off 2 fuel = S)
     (hok : finalOK x rootx off wb s A B S p q = true) :
     L x = (p : ℤ) - q := by
-  obtain ⟨hroot1, hS, hA, hB2, hB, hx, hx64, hs1, hs2, hpq, hoff, hwb, hroot⟩ := of_finalOK hok
+  obtain ⟨hroot1, hS, hA, hB2, hB, hx, hx64, hs1, hs2, hpq, hoff, hwb, hroot⟩ :=
+    of_decide_eq_true hok
   obtain ⟨hk, hA', hB'⟩ := state_split hS (by omega) hA
   have hvals : BlockValues x x rootx low hi wb off := by
     have h := blockValues_of_tables (j := 1) Nat.one_pos hroot1 hroot hlow hhi
