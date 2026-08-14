@@ -38,12 +38,11 @@ public theorem L_eq_sub_two_mul (v : ℕ) :
       omega
     have hnot : (v + 1) ∉ {n ∈ Finset.Icc 1 v | Odd (cardFactors n)} := by simp
     rw [L_succ, ih, hIcc, Finset.filter_insert, liouville_eq_ite (by omega)]
-    by_cases hodd : Odd (cardFactors (v + 1))
-    · rw [if_pos hodd, if_pos hodd, Finset.card_insert_of_notMem hnot]
+    split_ifs with hodd
+    · rw [Finset.card_insert_of_notMem hnot]
       push_cast
       ring
-    · rw [if_neg hodd, if_neg hodd]
-      push_cast
+    · push_cast
       ring
 
 end PrimeCert.Polya
