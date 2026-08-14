@@ -37,16 +37,12 @@ theorem powLoopK_base {M w q seed st c pw V e : ℕ} (h : IsPowState w st c pw V
     powLoopK_spec e h hq hseed64 hMw hM64 hroom
   refine ⟨m, hme, V', hstate, hbelow, hfields, hle, fun k hk hkM => ?_⟩
   by_contra hgt
-  have hpow : 2 ^ e ≤ q ^ e := Nat.pow_le_pow_left hq e
   have hmlt : m < e := by
-    rcases Nat.lt_or_ge m e with h' | h'
-    · exact h'
-    · exfalso
-      have hme' : m = e := by omega
-      subst hme'
-      have hlt : q ^ m < q ^ k := Nat.pow_lt_pow_right (by omega) (by omega)
-      have hmul : q ^ k ≤ seed * q ^ k := Nat.le_mul_of_pos_left _ (by omega)
-      omega
+    by_contra hge
+    have hpow : 2 ^ e ≤ q ^ e := Nat.pow_le_pow_left hq e
+    have hlt : q ^ e < q ^ k := Nat.pow_lt_pow_right (by omega) (by omega)
+    have hmul : q ^ k ≤ seed * q ^ k := Nat.le_mul_of_pos_left _ (by omega)
+    omega
   have hmono : seed * q ^ (m + 1) ≤ seed * q ^ k :=
     Nat.mul_le_mul_left seed (Nat.pow_le_pow_right (by omega) (by omega))
   have := htop hmlt
@@ -108,23 +104,25 @@ theorem hpLoopK_succ_eq (lit M w e st start fuel : ℕ) :
   rw [hb]
   cases lit.testBit (start + fuel) <;> rfl
 
-/-- Positions with a clear bit contribute nothing. -/
-theorem hpVal_succ_of_not_testBit {lit M pos v : ℕ} (hbit : lit.testBit pos = false) :
-    HpVal lit M (pos + 1) v ↔ HpVal lit M pos v := by
-  constructor
-  · rintro (h | h | ⟨t, ht1, htlt, htbit, hrest⟩)
-    · exact Or.inl h
-    · exact Or.inr (Or.inl h)
-    · refine Or.inr (Or.inr ⟨t, ht1, ?_, htbit, hrest⟩)
-      rcases Nat.lt_or_ge t pos with h' | h'
-      · exact h'
-      · have hpt : t = pos := by omega
-        rw [hpt, hbit] at htbit
-        exact absurd htbit (by simp)
-  · rintro (h | h | ⟨t, ht1, htlt, hrest⟩)
-    · exact Or.inl h
-    · exact Or.inr (Or.inl h)
-    · exact Or.inr (Or.inr ⟨t, ht1, by omega, hrest⟩)
+/-- The values collected only grow as the walk advances. -/
+theorem HpVal.mono {lit M pos pos' v : ℕ} (h : HpVal lit M pos v) (hle : pos ≤ pos') :
+    HpVal lit M pos' v := by
+  rcases h with h | h | ⟨t, ht1, htlt, hrest⟩
+  · exact Or.inl h
+  · exact Or.inr (Or.inl h)
+  · exact Or.inr (Or.inr ⟨t, ht1, by omega, hrest⟩)
+
+/-- A position with a clear bit contributes nothing. -/
+theorem HpVal.of_not_testBit {lit M pos v : ℕ} (h : HpVal lit M (pos + 1) v)
+    (hbit : lit.testBit pos = false) : HpVal lit M pos v := by
+  rcases h with h | h | ⟨t, ht1, htlt, htbit, hrest⟩
+  · exact Or.inl h
+  · exact Or.inr (Or.inl h)
+  · refine Or.inr (Or.inr ⟨t, ht1, ?_, htbit, hrest⟩)
+    rcases Nat.lt_or_ge t pos with h' | h'
+    · exact h'
+    · rw [(by omega : t = pos), hbit] at htbit
+      exact absurd htbit (by simp)
 
 /-- What the walk holds: the values named by `HpVal`, each in exactly one field. -/
 public theorem hpLoopK_spec {lit M w e st c pw V start : ℕ} (fuel : ℕ) (hsieve : IsSieve M lit)
@@ -150,8 +148,8 @@ public theorem hpLoopK_spec {lit M w e st c pw V start : ℕ} (fuel : ℕ) (hsie
     rcases hbit : lit.testBit (start + f) with _ | _
     · rw [if_neg Bool.false_ne_true]
       refine ⟨c', pw', V', hstate', hcc', by omega, fun j hj => ?_, fun v hv => ?_, hinj'⟩
-      · exact (hpVal_succ_of_not_testBit hbit).2 (hsound' j hj)
-      · exact hcomp' v ((hpVal_succ_of_not_testBit hbit).1 hv)
+      · exact (hsound' j hj).mono (by omega)
+      · exact hcomp' v (hv.of_not_testBit hbit)
     · rw [if_pos rfl]
       have hnumle : num (start + f) ≤ M := hnum _ (by omega)
       have hprime : (num (start + f)).Prime :=
@@ -168,12 +166,8 @@ public theorem hpLoopK_spec {lit M w e st c pw V start : ℕ} (fuel : ℕ) (hsie
       · -- soundness
         rcases Nat.lt_or_ge j c' with hjc | hjc
         · rw [hbelow j hjc]
-          rcases hsound' j hjc with h | h | ⟨t, ht1, htlt, hrest⟩
-          · exact Or.inl h
-          · exact Or.inr (Or.inl h)
-          · exact Or.inr (Or.inr ⟨t, ht1, by omega, hrest⟩)
-        · obtain ⟨d, hd⟩ : ∃ d, j = c' + d := ⟨j - c', by omega⟩
-          subst hd
+          exact (hsound' j hjc).mono (by omega)
+        · obtain ⟨d, rfl⟩ := Nat.exists_eq_add_of_le hjc
           have hdm : d < m := by omega
           refine Or.inr (Or.inr
             ⟨start + f, by omega, by omega, hbit, hprime, d + 2, by omega, ?_, ?_⟩)
@@ -191,8 +185,7 @@ public theorem hpLoopK_spec {lit M w e st c pw V start : ℕ} (fuel : ℕ) (hsie
         · exact hprev v (Or.inr (Or.inl h))
         · rcases Nat.lt_or_ge t (start + f) with htf | htf
           · exact hprev v (Or.inr (Or.inr ⟨t, ht1, htf, htbit, htp, k, hk, hvk, hvM⟩))
-          · have htf' : t = start + f := by omega
-            subst htf'
+          · obtain rfl : t = start + f := by omega
             have hk1 : num (start + f) * num (start + f) ^ (k - 1) = num (start + f) ^ k := by
               rw [← Nat.pow_succ']
               congr 1
@@ -206,8 +199,7 @@ public theorem hpLoopK_spec {lit M w e st c pw V start : ℕ} (fuel : ℕ) (hsie
         have hcross : ∀ a b, a < c' → c' ≤ b → b < c' + m →
             fieldK V'' w a ≠ fieldK V'' w b := by
           intro a b ha hb hbm heq'
-          obtain ⟨d, hd⟩ : ∃ d, b = c' + d := ⟨b - c', by omega⟩
-          subst hd
+          obtain ⟨d, rfl⟩ := Nat.exists_eq_add_of_le hb
           rw [hbelow a ha, hfields d (by omega)] at heq'
           refine (hsound' a ha).ne_pow le_rfl (by omega) hprime (k := d + 2) (by omega) ?_
           rw [heq', Nat.pow_succ]
@@ -217,21 +209,11 @@ public theorem hpLoopK_spec {lit M w e st c pw V start : ℕ} (fuel : ℕ) (hsie
           exact hinj' j₁ j₂ h₁ h₂ heq
         · exact absurd heq (hcross j₁ j₂ h₁ h₂ hj₂)
         · exact absurd heq.symm (hcross j₂ j₁ h₂ h₁ hj₁)
-        · obtain ⟨d₁, hd₁⟩ : ∃ d, j₁ = c' + d := ⟨j₁ - c', by omega⟩
-          obtain ⟨d₂, hd₂⟩ : ∃ d, j₂ = c' + d := ⟨j₂ - c', by omega⟩
-          subst hd₁
-          subst hd₂
-          rw [hfields d₁ (by omega), hfields d₂ (by omega)] at heq
-          have hmono : ∀ a b : ℕ, a < b → num (start + f) * num (start + f) ^ (a + 1) <
-              num (start + f) * num (start + f) ^ (b + 1) := by
-            intro a b hab
-            have hlt : num (start + f) ^ (a + 1) < num (start + f) ^ (b + 1) :=
-              Nat.pow_lt_pow_right (by omega) (by omega)
-            exact mul_lt_mul_of_pos_left hlt (by omega)
-          rcases Nat.lt_trichotomy d₁ d₂ with h' | h' | h'
-          · exact absurd heq (Nat.ne_of_lt (hmono d₁ d₂ h'))
-          · omega
-          · exact absurd heq.symm (Nat.ne_of_lt (hmono d₂ d₁ h'))
+        · obtain ⟨d₁, rfl⟩ := Nat.exists_eq_add_of_le h₁
+          obtain ⟨d₂, rfl⟩ := Nat.exists_eq_add_of_le h₂
+          rw [hfields d₁ (by omega), hfields d₂ (by omega), ← Nat.pow_succ', ← Nat.pow_succ'] at heq
+          have := Nat.pow_right_injective h2q heq
+          omega
 
 /-! ### The seed -/
 
@@ -255,8 +237,7 @@ public theorem seed_spec {M w e : ℕ} (lit : ℕ) (hMw : M < 2 ^ w) (hM64 : M <
   · rcases Nat.lt_or_ge j m₂ with hjm | hjm
     · rw [hb₃ j hjm, hf₂ j hjm]
       exact Or.inl ⟨j + 1, by omega, rfl, hle₂ j hjm⟩
-    · obtain ⟨d, hd⟩ : ∃ d, j = m₂ + d := ⟨j - m₂, by omega⟩
-      subst hd
+    · obtain ⟨d, rfl⟩ := Nat.exists_eq_add_of_le hjm
       rw [hf₃ d (by omega)]
       exact Or.inr (Or.inl ⟨d + 1, by omega, rfl, hle₃ d (by omega)⟩)
   · rcases hv with ⟨k, hk, hvk, hvM⟩ | ⟨k, hk, hvk, hvM⟩ | ⟨t, ht1, htlt, -⟩
@@ -273,8 +254,7 @@ public theorem seed_spec {M w e : ℕ} (lit : ℕ) (hMw : M < 2 ^ w) (hM64 : M <
     · omega
   · have hcross : ∀ a b, a < m₂ → m₂ ≤ b → b < m₂ + m₃ → fieldK V₃ w a ≠ fieldK V₃ w b := by
       intro a b ha hb hbm heq'
-      obtain ⟨d, hd⟩ : ∃ d, b = m₂ + d := ⟨b - m₂, by omega⟩
-      subst hd
+      obtain ⟨d, rfl⟩ := Nat.exists_eq_add_of_le hb
       rw [hb₃ a ha, hf₂ a ha, hf₃ d (by omega)] at heq'
       exact absurd (prime_base_eq Nat.prime_two Nat.prime_three (by omega) heq') (by omega)
     rcases Nat.lt_or_ge j₁ m₂ with h₁ | h₁ <;> rcases Nat.lt_or_ge j₂ m₂ with h₂ | h₂
@@ -283,10 +263,8 @@ public theorem seed_spec {M w e : ℕ} (lit : ℕ) (hMw : M < 2 ^ w) (hM64 : M <
       omega
     · exact absurd heq (hcross j₁ j₂ h₁ h₂ hj₂)
     · exact absurd heq.symm (hcross j₂ j₁ h₂ h₁ hj₁)
-    · obtain ⟨d₁, hd₁⟩ : ∃ d, j₁ = m₂ + d := ⟨j₁ - m₂, by omega⟩
-      obtain ⟨d₂, hd₂⟩ : ∃ d, j₂ = m₂ + d := ⟨j₂ - m₂, by omega⟩
-      subst hd₁
-      subst hd₂
+    · obtain ⟨d₁, rfl⟩ := Nat.exists_eq_add_of_le h₁
+      obtain ⟨d₂, rfl⟩ := Nat.exists_eq_add_of_le h₂
       rw [hf₃ d₁ (by omega), hf₃ d₂ (by omega)] at heq
       have := Nat.pow_right_injective (by omega : 2 ≤ 3) heq
       omega
@@ -311,8 +289,7 @@ public theorem hpVal_iff {lit M fuel v : ℕ} (hsieve : IsSieve M lit)
         rcases (by omega : p = 2 ∨ p = 3 ∨ p = 4) with h | h | h
         · exact Or.inl h
         · exact Or.inr h
-        · exfalso
-          rw [h] at hp
+        · rw [h] at hp
           exact absurd hp (by decide)
       rcases hp23 with rfl | rfl
       · exact Or.inl ⟨k, hk, hvk, hvM⟩
