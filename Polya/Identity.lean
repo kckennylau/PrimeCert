@@ -67,13 +67,10 @@ public theorem sum_divisors_liouville {n : ℕ} (hn : n ≠ 0) :
       if_pos ((isSquare_iff_even_factorization hn).1 hsq p)]
   · rw [if_neg hsq]
     obtain ⟨p, hp⟩ : ∃ p, ¬ Even (n.factorization p) := by
-      by_contra h
-      exact hsq ((isSquare_iff_even_factorization hn).2 (by simpa using h))
-    have hmem : p ∈ n.factorization.support := by
-      simp only [Finsupp.mem_support_iff]
-      rintro h0
-      rw [h0] at hp
-      exact hp ⟨0, rfl⟩
+      by_contra! h
+      exact hsq ((isSquare_iff_even_factorization hn).2 h)
+    have hmem : p ∈ n.factorization.support :=
+      Finsupp.mem_support_iff.2 fun h0 => hp (by simp [h0])
     refine Finset.prod_eq_zero hmem ?_
     rw [hpow p _ (Nat.prime_of_mem_primeFactors (by simpa using hmem)), if_neg hp]
 
