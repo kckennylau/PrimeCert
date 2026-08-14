@@ -24,26 +24,12 @@ open PrimeCert.Sieve (IsSieve num)
 theorem not_prime_five_le {p k v : ℕ} (hp : p.Prime) (hk : 1 ≤ k) (hv : v = p ^ k)
     (hcase : p < 5 ∨ 2 ≤ k) : ¬ (v.Prime ∧ 5 ≤ v) := by
   rintro ⟨hvp, hv5⟩
-  rcases Nat.lt_or_ge k 2 with hk1 | hk2
-  · have hk' : k = 1 := by omega
-    subst hk'
-    rw [Nat.pow_one] at hv
-    have hp5 : p < 5 := by
-      rcases hcase with h | h
-      · exact h
-      · omega
+  subst hv
+  have hpk : Prime p ∧ k = 1 := prime_pow_iff.1 (Nat.prime_iff.1 hvp)
+  rcases hcase with h | h
+  · rw [hpk.2, Nat.pow_one] at hv5
     omega
-  · have h2 := hp.two_le
-    have hdvd : p ∣ v := by
-      rw [hv]
-      exact dvd_pow_self p (by omega)
-    have hplt : p < v := by
-      rw [hv]
-      calc p = p ^ 1 := (Nat.pow_one p).symm
-        _ < p ^ k := Nat.pow_lt_pow_right hp.one_lt (by omega)
-    rcases hvp.eq_one_or_self_of_dvd p hdvd with h | h
-    · omega
-    · omega
+  · omega
 
 /-- The numbers the walk visits stay in range. -/
 theorem num_le_of_lt_fuel {M fuel t : ℕ} (hfuel : 3 * fuel + 2 ≤ M) (ht : t < 1 + fuel) :
