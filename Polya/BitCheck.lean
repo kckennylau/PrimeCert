@@ -40,6 +40,16 @@ theorem bitCheckStepK_eq (qs w lit st i : ℕ) :
     Nat.succ_eq_add_one]
   rfl
 
+/-- The flag a step carries is a product of four tests, each `0` or `1`, so an odd state means
+every test passed. -/
+theorem tests_of_flag {a b c d e : ℕ} (ha : a ≤ 1) (hb : b ≤ 1) (hc : c ≤ 1) (hd : d ≤ 1)
+    (h : (e * 2 + a * b * c * d) % 2 = 1) : a = 1 ∧ b = 1 ∧ c = 1 ∧ d = 1 := by
+  have hle : a * b * c * d ≤ 1 :=
+    le_trans (Nat.mul_le_mul (Nat.mul_le_mul (Nat.mul_le_mul ha hb) hc) hd) (by omega)
+  have hprod : a * b * c * d = 1 := by omega
+  simp only [mul_eq_one] at hprod
+  omega
+
 /-- Every field passed its tests, and the sieve indices strictly increase. -/
 public theorem bitCheckLoopK_spec {qs w lit : ℕ} (fuel : ℕ)
     (h : bitCheckLoopK qs w lit 1 0 fuel % 2 = 1) :
@@ -51,34 +61,12 @@ public theorem bitCheckLoopK_spec {qs w lit : ℕ} (fuel : ℕ)
   | zero => exact ⟨by omega, by omega, by omega⟩
   | succ f ih =>
     rw [bitCheckLoopK_succ, Nat.zero_add, bitCheckStepK_eq] at h ⊢
-    have hf1 : bitCheckLoopK qs w lit 1 0 f % 2 ≤ 1 := by omega
-    have hf2 : (if fieldK qs w f % 6 % 4 = 1 then 1 else 0) ≤ 1 := by split <;> omega
-    have hf3 : (if bitCheckLoopK qs w lit 1 0 f / 2 + 1 ≤ idx (fieldK qs w f) then 1 else 0) ≤ 1 :=
-      by split <;> omega
-    have hf4 : (lit >>> idx (fieldK qs w f)) % 2 ≤ 1 := by omega
-    have hple : (bitCheckLoopK qs w lit 1 0 f % 2) *
-        (if fieldK qs w f % 6 % 4 = 1 then 1 else 0) *
-        (if bitCheckLoopK qs w lit 1 0 f / 2 + 1 ≤ idx (fieldK qs w f) then 1 else 0) *
-        ((lit >>> idx (fieldK qs w f)) % 2) ≤ 1 :=
-      le_trans (Nat.mul_le_mul (Nat.mul_le_mul (Nat.mul_le_mul hf1 hf2) hf3) hf4) (by omega)
-    have hprod : (bitCheckLoopK qs w lit 1 0 f % 2) *
-        (if fieldK qs w f % 6 % 4 = 1 then 1 else 0) *
-        (if bitCheckLoopK qs w lit 1 0 f / 2 + 1 ≤ idx (fieldK qs w f) then 1 else 0) *
-        ((lit >>> idx (fieldK qs w f)) % 2) = 1 := by omega
-    have hfac : ∀ {a b : ℕ}, a * b = 1 → a = 1 ∧ b = 1 := fun hab =>
-      ⟨Nat.eq_one_of_mul_eq_one_right hab, Nat.eq_one_of_mul_eq_one_left hab⟩
-    obtain ⟨habc, hset⟩ := hfac hprod
-    obtain ⟨hab, hriseif⟩ := hfac habc
-    obtain ⟨hok, hmodif⟩ := hfac hab
-    have hmod : fieldK qs w f % 6 % 4 = 1 := by
-      by_contra hne
-      rw [if_neg hne] at hmodif
-      omega
+    obtain ⟨hok, hmodif, hriseif, hset⟩ := tests_of_flag (by omega) (by split <;> omega)
+      (by split <;> omega) (by omega) h
+    simp only [hok, hmodif, hriseif, hset, Nat.mul_one]
+    have hmod : fieldK qs w f % 6 % 4 = 1 := by simpa using hmodif
     have hrise : bitCheckLoopK qs w lit 1 0 f / 2 + 1 ≤ idx (fieldK qs w f) := by
-      by_contra hne
-      rw [if_neg hne] at hriseif
-      omega
-    rw [hprod] at h ⊢
+      simpa using hriseif
     obtain ⟨ihtests, ihmono, ihtop⟩ := ih hok
     refine ⟨fun i hi => ?_, fun i j hij hj => ?_, fun _ => ?_⟩
     · rcases Nat.lt_or_ge i f with hif | hif
@@ -115,24 +103,24 @@ public theorem fieldK_prime {qs w lit M cnt : ℕ} (hsieve : IsSieve M lit)
     {i : ℕ} (hi : i < cnt) (hbound : fieldK qs w i ≤ M) : (fieldK qs w i).Prime := by
   obtain ⟨htests, -, -⟩ := bitCheckLoopK_spec cnt h
   obtain ⟨hmod, hpos, hset⟩ := htests i hi
-  have hnum : num (idx (fieldK qs w i)) = fieldK qs w i := by
-    refine num_idx ?_
-    omega
+  have hnum : num (idx (fieldK qs w i)) = fieldK qs w i := num_idx (by omega)
   have hbit : lit.testBit (idx (fieldK qs w i)) = true := by
     rw [Nat.shiftRight_eq_div_pow] at hset
-    rw [Nat.testBit_eq_decide_div_mod_eq]
-    simp only [decide_eq_true_eq]
-    omega
+    simp [Nat.testBit_eq_decide_div_mod_eq, hset]
   exact hnum ▸ (hsieve _ (by omega) (by rw [hnum]; exact hbound)).1 hbit
+
+/-- A strictly increasing map is injective below the bound. -/
+public theorem eq_of_mono {f : ℕ → ℕ} {n : ℕ} (hmono : ∀ i j, i < j → j < n → f i < f j)
+    {a b : ℕ} (ha : a < n) (hb : b < n) (hab : f a = f b) : a = b := by
+  rcases Nat.lt_trichotomy a b with h | h | h
+  · exact absurd hab (Nat.ne_of_lt (hmono a b h hb))
+  · exact h
+  · exact absurd hab.symm (Nat.ne_of_lt (hmono b a h ha))
 
 /-- The fields that passed are distinct: their sieve indices rise. -/
 public theorem fieldK_injOn {qs w lit cnt : ℕ} (h : bitCheckLoopK qs w lit 1 0 cnt % 2 = 1)
     {i j : ℕ} (hi : i < cnt) (hj : j < cnt) (heq : fieldK qs w i = fieldK qs w j) : i = j := by
   obtain ⟨-, hmono, -⟩ := bitCheckLoopK_spec cnt h
-  by_contra hne
-  rcases Nat.lt_or_ge i j with hij | hij
-  · exact absurd (congrArg idx heq) (Nat.ne_of_lt (hmono i j hij hj))
-  · have hji : j < i := by omega
-    exact absurd (congrArg idx heq.symm) (Nat.ne_of_lt (hmono j i hji hi))
+  exact eq_of_mono hmono hi hj (congrArg idx heq)
 
 end PrimeCert.Polya
