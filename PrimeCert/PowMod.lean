@@ -19,8 +19,6 @@ slower and less efficiently than the one here.
 
 open Nat
 
-/-- The pow-mod function, named explicitly to allow more precise control of reduction. -/
-@[expose] public def powMod (a b n : ℕ) : ℕ := a ^ b % n
 /-- The pow-mod auxiliary function, named explicitly to allow more precise control of reduction. -/
 def powModAux (a b c n : ℕ) : ℕ := (a ^ b * c) % n
 
@@ -42,7 +40,7 @@ where
 
 /-- Computable version of `powModK` using `partial_fixpoint`. Used at elaboration time
 (e.g. in `mkPowModEq'`) where we need actual computation, not kernel reduction. -/
-public def powModK' (a b n : ℕ) : ℕ :=
+public def powMod (a b n : ℕ) : ℕ :=
   aux (a % n) b 1
   where aux (a b c : ℕ) : ℕ :=
     if b = 0 then c % n
@@ -93,15 +91,15 @@ lemma powModK_aux_eq (n a b c fuel) (hfuel : b < fuel) :
       congr! 3
       lia
 
-public lemma powModK_eq (a b n : ℕ) : powModK a b n = powMod a b n := by
+public lemma powModK_eq (a b n : ℕ) : powModK a b n = a ^ b % n := by
   rw [powModK, powModK_aux_eq _ _ _ _ _ (by omega)]
-  rw [powModAux, mul_one, powMod, mod_eq_mod, ← Nat.pow_mod]
+  rw [powModAux, mul_one, mod_eq_mod, ← Nat.pow_mod]
 
 public lemma powMod_eq_of_powModK (a b n m : ℕ) (h : (powModK a b n).beq m) :
-    powMod a b n = m := by
+    a ^ b % n = m := by
   rwa [powModK_eq, beq_eq] at h
 
 public lemma powMod_ne_of_powModK (a b n m : ℕ) (h : (powModK a b n).beq m = false) :
-    powMod a b n ≠ m := by
+    a ^ b % n ≠ m := by
   have := Nat.ne_of_beq_eq_false h
   rwa [powModK_eq] at this

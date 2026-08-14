@@ -116,12 +116,12 @@ theorem pocklington3_test (N F R m r s : ℕ)
     · lia
 
 theorem Pocklington3Cert.of_prime (r s p : Nat) (hp : Nat.Prime p) (h2p : 2 < p)
-    (cond : powMod (r ^ 2 - 8 * s) (p / 2) p = p - 1) :
+    (cond : (r ^ 2 - 8 * s) ^ (p / 2) % p = p - 1) :
     Pocklington3Cert r s := by
   refine .inr <| .inl fun h ↦ ?_
   have p_odd : p % 2 = 1 := by rw [← Nat.not_even_iff, Nat.Prime.even_iff hp]; lia
   obtain ⟨a, ha⟩ := h
-  rw [ha, powMod, ← sq, ← pow_mul, Nat.two_mul_odd_div_two p_odd] at cond
+  rw [ha, ← sq, ← pow_mul, Nat.two_mul_odd_div_two p_odd] at cond
   replace cond := congr(($cond : ZMod p))
   have := Fact.mk hp
   rw [ZMod.natCast_mod, Nat.cast_pow, Nat.cast_sub hp.one_le, ZMod.natCast_self, zero_sub,
@@ -260,11 +260,11 @@ public theorem pocklington3_certK (N root m e : ℕ) (F' : List PrimePow)
     rw [← Nat.div_add_mod R (2 * F), ← h_two_F]; rfl
   refine pocklington3_test N F R m r s R_def (mul_comm 2 F ▸ rfl) (mul_comm 2 F ▸ rfl)
     (by lia) odd_N (Nat.odd_iff.mpr odd_R) ?_ ?_ ?_ ?_
-  · simp only [List.rec_and, Nat.beq_eq, powMod] at primitive
+  · simp only [List.rec_and, Nat.beq_eq] at primitive
     rw [F_def, ← PrimePow.toNat_def ⟨2, e, Nat.prime_two, by simpa⟩, mul_comm, ← List.prod_cons,
       ← List.map_cons]
     refine fun p hp ↦ ⟨root, ?_, ?_⟩
-    · rw [Nat.ModEq, Nat.one_mod_eq_one.mpr hn₁, ← powMod, psp]
+    · rw [Nat.ModEq, Nat.one_mod_eq_one.mpr hn₁, psp]
     · obtain ⟨pp, hpp, rfl⟩ := mem_primeFactors_prod_toNat _ _ hp
       rw [List.mem_cons] at hpp
       refine of_gcd_pred_mod_eq_one _ _ ?_ (by lia)

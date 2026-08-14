@@ -120,7 +120,7 @@ public theorem PocklingtonPred.step_pow {N root F₂ p e : ℕ} (hp : p.Prime)
   by_cases he : e = 0
   · simpa [he]
   by_cases hn : N = 0
-  · simp [hn, predModK, powModK_eq, powMod] at step
+  · simp [hn, predModK, powModK_eq] at step
   rw [PocklingtonPred] at ih ⊢
   rw [Nat.mul_eq, Nat.pow_eq]
   rw [Nat.primeFactors_mul hf₂ (pow_ne_zero _ hp.ne_zero), Nat.primeFactors_prime_pow he hp]
@@ -129,7 +129,7 @@ public theorem PocklingtonPred.step_pow {N root F₂ p e : ℕ} (hp : p.Prime)
   simp only [Nat.pred_eq_sub_one, Nat.div_eq_div, Nat.beq_eq] at step
   simp only [Nat.blt_eq] at hroot
   rw [predModK_eq hn (by rw [powModK_eq]; exact (Nat.mod_lt _ (by lia)).le),
-    ← Nat.add_sub_assoc (by lia), powModK_eq, powMod] at step
+    ← Nat.add_sub_assoc (by lia), powModK_eq] at step
   by_cases hp : root ^ ((N - 1) / p) % N = 0
   · rw [← Nat.dvd_iff_mod_eq_zero] at hp
     obtain ⟨r, hr⟩ := hp
