@@ -35,15 +35,11 @@ theorem strideMaskK_succ (q M r : ℕ) :
 
 theorem strideMaskK_succ_of_le {q M r : ℕ} (h : q <<< r ≤ M) :
     strideMaskK q M (r + 1) = strideMaskK q M r ||| (strideMaskK q M r <<< (q <<< r)) := by
-  have hb : (q <<< r).ble M = true := by simpa using h
-  rw [strideMaskK_succ, hb]
+  rw [strideMaskK_succ, bool_rec_ble_eq, if_pos h]
 
 theorem strideMaskK_succ_of_gt {q M r : ℕ} (h : M < q <<< r) :
     strideMaskK q M (r + 1) = strideMaskK q M r := by
-  have hb : (q <<< r).ble M = false := by
-    simp only [Bool.eq_false_iff, ne_eq, Nat.ble_eq]
-    omega
-  rw [strideMaskK_succ, hb]
+  rw [strideMaskK_succ, bool_rec_ble_eq, if_neg (by omega)]
 
 /-- Every set bit of a stride mask sits at a positive multiple of `q`. -/
 public theorem dvd_of_testBit_strideMaskK {q M r j : ℕ} (hq : 0 < q)
