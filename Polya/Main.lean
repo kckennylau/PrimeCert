@@ -73,15 +73,13 @@ public theorem tables_of_data {x M rootx top w r wc chunks off wb qs np cnt chun
       omega
     have := bitSum_le (lamK qs w M r cnt / 2 ^ 1) n
     omega
-  have hlowbound : ∀ j < rootx + 1, lowVal lam ones wc off j < 2 ^ wb := by
-    intro j hj
+  have hlowbound : ∀ j < rootx + 1, lowVal lam ones wc off j < 2 ^ wb := fun j hj => by
     simp only [lowVal]
     omega
   have hdiv : ∀ m, top + 1 ≤ m → x / m ≤ M := fun m hm =>
     le_trans (Nat.div_le_div_left hm (by omega)) hcut
   have hhibound : ∀ j, top + 1 ≤ j → j < top + 1 + (rootx - top) →
-      hiVal x lam ones wc off j < 2 ^ wb := by
-    intro j hj1 hj2
+      hiVal x lam ones wc off j < 2 ^ wb := fun j hj1 _ => by
     have := hdiv j hj1
     simp only [hiVal]
     omega
