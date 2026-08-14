@@ -55,47 +55,45 @@ public theorem fieldK_lt (qs w i : ℕ) : fieldK qs w i < 2 ^ w := by
 public theorem fieldK_eq_zero_of_lt {t w i : ℕ} (ht : t < 2 ^ (w * i)) : fieldK t w i = 0 := by
   rw [fieldK_eq_div_mod, Nat.div_eq_of_lt ht, Nat.zero_mod]
 
+/-- One field further along starts `w` positions higher. -/
+theorem mul_succ_le_mul {w a b : ℕ} (h : a < b) : w * a + w ≤ w * b := by
+  rw [← Nat.mul_succ]
+  exact Nat.mul_le_mul_left w h
+
+/-- Reading a field distributes over a bitwise or. -/
+theorem fieldK_lor (a b w j : ℕ) : fieldK (a ||| b) w j = fieldK a w j ||| fieldK b w j := by
+  refine Nat.eq_of_testBit_eq fun i => ?_
+  simp [Bool.and_or_distrib_left]
+
+/-- A value written at field `i` reads back there. -/
+theorem fieldK_shiftLeft_self {val w i : ℕ} (hv : val < 2 ^ w) :
+    fieldK (val <<< (w * i)) w i = val := by
+  rw [fieldK_eq_div_mod, Nat.shiftLeft_eq, Nat.mul_div_cancel _ (Nat.two_pow_pos _),
+    Nat.mod_eq_of_lt hv]
+
+/-- A value written at field `i` leaves every other field clear. -/
+theorem fieldK_shiftLeft_ne {val w i j : ℕ} (hv : val < 2 ^ w) (hij : j ≠ i) :
+    fieldK (val <<< (w * i)) w j = 0 := by
+  refine Nat.eq_of_testBit_eq fun b => ?_
+  rcases Nat.lt_or_ge b w with hb | hb
+  · rcases Nat.lt_or_ge j i with h | h
+    · have := mul_succ_le_mul (w := w) h
+      simp [hb, Nat.testBit_shiftLeft, Nat.not_le.2 (by omega : b + w * j < w * i)]
+    · have := mul_succ_le_mul (w := w) (by omega : i < j)
+      have hzero : val.testBit (b + w * j - w * i) = false :=
+        Nat.testBit_lt_two_pow (lt_of_lt_of_le hv (Nat.pow_le_pow_right (by omega) (by omega)))
+      simp [hb, Nat.testBit_shiftLeft, hzero]
+  · simp [Nat.not_lt.2 hb]
+
 /-- Writing a field leaves the other fields alone, wherever it is written. -/
 public theorem fieldK_lor_shiftLeft_ne {t val w i j : ℕ} (hv : val < 2 ^ w) (hij : j ≠ i) :
     fieldK (t ||| val <<< (w * i)) w j = fieldK t w j := by
-  refine Nat.eq_of_testBit_eq fun b => ?_
-  rw [testBit_fieldK, testBit_fieldK]
-  rcases lt_or_ge b w with hb | hb
-  · have hne : val.testBit (b + w * j - w * i) = false ∨ b + w * j < w * i := by
-      rcases Nat.lt_or_ge j i with h | h
-      · refine Or.inr ?_
-        have h1 : w * j + w ≤ w * i := by
-          rw [← Nat.mul_succ]
-          exact Nat.mul_le_mul_left w h
-        omega
-      · have hji : i < j := by omega
-        refine Or.inl (Nat.testBit_lt_two_pow (lt_of_lt_of_le hv (Nat.pow_le_pow_right ?_ ?_)))
-        · omega
-        · have h1 : w * i + w ≤ w * j := by
-            rw [← Nat.mul_succ]
-            exact Nat.mul_le_mul_left w hji
-          omega
-    rcases hne with h | h
-    · simp [hb, Nat.testBit_shiftLeft, h]
-    · simp [hb, Nat.testBit_shiftLeft, Nat.not_le.2 h]
-  · simp [Nat.not_lt.2 hb]
+  rw [fieldK_lor, fieldK_shiftLeft_ne hv hij, Nat.or_zero]
 
 /-- Writing over a clear field reads the value back. -/
 public theorem fieldK_lor_shiftLeft_of_zero {t val w i : ℕ} (ht : fieldK t w i = 0)
     (hv : val < 2 ^ w) : fieldK (t ||| val <<< (w * i)) w i = val := by
-  refine Nat.eq_of_testBit_eq fun b => ?_
-  rw [testBit_fieldK]
-  rcases lt_or_ge b w with hb | hb
-  · have htb : t.testBit (b + w * i) = false := by
-      have h0 : (fieldK t w i).testBit b = false := by
-        rw [ht]
-        simp
-      rw [testBit_fieldK] at h0
-      simpa [hb] using h0
-    simp [hb, Nat.testBit_shiftLeft, htb]
-  · have : val.testBit b = false :=
-      Nat.testBit_lt_two_pow (lt_of_lt_of_le hv (Nat.pow_le_pow_right (by omega) hb))
-    simp [Nat.not_lt.2 hb, this]
+  rw [fieldK_lor, ht, fieldK_shiftLeft_self hv, Nat.zero_or]
 
 /-- Shifting a table down by whole fields renumbers them. -/
 public theorem fieldK_shiftRight (qs w n j : ℕ) :
