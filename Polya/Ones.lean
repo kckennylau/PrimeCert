@@ -39,23 +39,15 @@ theorem onesLoopK_spec {lam w : ℕ} (hw : ∀ n, bitSum lam n < 2 ^ w) (fuel : 
       onesLoopK lam w 0 0 fuel < 2 ^ (w * (fuel + 1)) := by
   induction fuel with
   | zero =>
-    constructor
-    · intro i hi
-      have hi0 : i = 0 := by omega
-      subst hi0
-      simp [onesLoopK, fieldK_eq_div_mod, bitSum]
-    · simp only [onesLoopK]
-      exact Nat.two_pow_pos _
+    refine ⟨fun i hi => ?_, Nat.two_pow_pos _⟩
+    obtain rfl : i = 0 := by omega
+    simp [onesLoopK, fieldK_eq_div_mod, bitSum]
   | succ f ih =>
     obtain ⟨ihfield, ihlt⟩ := ih
     have hval : fieldK (onesLoopK lam w 0 0 f) w f +
         popc32K ((lam >>> (32 * f)) &&& ((1 <<< 32) - 1))
         = bitSum lam (32 * (f + 1)) := by
-      rw [ihfield f (by omega), popc32K_chunk lam f]
-      have hsplit := bitSum_add lam (32 * f) 32
-      have harith : 32 * f + 32 = 32 * (f + 1) := by omega
-      rw [harith] at hsplit
-      omega
+      rw [ihfield f (by omega), popc32K_chunk lam f, ← bitSum_add, Nat.mul_succ]
     have hlt : bitSum lam (32 * (f + 1)) < 2 ^ w := hw _
     have hstep : onesLoopK lam w 0 0 (f + 1)
         = onesLoopK lam w 0 0 f ||| (bitSum lam (32 * (f + 1))) <<< (w * (f + 1)) := by
@@ -64,14 +56,11 @@ theorem onesLoopK_spec {lam w : ℕ} (hw : ∀ n, bitSum lam n < 2 ^ w) (fuel : 
         Nat.add_eq, Nat.succ_eq_add_one, Nat.zero_add]
       rw [hval]
     rw [hstep]
-    constructor
-    · intro i hi
-      rcases Nat.lt_or_ge i (f + 1) with h | h
-      · rw [fieldK_lor_shiftLeft_ne hlt (by omega), ihfield i (by omega)]
-      · have hif : i = f + 1 := by omega
-        subst hif
-        rw [fieldK_lor_shiftLeft_of_zero (fieldK_eq_zero_of_lt ihlt) hlt]
-    · exact lor_shiftLeft_lt ihlt hlt
+    refine ⟨fun i hi => ?_, lor_shiftLeft_lt ihlt hlt⟩
+    rcases Nat.lt_or_ge i (f + 1) with h | h
+    · rw [fieldK_lor_shiftLeft_ne hlt (by omega), ihfield i (by omega)]
+    · obtain rfl : i = f + 1 := by omega
+      rw [fieldK_lor_shiftLeft_of_zero (fieldK_eq_zero_of_lt ihlt) hlt]
 
 /-- Field `i` of the counts table holds the set bits of `lam` below position `32 * i`. -/
 public theorem fieldK_onesK {lam w cnt i : ℕ} (hw : ∀ n, bitSum lam n < 2 ^ w) (hi : i ≤ cnt) :
@@ -87,19 +76,14 @@ public theorem onesBelowK_eq {lam ones wc p : ℕ}
       = fieldK ones wc (p / 32) := by
     rw [land_shiftLeft_shiftRight, fieldK]
     simp [Nat.one_shiftLeft]
-  have hlt : (lam / 2 ^ (32 * (p / 32))) % 2 ^ (p % 32) < 2 ^ (p % 32) :=
-    Nat.mod_lt _ (Nat.two_pow_pos _)
   have hpart : popc32K ((lam &&& ((2 ^ (p % 32) - 1) <<< ((p / 32) * 32))) >>> ((p / 32) * 32))
       = bitSum (lam / 2 ^ (32 * (p / 32))) (p % 32) := by
     rw [land_shiftLeft_shiftRight, Nat.and_two_pow_sub_one_eq_mod, Nat.shiftRight_eq_div_pow,
-      Nat.mul_comm (p / 32) 32, popc32K_eq_bitSum _, bitSum_of_lt hlt (by omega), bitSum_mod]
+      Nat.mul_comm (p / 32) 32, popc32K_eq_bitSum _,
+      bitSum_of_lt (Nat.mod_lt _ (Nat.two_pow_pos _)) (by omega), bitSum_mod]
   rw [onesBelowK]
   simp only [Nat.div_eq_div, Nat.mod_eq_mod, Nat.land_eq, Nat.shiftRight_eq', Nat.shiftLeft_eq',
     Nat.sub_eq, Nat.add_eq, Nat.mul_eq, Nat.one_shiftLeft]
-  rw [hfield, hones, hpart]
-  have hsplit := bitSum_add lam (32 * (p / 32)) (p % 32)
-  have harith : 32 * (p / 32) + p % 32 = p := by omega
-  rw [harith] at hsplit
-  omega
+  rw [hfield, hones, hpart, ← bitSum_add, Nat.div_add_mod]
 
 end PrimeCert.Polya
