@@ -85,9 +85,8 @@ theorem powStepK_eq (M w q st : ℕ) :
 theorem powStepK_of_le {M w q st c pw V : ℕ} (h : IsPowState w st c pw V) (hq : 1 ≤ q)
     (hle : pw * q ≤ M) (hM : M < 2 ^ w) (hM64 : M < 2 ^ 64) (hc : c + 1 < 2 ^ 64) :
     IsPowState w (powStepK M w q st) (c + 1) (pw * q) (V + pw * q * 2 ^ (w * c)) := by
+  rw [powStepK_eq, h.pow_eq, h.count_eq, if_pos hle]
   obtain ⟨hst, hc64, hpw64, hV⟩ := h
-  rw [powStepK_eq, IsPowState.pow_eq ⟨hst, hc64, hpw64, hV⟩,
-    IsPowState.count_eq ⟨hst, hc64, hpw64, hV⟩, if_pos hle]
   obtain ⟨d, hd⟩ : ∃ d, pw * q = pw + d := ⟨pw * q - pw, by
     have := Nat.le_mul_of_pos_right pw (Nat.lt_of_lt_of_le Nat.zero_lt_one hq)
     omega⟩
