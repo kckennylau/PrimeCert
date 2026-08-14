@@ -63,10 +63,7 @@ theorem blockLoopK_spec {x v rootx low hi wb off st k₀ A₀ B₀ : ℕ} (hoff 
     have hmod : (k + 2 ^ 64 * A + 2 ^ 128 * B) % 2 ^ 64 = k := by
       have hsplit : k + 2 ^ 64 * A + 2 ^ 128 * B = k + 2 ^ 64 * (A + 2 ^ 64 * B) := by ring
       rw [hsplit, Nat.add_mul_mod_self_left, Nat.mod_eq_of_lt (by omega)]
-    have hsub : k + 2 ^ 64 * A + 2 ^ 128 * B - k = 2 ^ 64 * A + 2 ^ 128 * B := by
-      have hcomm : k + 2 ^ 64 * A + 2 ^ 128 * B = 2 ^ 64 * A + 2 ^ 128 * B + k := by ring
-      rw [hcomm, Nat.add_sub_cancel]
-    rw [hmod, hsub]
+    rw [hmod, (by omega : k + 2 ^ 64 * A + 2 ^ 128 * B - k = 2 ^ 64 * A + 2 ^ 128 * B)]
     have hvallt : (if v / k ≤ rootx then fieldK low wb (v / k)
         else fieldK hi wb (x / (v / k))) < 2 ^ wb := by split <;> exact fieldK_lt _ _ _
     refine ⟨v / (v / k) + 1,
@@ -78,28 +75,16 @@ theorem blockLoopK_spec {x v rootx low hi wb off st k₀ A₀ B₀ : ℕ} (hoff 
     · have hstep : (v / (v / k) - k + 1) *
           (if v / k ≤ rootx then fieldK low wb (v / k) else fieldK hi wb (x / (v / k)))
             ≤ 2 * ((v / (v / k) - k + 1) * off) := by
-        have hle2 : (v / (v / k) - k + 1) *
-            (if v / k ≤ rootx then fieldK low wb (v / k) else fieldK hi wb (x / (v / k)))
-              ≤ (v / (v / k) - k + 1) * (2 * off) :=
-          Nat.mul_le_mul_left _ (by omega)
-        have heq : (v / (v / k) - k + 1) * (2 * off) = 2 * ((v / (v / k) - k + 1) * off) := by ring
-        omega
+        rw [Nat.mul_left_comm]
+        exact Nat.mul_le_mul_left _ (by omega)
       omega
     · rcases hcase with ⟨hk2, hB, hsum⟩ | hbad
       · rcases Nat.lt_or_ge v k with hgt | hle
-        · refine Or.inr ?_
-          have hkv1 : k = v + 1 := by omega
-          have hq0 : v / k = 0 := by
-            rw [hkv1]
-            exact Nat.div_eq_of_lt (by omega)
-          have hrun1 : v / (v / k) - k + 1 = 1 := by
-            rw [hq0, Nat.div_zero]
-            omega
-          have hBv : B = off * (v - 1) := by
-            rw [hB, hkv1]
-            have hvv : v + 1 - 2 = v - 1 := by omega
-            rw [hvv]
-          rw [hrun1, hBv, Nat.one_mul]
+        · obtain rfl : k = v + 1 := by omega
+          have hq0 : v / (v + 1) = 0 := Nat.div_eq_of_lt (by omega)
+          refine Or.inr ?_
+          rw [hq0, Nat.div_zero, hB, (by omega : v + 1 - 2 = v - 1),
+            (by omega : 0 - (v + 1) + 1 = 1), Nat.one_mul]
           omega
         · have hkd : k ≤ v / (v / k) := le_div_div (by omega) hle
           refine Or.inl ⟨by omega, ?_, ?_⟩
@@ -107,22 +92,12 @@ theorem blockLoopK_spec {x v rootx low hi wb off st k₀ A₀ B₀ : ℕ} (hoff 
             have hcnt : v / (v / k) + 1 - 2 = k - 2 + (v / (v / k) - k + 1) := by omega
             rw [hcnt, Nat.mul_add]
             ring
-          · have hIcc : Finset.Icc k (v / (v / k)) = Finset.Ico k (v / (v / k) + 1) := by
-              ext a
-              simp only [Finset.mem_Icc, Finset.mem_Ico]
-              omega
-            have hsplit : Finset.Ico 2 k ∪ Finset.Ico k (v / (v / k) + 1)
-                = Finset.Ico 2 (v / (v / k) + 1) :=
-              Finset.Ico_union_Ico_eq_Ico (by omega) (by omega)
-            have hdisj : Disjoint (Finset.Ico 2 k) (Finset.Ico k (v / (v / k) + 1)) := by
-              rw [Finset.disjoint_left]
-              intro a ha ha'
-              simp only [Finset.mem_Ico] at ha ha'
-              omega
-            have hblock : ∑ j ∈ Finset.Icc k (v / (v / k)), L (v / j)
-                = ((v / (v / k) - k + 1 : ℕ) : ℤ) * L (v / k) := sum_run (by omega) hle _
-            rw [hIcc] at hblock
-            rw [← hsplit, Finset.sum_union hdisj, ← hsum, hblock]
+          · have hblock : ∑ j ∈ Finset.Ico k (v / (v / k) + 1), L (v / j)
+                = ((v / (v / k) - k + 1 : ℕ) : ℤ) * L (v / k) := by
+              rw [Finset.Ico_add_one_right_eq_Icc]
+              exact sum_run (by omega) hle _
+            rw [← Finset.Ico_union_Ico_eq_Ico (by omega : 2 ≤ k) (by omega),
+              Finset.sum_union (Finset.Ico_disjoint_Ico_consecutive 2 k _), ← hsum, hblock]
             have hvalL : ((if v / k ≤ rootx then fieldK low wb (v / k)
                 else fieldK hi wb (x / (v / k))) : ℤ) = L (v / k) + off := hvals k (by omega) hle
             push_cast
