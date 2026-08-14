@@ -123,51 +123,54 @@ theorem byte_pipeline : ∀ e < 256,
 
 /-! ## Peeling one byte -/
 
+/-- A repeated-byte mask splits at the byte boundary. -/
+theorem land_rep_succ {v m k : ℕ} (hm : m < 256) :
+    v &&& rep m (k + 1) = ((v % 256) &&& m) + 256 * ((v / 256) &&& rep m k) := by
+  rw [land_split_byte, rep_mod_byte hm, rep_div_byte hm]
+
+theorem shiftRight_div_byte (v s : ℕ) : (v >>> s) / 256 = (v / 256) >>> s := by
+  simp only [Nat.shiftRight_eq_div_pow, Nat.div_div_eq_div_mul, Nat.mul_comm]
+
+/-- A mask that stops below `2 ^ (8 - s)` reads the same byte before and after the shift. -/
+theorem land_shiftRight_byte {v m s : ℕ} (hs : s ≤ 8) (hm : m < 2 ^ (8 - s)) :
+    ((v >>> s) % 256) &&& m = ((v % 256) >>> s) &&& m := by
+  have h8 : (256 : ℕ) = 2 ^ 8 := rfl
+  rw [h8]
+  refine Nat.eq_of_testBit_eq fun i => ?_
+  rcases Nat.lt_or_ge i (8 - s) with h | h
+  · have hi8 : i < 8 := by omega
+    have hsi8 : s + i < 8 := by omega
+    simp only [Nat.testBit_and, Nat.testBit_mod_two_pow, Nat.testBit_shiftRight, hi8, hsi8,
+      decide_true, Bool.true_and]
+  · have hmi : m.testBit i = false :=
+      Nat.testBit_lt_two_pow (lt_of_lt_of_le hm (Nat.pow_le_pow_right (by omega) h))
+    simp [Nat.testBit_and, hmi]
+
+/-- A masked shift splits at the byte boundary. -/
+theorem land_shiftRight_rep_succ {v m k s : ℕ} (hs : s ≤ 8) (hm : m < 2 ^ (8 - s)) :
+    (v >>> s) &&& rep m (k + 1)
+      = (((v % 256) >>> s) &&& m) + 256 * (((v / 256) >>> s) &&& rep m k) := by
+  have hm256 : m < 256 := by
+    have hpow : (2 : ℕ) ^ (8 - s) ≤ 2 ^ 8 := Nat.pow_le_pow_right (by omega) (by omega)
+    omega
+  rw [land_rep_succ hm256, land_shiftRight_byte hs hm, shiftRight_div_byte]
+
 theorem stageA_succ (k v : ℕ) :
     stageA (k + 1) v = stageA 1 (v % 256) + 256 * stageA k (v / 256) := by
-  have hlow : ((v >>> 1) % 256) &&& 85 = ((v % 256) >>> 1) &&& 85 := by
-    rw [land_85 ((v >>> 1) % 256), land_85 ((v % 256) >>> 1)]
-    congr 1
-    simp only [Nat.shiftRight_eq_div_pow, Nat.reducePow]
-    omega
-  have hhigh : (v >>> 1) / 256 = (v / 256) >>> 1 := by
-    simp only [Nat.shiftRight_eq_div_pow, Nat.reducePow]
-    omega
-  have hand : (v >>> 1) &&& rep 85 (k + 1)
-      = (((v % 256) >>> 1) &&& 85) + 256 * (((v / 256) >>> 1) &&& rep 85 k) := by
-    rw [land_split_byte, rep_mod_byte (by omega), rep_div_byte (by omega), hlow, hhigh]
   have hle1 : ((v % 256) >>> 1) &&& 85 ≤ v % 256 := and_shiftRight_le _ _ _
   have hle2 : ((v / 256) >>> 1) &&& rep 85 k ≤ v / 256 := and_shiftRight_le _ _ _
   simp only [stageA, rep_one]
-  rw [hand]
+  rw [land_shiftRight_rep_succ (by omega) (by norm_num)]
   omega
 
 theorem stageB_succ (k v : ℕ) :
     stageB (k + 1) v = stageB 1 (v % 256) + 256 * stageB k (v / 256) := by
-  have hA := stageA_succ k v
   have hAlt : stageA 1 (v % 256) < 256 := (byte_pipeline _ (Nat.mod_lt _ (by omega))).1
   have h3 : (stageA 1 (v % 256) + 256 * stageA k (v / 256)) % 256 = stageA 1 (v % 256) := by omega
   have h4 : (stageA 1 (v % 256) + 256 * stageA k (v / 256)) / 256 = stageA k (v / 256) := by omega
-  have hand1 : stageA (k + 1) v &&& rep 51 (k + 1)
-      = (stageA 1 (v % 256) &&& 51) + 256 * (stageA k (v / 256) &&& rep 51 k) := by
-    rw [hA, land_split_byte, rep_mod_byte (by omega), rep_div_byte (by omega), h3, h4]
-  have hand2 : (stageA (k + 1) v >>> 2) &&& rep 51 (k + 1)
-      = ((stageA 1 (v % 256) >>> 2) &&& 51) + 256 * ((stageA k (v / 256) >>> 2) &&& rep 51 k) := by
-    have hlow : (((stageA 1 (v % 256) + 256 * stageA k (v / 256)) >>> 2) % 256) &&& 51
-        = (stageA 1 (v % 256) >>> 2) &&& 51 := by
-      rw [land_51 _, land_51 (stageA 1 (v % 256) >>> 2)]
-      congr 1
-      simp only [Nat.shiftRight_eq_div_pow, Nat.reducePow]
-      omega
-    have hhigh : ((stageA 1 (v % 256) + 256 * stageA k (v / 256)) >>> 2) / 256
-        = stageA k (v / 256) >>> 2 := by
-      simp only [Nat.shiftRight_eq_div_pow, Nat.reducePow]
-      omega
-    rw [hA, land_split_byte, rep_mod_byte (by omega), rep_div_byte (by omega), hlow, hhigh]
-  have hb1 : stageA 1 (v % 256) &&& 51 ≤ 51 := Nat.and_le_right
-  have hb2 : (stageA 1 (v % 256) >>> 2) &&& 51 ≤ 51 := Nat.and_le_right
   simp only [stageB, rep_one]
-  rw [hand1, hand2]
+  rw [stageA_succ k v, land_rep_succ (by norm_num),
+    land_shiftRight_rep_succ (by omega) (by norm_num), h3, h4]
   omega
 
 theorem stageB_mod_16 (k v : ℕ) : stageB k v % 16 ≤ 4 := by
@@ -185,8 +188,7 @@ theorem stageC_byte_split {a b k : ℕ} (ha : a ≤ 68) (hb : b % 16 ≤ 4) :
   simp only [Nat.shiftRight_eq_div_pow, Nat.reducePow]
   rw [(by omega : a + 256 * b + (a + 256 * b) / 16
       = a + a / 16 + 16 * (b % 16) + 256 * (b + b / 16)),
-    land_split_byte, rep_mod_byte (by omega : (15:ℕ) < 256),
-    rep_div_byte (by omega : (15:ℕ) < 256),
+    land_rep_succ (by omega : (15:ℕ) < 256),
     (by omega : (a + a / 16 + 16 * (b % 16) + 256 * (b + b / 16)) % 256
       = a + a / 16 + 16 * (b % 16)),
     (by omega : (a + a / 16 + 16 * (b % 16) + 256 * (b + b / 16)) / 256 = b + b / 16),
