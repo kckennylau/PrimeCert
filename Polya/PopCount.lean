@@ -178,38 +178,26 @@ theorem stageB_mod_16 (k v : ℕ) : stageB k v % 16 ≤ 4 := by
     have h := (byte_pipeline (v % 256) (Nat.mod_lt _ (by omega))).2.2.1
     omega
 
+/-- The last stage of a two-byte value splits into the stages of its bytes. -/
+theorem stageC_byte_split {a b k : ℕ} (ha : a ≤ 68) (hb : b % 16 ≤ 4) :
+    (a + 256 * b + ((a + 256 * b) >>> 4)) &&& rep 15 (k + 1)
+      = ((a + a >>> 4) &&& 15) + 256 * ((b + b >>> 4) &&& rep 15 k) := by
+  simp only [Nat.shiftRight_eq_div_pow, Nat.reducePow]
+  rw [(by omega : a + 256 * b + (a + 256 * b) / 16
+      = a + a / 16 + 16 * (b % 16) + 256 * (b + b / 16)),
+    land_split_byte, rep_mod_byte (by omega : (15:ℕ) < 256),
+    rep_div_byte (by omega : (15:ℕ) < 256),
+    (by omega : (a + a / 16 + 16 * (b % 16) + 256 * (b + b / 16)) % 256
+      = a + a / 16 + 16 * (b % 16)),
+    (by omega : (a + a / 16 + 16 * (b % 16) + 256 * (b + b / 16)) / 256 = b + b / 16),
+    land_15, land_15]
+  omega
+
 theorem stageC_succ (k v : ℕ) :
     stageC (k + 1) v = stageC 1 (v % 256) + 256 * stageC k (v / 256) := by
-  have hB := stageB_succ k v
-  have hble : stageB 1 (v % 256) ≤ 68 := (byte_pipeline _ (Nat.mod_lt _ (by omega))).2.1
-  have hnib : stageB k (v / 256) % 16 ≤ 4 := stageB_mod_16 k (v / 256)
-  have hshiftB : stageB (k + 1) v >>> 4
-      = stageB 1 (v % 256) / 16 + 16 * stageB k (v / 256) := by
-    simp only [Nat.shiftRight_eq_div_pow, Nat.reducePow, hB]
-    omega
-  have hshift1 : stageB 1 (v % 256) >>> 4 = stageB 1 (v % 256) / 16 := by
-    simp only [Nat.shiftRight_eq_div_pow, Nat.reducePow]
-  have hshiftk : stageB k (v / 256) >>> 4 = stageB k (v / 256) / 16 := by
-    simp only [Nat.shiftRight_eq_div_pow, Nat.reducePow]
-  have hsum : stageB (k + 1) v + (stageB (k + 1) v >>> 4)
-      = (stageB 1 (v % 256) + stageB 1 (v % 256) / 16 + 16 * (stageB k (v / 256) % 16)) +
-        256 * (stageB k (v / 256) + stageB k (v / 256) / 16) := by
-    rw [hshiftB, hB]
-    omega
-  rw [stageC, hsum, land_split_byte, rep_mod_byte (by omega : (15:ℕ) < 256),
-    rep_div_byte (by omega : (15:ℕ) < 256)]
-  have hlowlt : stageB 1 (v % 256) + stageB 1 (v % 256) / 16 + 16 * (stageB k (v / 256) % 16)
-      < 256 := by omega
-  have h3 : ((stageB 1 (v % 256) + stageB 1 (v % 256) / 16 + 16 * (stageB k (v / 256) % 16)) +
-      256 * (stageB k (v / 256) + stageB k (v / 256) / 16)) % 256
-      = stageB 1 (v % 256) + stageB 1 (v % 256) / 16 + 16 * (stageB k (v / 256) % 16) := by omega
-  have h4 : ((stageB 1 (v % 256) + stageB 1 (v % 256) / 16 + 16 * (stageB k (v / 256) % 16)) +
-      256 * (stageB k (v / 256) + stageB k (v / 256) / 16)) / 256
-      = stageB k (v / 256) + stageB k (v / 256) / 16 := by omega
-  rw [h3, h4]
-  simp only [stageC, rep_one, hshift1, hshiftk]
-  rw [land_15, land_15]
-  omega
+  rw [stageC, stageB_succ, stageC_byte_split (byte_pipeline _ (Nat.mod_lt _ (by omega))).2.1
+    (stageB_mod_16 k (v / 256))]
+  simp only [stageC, rep_one]
 
 /-! ## The word count from the byte counts -/
 
@@ -247,10 +235,8 @@ public theorem bitSum_of_lt {y m n : ℕ} (hy : y < 2 ^ m) (hmn : m ≤ n) :
 
 /-- Each position contributes at most one. -/
 public theorem bitSum_le (v n : ℕ) : bitSum v n ≤ n := by
-  rw [bitSum]
-  calc ∑ i ∈ Finset.range n, (v >>> i) % 2 ≤ ∑ _i ∈ Finset.range n, 1 :=
-        Finset.sum_le_sum fun i _ => Nat.le_of_lt_succ (Nat.mod_lt _ (by omega))
-    _ = n := by simp
+  rw [bitSum_eq_card]
+  exact le_trans (Finset.card_filter_le _ _) (by simp)
 
 /-- A count over any range is bounded by the width of the value. -/
 public theorem bitSum_le_of_lt {v m : ℕ} (hv : v < 2 ^ m) (n : ℕ) : bitSum v n ≤ m := by
@@ -297,11 +283,7 @@ public theorem popc32K_eq_bitSum (v : ℕ) : popc32K v = bitSum v 32 := by
     rw [stageC_succ 3 v, stageC_succ 2 (v / 256), stageC_succ 1 (v / 256 / 256),
       stageC_succ 0 (v / 256 / 256 / 256)]
     simp
-  have hb0 : stageC 1 (v % 256) ≤ 8 := (byte_pipeline _ (Nat.mod_lt _ (by omega))).2.2.2.1
-  have hb1 : stageC 1 (v / 256 % 256) ≤ 8 := (byte_pipeline _ (Nat.mod_lt _ (by omega))).2.2.2.1
-  have hb2 : stageC 1 (v / 256 / 256 % 256) ≤ 8 :=
-    (byte_pipeline _ (Nat.mod_lt _ (by omega))).2.2.2.1
-  have hb3 : stageC 1 (v / 256 / 256 / 256 % 256) ≤ 8 :=
+  have hb : ∀ y : ℕ, stageC 1 (y % 256) ≤ 8 := fun y =>
     (byte_pipeline _ (Nat.mod_lt _ (by omega))).2.2.2.1
   have hcount : bitSum v 32 = stageC 1 (v % 256) + stageC 1 (v / 256 % 256) +
       stageC 1 (v / 256 / 256 % 256) + stageC 1 (v / 256 / 256 / 256 % 256) := by
@@ -318,6 +300,6 @@ public theorem popc32K_eq_bitSum (v : ℕ) : popc32K v = bitSum v 32 := by
     omega
   have hp24 : (2 : ℕ) ^ 24 = 16777216 := rfl
   rw [hdef, hbytes, Nat.shiftRight_eq_div_pow, hp24, land_255, hcount]
-  exact byte_merge hb0 hb1 hb2 hb3
+  exact byte_merge (hb v) (hb (v / 256)) (hb (v / 256 / 256)) (hb (v / 256 / 256 / 256))
 
 end PrimeCert.Polya
