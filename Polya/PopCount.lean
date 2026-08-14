@@ -202,9 +202,7 @@ theorem stageC_succ (k v : ℕ) :
 /-! ## The word count from the byte counts -/
 
 theorem shiftRight_mod_two (x i : ℕ) : (x >>> i) % 2 = if x.testBit i then 1 else 0 := by
-  rw [Nat.testBit_eq_decide_div_mod_eq, Nat.shiftRight_eq_div_pow]
-  have h : x / 2 ^ i % 2 = 0 ∨ x / 2 ^ i % 2 = 1 := by omega
-  rcases h with h | h <;> simp [h]
+  grind [Nat.shiftRight_eq_div_pow]
 
 /-- The count as the size of the set of set positions. -/
 public theorem bitSum_eq_card (v n : ℕ) :
@@ -229,9 +227,7 @@ public theorem bitSum_add (v s t : ℕ) : bitSum v (s + t) = bitSum v s + bitSum
 /-- Positions above the top set bit contribute nothing. -/
 public theorem bitSum_of_lt {y m n : ℕ} (hy : y < 2 ^ m) (hmn : m ≤ n) :
     bitSum y n = bitSum y m := by
-  obtain ⟨d, rfl⟩ := Nat.exists_eq_add_of_le hmn
-  rw [bitSum_add, Nat.div_eq_of_lt hy, bitSum_zero_left]
-  omega
+  grind [bitSum_add, Nat.div_eq_of_lt, bitSum_zero_left, Nat.exists_eq_add_of_le]
 
 /-- Each position contributes at most one. -/
 public theorem bitSum_le (v n : ℕ) : bitSum v n ≤ n := by

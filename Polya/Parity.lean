@@ -109,9 +109,7 @@ public theorem testBit_strideMaskK {q M r j : ℕ} (hq : 0 < q) (hjM : j ≤ M) 
 /-- Position `0` is no multiple of a positive stride. -/
 public theorem testBit_strideMaskK_zero {q M r : ℕ} (hq : 0 < q) :
     (strideMaskK q M r).testBit 0 = false := by
-  rcases Bool.eq_false_or_eq_true ((strideMaskK q M r).testBit 0) with h | h
-  · exact absurd (dvd_of_testBit_strideMaskK hq h).2 (by simp)
-  · exact h
+  grind [dvd_of_testBit_strideMaskK]
 
 /-! ## One step of the table -/
 
