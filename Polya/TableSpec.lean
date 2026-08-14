@@ -21,8 +21,8 @@ namespace PrimeCert.Polya
 open PrimeCert.Sieve (IsSieve num)
 
 /-- The powers the second block collects are none of the primes from 5 upward. -/
-theorem not_prime_five_le {p k v : ℕ} (hp : p.Prime) (hk : 1 ≤ k) (hv : v = p ^ k)
-    (hcase : p < 5 ∨ 2 ≤ k) : ¬ (v.Prime ∧ 5 ≤ v) := by
+theorem not_prime_five_le {p k v : ℕ} (hv : v = p ^ k) (hcase : p < 5 ∨ 2 ≤ k) :
+    ¬ (v.Prime ∧ 5 ≤ v) := by
   rintro ⟨hvp, hv5⟩
   subst hv
   have hpk : Prime p ∧ k = 1 := prime_pow_iff.1 (Nat.prime_iff.1 hvp)
@@ -80,27 +80,23 @@ public theorem isPrimePowerTable_of_checks {qs w lit M np cnt chunks e fuel st h
   · rcases Nat.lt_or_ge i np with hin | hin
     · obtain ⟨hprime, -, -⟩ := hp1 i hin
       exact (isPrimePow_nat_iff _).2 ⟨fieldK qs w i, 1, hprime, by omega, Nat.pow_one _⟩
-    · obtain ⟨j, hjd⟩ : ∃ j, i = np + j := ⟨i - np, by omega⟩
-      subst hjd
+    · obtain ⟨j, rfl⟩ := Nat.exists_eq_add_of_le hin
       rw [← hfield j]
       obtain ⟨p, k, hp, hk, hvk, -, -⟩ := (hval _).1 (hs1 j (by omega))
       exact (isPrimePow_nat_iff _).2 ⟨p, k, hp, by omega, hvk.symm⟩
   · have hcross : ∀ a b, a < np → np ≤ b → b < cnt → fieldK qs w a ≠ fieldK qs w b := by
       intro a b ha hb hbc heq'
-      obtain ⟨j, hjd⟩ : ∃ j, b = np + j := ⟨b - np, by omega⟩
-      subst hjd
+      obtain ⟨j, rfl⟩ := Nat.exists_eq_add_of_le hb
       rw [← hfield j] at heq'
       obtain ⟨p, k, hp, hk, hvk, -, hpcase⟩ := (hval _).1 (hs1 j (by omega))
       obtain ⟨hprime, hfive, -⟩ := hp1 a ha
-      exact not_prime_five_le hp hk hvk hpcase ⟨heq' ▸ hprime, heq' ▸ hfive⟩
+      exact not_prime_five_le hvk hpcase ⟨heq' ▸ hprime, heq' ▸ hfive⟩
     rcases Nat.lt_or_ge i₁ np with h₁ | h₁ <;> rcases Nat.lt_or_ge i₂ np with h₂ | h₂
     · exact hp3 i₁ i₂ h₁ h₂ heq
     · exact absurd heq (hcross i₁ i₂ h₁ h₂ hi₂)
     · exact absurd heq.symm (hcross i₂ i₁ h₂ h₁ hi₁)
-    · obtain ⟨j₁, hj₁⟩ : ∃ j, i₁ = np + j := ⟨i₁ - np, by omega⟩
-      obtain ⟨j₂, hj₂⟩ : ∃ j, i₂ = np + j := ⟨i₂ - np, by omega⟩
-      subst hj₁
-      subst hj₂
+    · obtain ⟨j₁, rfl⟩ := Nat.exists_eq_add_of_le h₁
+      obtain ⟨j₂, rfl⟩ := Nat.exists_eq_add_of_le h₂
       rw [← hfield j₁, ← hfield j₂] at heq
       have := hi1 j₁ j₂ (by omega) (by omega) heq
       omega
