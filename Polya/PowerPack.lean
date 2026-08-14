@@ -68,11 +68,7 @@ theorem IsPowState.pow_eq {w st c pw V : ℕ} (h : IsPowState w st c pw V) :
 public theorem IsPowState.vals_eq {w st c pw V : ℕ} (h : IsPowState w st c pw V) :
     st / 2 ^ 128 = V := by
   obtain ⟨hst, hc, hpw, -⟩ := h
-  have h128 : (2 : ℕ) ^ 128 = 2 ^ 64 * 2 ^ 64 := by norm_num
-  have hmul : 2 ^ 64 * pw ≤ 2 ^ 64 * (2 ^ 64 - 1) := Nat.mul_le_mul_left _ (by omega)
-  have hlt : c + 2 ^ 64 * pw < 2 ^ 128 := by
-    rw [Nat.mul_sub, Nat.mul_one] at hmul
-    omega
+  have hlt : c + 2 ^ 64 * pw < 2 ^ 128 := by omega
   rw [hst, Nat.add_mul_div_left _ _ (Nat.two_pow_pos 128), Nat.div_eq_of_lt hlt, Nat.zero_add]
 
 /-! ### One step -/
