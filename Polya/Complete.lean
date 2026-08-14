@@ -57,8 +57,7 @@ theorem fieldK_le {qs w lit cnt M : ℕ} (h : bitCheckLoopK qs w lit 1 0 cnt % 2
   have hle : idx (fieldK qs w i) ≤ idx (fieldK qs w (cnt - 1)) := by
     rcases Nat.lt_or_ge i (cnt - 1) with hlt | hge
     · exact Nat.le_of_lt (hmono i (cnt - 1) hlt (by omega))
-    · have : i = cnt - 1 := by omega
-      rw [this]
+    · rw [(by omega : i = cnt - 1)]
   rw [← num_idx_fieldK h hi]
   exact le_trans (num_le_num hle) (htopidx ▸ htop hcnt)
 
@@ -82,12 +81,7 @@ theorem exists_field_of_testBit {qs w lit cnt chunks : ℕ}
     exact ⟨hlt i hi, testBit_iff_shiftRight_mod_two.2 hset⟩
   have himg : ((Finset.range cnt).image (fun i => idx (fieldK qs w i))).card = cnt := by
     rw [Finset.card_image_of_injOn, Finset.card_range]
-    intro a ha b hb hab
-    simp only [Finset.mem_coe, Finset.mem_range] at ha hb
-    by_contra hne
-    rcases Nat.lt_or_ge a b with hab' | hab'
-    · exact absurd hab (Nat.ne_of_lt (hmono a b hab' hb))
-    · exact absurd hab.symm (Nat.ne_of_lt (hmono b a (by omega) ha))
+    exact fun a ha b hb hab => eq_of_mono hmono (by simpa using ha) (by simpa using hb) hab
   have heq : (Finset.range cnt).image (fun i => idx (fieldK qs w i))
       = {i ∈ Finset.range (32 * chunks) | lit.testBit i} :=
     Finset.eq_of_subset_of_card_le hsub (by omega)
@@ -98,10 +92,8 @@ theorem exists_field_of_testBit {qs w lit cnt chunks : ℕ}
 
 /-- A prime of at least 5 is coprime to 6. -/
 public theorem mod_six_of_prime {p : ℕ} (hp : p.Prime) (h5 : 5 ≤ p) : p % 6 = 1 ∨ p % 6 = 5 := by
-  have h2 : ¬ (2 ∣ p) := fun hd => by
-    rcases (Nat.Prime.eq_one_or_self_of_dvd hp 2 hd) with h | h <;> omega
-  have h3 : ¬ (3 ∣ p) := fun hd => by
-    rcases (Nat.Prime.eq_one_or_self_of_dvd hp 3 hd) with h | h <;> omega
+  have h2 : ¬ (2 ∣ p) := fun hd => by rcases hp.eq_one_or_self_of_dvd 2 hd with h | h <;> omega
+  have h3 : ¬ (3 ∣ p) := fun hd => by rcases hp.eq_one_or_self_of_dvd 3 hd with h | h <;> omega
   rw [Nat.dvd_iff_mod_eq_zero] at h2 h3
   omega
 
