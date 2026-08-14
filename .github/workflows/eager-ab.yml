@@ -21,10 +21,10 @@ jobs:
       - name: Fetch the mathlib build cache
         run: lake exe cache get
 
-      - name: Alternate the two arms, five rounds
+      - name: Alternate the two arms, fifteen rounds
         run: |
           set -u
-          for round in 1 2 3 4 5; do
+          for round in $(seq 1 15); do
             for arm in eager noeager; do
               git checkout -- PrimeCert
               if [ "$arm" = noeager ]; then git apply bench/no-eager.patch; fi
