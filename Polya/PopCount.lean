@@ -262,6 +262,10 @@ public theorem bitSum_le_of_lt {v m : ℕ} (hv : v < 2 ^ m) (n : ℕ) : bitSum v
 theorem bitSum_byte (e : ℕ) : bitSum e 8 = pop8 e := by
   simp [bitSum, pop8, Finset.sum_range_succ, Nat.shiftRight_eq_div_pow]
 
+/-- Splitting a count at a byte boundary. -/
+theorem bitSum_byte_split (v n : ℕ) : bitSum v (8 + n) = bitSum v 8 + bitSum (v / 256) n :=
+  bitSum_add v 8 n
+
 /-- The four masks and the multiplier of `popc32K` repeat one byte across the word. -/
 theorem rep_85 : rep 85 4 = 1431655765 := rfl
 
@@ -301,17 +305,11 @@ public theorem popc32K_eq_bitSum (v : ℕ) : popc32K v = bitSum v 32 := by
     (byte_pipeline _ (Nat.mod_lt _ (by omega))).2.2.2.1
   have hcount : bitSum v 32 = stageC 1 (v % 256) + stageC 1 (v / 256 % 256) +
       stageC 1 (v / 256 / 256 % 256) + stageC 1 (v / 256 / 256 / 256 % 256) := by
-    have hp : (2 : ℕ) ^ 8 = 256 := rfl
-    have e0 : bitSum v 32 = bitSum v 8 + bitSum (v / 256) 24 := by
-      have h := bitSum_add v 8 24
-      rwa [hp] at h
-    have e1 : bitSum (v / 256) 24 = bitSum (v / 256) 8 + bitSum (v / 256 / 256) 16 := by
-      have h := bitSum_add (v / 256) 8 16
-      rwa [hp] at h
+    have e0 : bitSum v 32 = bitSum v 8 + bitSum (v / 256) 24 := bitSum_byte_split v 24
+    have e1 : bitSum (v / 256) 24 = bitSum (v / 256) 8 + bitSum (v / 256 / 256) 16 :=
+      bitSum_byte_split _ 16
     have e2 : bitSum (v / 256 / 256) 16
-        = bitSum (v / 256 / 256) 8 + bitSum (v / 256 / 256 / 256) 8 := by
-      have h := bitSum_add (v / 256 / 256) 8 8
-      rwa [hp] at h
+        = bitSum (v / 256 / 256) 8 + bitSum (v / 256 / 256 / 256) 8 := bitSum_byte_split _ 8
     have byte : ∀ x : ℕ, bitSum x 8 = stageC 1 (x % 256) := by
       intro x
       have h : (2 : ℕ) ^ 8 = 256 := rfl
