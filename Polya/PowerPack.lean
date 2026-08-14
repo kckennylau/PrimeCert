@@ -68,8 +68,7 @@ theorem IsPowState.eq_regroup {w st c pw V : ℕ} (h : IsPowState w st c pw V) :
     st = c + 2 ^ 64 * (pw + 2 ^ 64 * V) := by rw [h.1]; ring
 
 public theorem IsPowState.count_eq {w st c pw V : ℕ} (h : IsPowState w st c pw V) :
-    st % 2 ^ 64 = c := by
-  rw [h.eq_regroup, Nat.add_mul_mod_self_left, Nat.mod_eq_of_lt h.2.1]
+    st % 2 ^ 64 = c := by rw [h.eq_regroup, Nat.add_mul_mod_self_left, Nat.mod_eq_of_lt h.2.1]
 
 theorem IsPowState.pow_eq {w st c pw V : ℕ} (h : IsPowState w st c pw V) :
     st / 2 ^ 64 % 2 ^ 64 = pw := by
