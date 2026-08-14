@@ -59,22 +59,18 @@ public theorem isPrimePowerTable_of_checks {qs w lit M np cnt chunks e fuel st h
   rw [hhp] at hst1
   have hV1 : V1 = qs / 2 ^ (w * np) := by rw [hlink, hst1.vals_eq]
   have hc1eq : np + c1 = cnt := by rwa [← hst1.count_eq]
-  have hfield : ∀ j, fieldK V1 w j = fieldK qs w (np + j) := by
-    intro j
+  have hfield : ∀ j, fieldK V1 w j = fieldK qs w (np + j) := fun j => by
     rw [hV1, fieldK_shiftRight]
-  have hval : ∀ v, HpVal lit M (1 + fuel) v ↔
-      ∃ p k, p.Prime ∧ 1 ≤ k ∧ v = p ^ k ∧ v ≤ M ∧ (p < 5 ∨ 2 ≤ k) :=
-    fun v => hpVal_iff hsieve hfuelup
   refine ⟨fun q hq hqM => ?_, fun i hi => ?_, fun i₁ i₂ hi₁ hi₂ heq => ?_⟩
   · obtain ⟨p, k, hp, hk, hpk⟩ := (isPrimePow_nat_iff q).1 hq
     by_cases hcase : 5 ≤ p ∧ k = 1
-    · obtain ⟨hp5, hk1⟩ := hcase
-      subst hk1
+    · obtain ⟨hp5, rfl⟩ := hcase
       rw [Nat.pow_one] at hpk
       subst hpk
       obtain ⟨i, hi, hiq⟩ := hp2 p hp hp5 hqM
       exact ⟨i, by omega, hiq⟩
-    · obtain ⟨j, hj, hjq⟩ := hcp1 q ((hval q).2 ⟨p, k, hp, by omega, hpk.symm, hqM, by omega⟩)
+    · obtain ⟨j, hj, hjq⟩ := hcp1 q ((hpVal_iff hsieve hfuelup).2
+        ⟨p, k, hp, by omega, hpk.symm, hqM, by omega⟩)
       refine ⟨np + j, by omega, ?_⟩
       rwa [← hfield j]
   · rcases Nat.lt_or_ge i np with hin | hin
@@ -82,13 +78,13 @@ public theorem isPrimePowerTable_of_checks {qs w lit M np cnt chunks e fuel st h
       exact (isPrimePow_nat_iff _).2 ⟨fieldK qs w i, 1, hprime, by omega, Nat.pow_one _⟩
     · obtain ⟨j, rfl⟩ := Nat.exists_eq_add_of_le hin
       rw [← hfield j]
-      obtain ⟨p, k, hp, hk, hvk, -, -⟩ := (hval _).1 (hs1 j (by omega))
+      obtain ⟨p, k, hp, hk, hvk, -, -⟩ := (hpVal_iff hsieve hfuelup).1 (hs1 j (by omega))
       exact (isPrimePow_nat_iff _).2 ⟨p, k, hp, by omega, hvk.symm⟩
   · have hcross : ∀ a b, a < np → np ≤ b → b < cnt → fieldK qs w a ≠ fieldK qs w b := by
       intro a b ha hb hbc heq'
       obtain ⟨j, rfl⟩ := Nat.exists_eq_add_of_le hb
       rw [← hfield j] at heq'
-      obtain ⟨p, k, hp, hk, hvk, -, hpcase⟩ := (hval _).1 (hs1 j (by omega))
+      obtain ⟨p, k, hp, hk, hvk, -, hpcase⟩ := (hpVal_iff hsieve hfuelup).1 (hs1 j (by omega))
       obtain ⟨hprime, hfive, -⟩ := hp1 a ha
       exact not_prime_five_le hvk hpcase ⟨heq' ▸ hprime, heq' ▸ hfive⟩
     rcases Nat.lt_or_ge i₁ np with h₁ | h₁ <;> rcases Nat.lt_or_ge i₂ np with h₂ | h₂
