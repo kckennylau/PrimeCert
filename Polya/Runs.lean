@@ -21,16 +21,12 @@ namespace PrimeCert.Polya
 open Finset
 
 /-- Inside a run the quotient is constant. -/
-public theorem div_eq_of_run {v k k' : ℕ} (hk : 0 < k) (hkv : k ≤ v) (hkk' : k ≤ k')
+public theorem div_eq_of_run {v k k' : ℕ} (hk : 0 < k) (hkk' : k ≤ k')
     (hk' : k' ≤ v / (v / k)) : v / k' = v / k := by
-  have hq : 0 < v / k := Nat.div_pos hkv hk
-  have hk'0 : 0 < k' := by omega
-  refine Nat.le_antisymm (Nat.div_le_div_left hkk' hk) ?_
-  have h1 : (v / k) * k' ≤ v :=
-    calc (v / k) * k' ≤ (v / k) * (v / (v / k)) := Nat.mul_le_mul_left _ hk'
-      _ = (v / (v / k)) * (v / k) := Nat.mul_comm _ _
-      _ ≤ v := Nat.div_mul_le_self v (v / k)
-  exact (Nat.le_div_iff_mul_le hk'0).2 h1
+  refine Nat.le_antisymm (Nat.div_le_div_left hkk' hk) ((Nat.le_div_iff_mul_le (by omega)).2 ?_)
+  calc (v / k) * k' ≤ (v / k) * (v / (v / k)) := Nat.mul_le_mul_left _ hk'
+    _ = (v / (v / k)) * (v / k) := Nat.mul_comm _ _
+    _ ≤ v := Nat.div_mul_le_self v (v / k)
 
 /-- The run starting at `k` ends at or after `k`. -/
 public theorem le_div_div {v k : ℕ} (hk : 0 < k) (hkv : k ≤ v) : k ≤ v / (v / k) :=
@@ -48,6 +44,6 @@ public theorem sum_run {v k : ℕ} (hk : 0 < k) (hkv : k ≤ v) (f : ℕ → ℤ
   · congr 2
     omega
   · simp only [Finset.mem_Icc] at hk'
-    rw [div_eq_of_run hk hkv hk'.1 hk'.2]
+    rw [div_eq_of_run hk hk'.1 hk'.2]
 
 end PrimeCert.Polya
