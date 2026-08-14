@@ -10,7 +10,7 @@ public import Lean.Elab.Tactic
 
 /-! # The `prove_pow_mod` tactic
 
-Elaboration-time evaluation of `a ^ b % n`, producing a kernel proof via `powModTR` and
+Elaboration-time evaluation of `a ^ b % n`, producing a kernel proof via `powModK` and
 `eagerReduce`.
 -/
 
@@ -20,9 +20,9 @@ open Lean Meta Elab Tactic
 
 /-- Given `a, b, n : ℕ`, return `(m, ⊢ powMod a b n = m)`. -/
 meta def mkPowModEq' (a b n : Nat) (aE bE nE : Expr) : MetaM (Nat × Expr × Expr) := do
-  let m := powModTR' a b n
+  let m := powMod a b n
   let mE := mkNatLit m
-  return (m, mE, mkApp5 (mkConst ``powMod_eq_of_powModTR) aE bE nE mE eagerReflBoolTrue)
+  return (m, mE, mkApp5 (mkConst ``powMod_eq_of_powModK) aE bE nE mE eagerReflBoolTrue)
 
 /-- Given `a, b, n, m : ℕ`, if `powMod a b n = m` then return a proof of that fact. -/
 meta def provePowModEq' (a b n m : Nat) (aE bE nE : Expr) : MetaM Expr := do
@@ -32,9 +32,15 @@ meta def provePowModEq' (a b n m : Nat) (aE bE nE : Expr) : MetaM Expr := do
 
 /-- Given `a, b, n, m : ℕ`, if `powMod a b n ≠ m` then return a proof of that fact. -/
 meta def provePowModNe' (a b n m : Nat) (aE bE nE mE : Expr) : MetaM Expr := do
-  let m' := powModTR' a b n
+  let m' := powMod a b n
   if m = m' then throwError "attempted to prove {a} ^ {b} % {n} ≠ {m} but it is {m'}"
-  return mkApp5 (mkConst ``powMod_ne_of_powModTR) aE bE nE mE eagerReflBoolFalse
+  return mkApp5 (mkConst ``powMod_ne_of_powModK) aE bE nE mE eagerReflBoolFalse
+
+/-- Split `a ^ b % n` into its three arguments. -/
+meta def matchPowMod? (e : Expr) : Option (Expr × Expr × Expr) := do
+  let_expr HMod.hMod _ _ _ _ powE nE := e | none
+  let_expr HPow.hPow _ _ _ _ aE bE := powE | none
+  some (aE, bE, nE)
 
 meta def prove_pow_mod_tac (g : MVarId) : MetaM Unit := do
   let t : Expr ← g.getType
@@ -42,7 +48,7 @@ meta def prove_pow_mod_tac (g : MVarId) : MetaM Unit := do
   | Eq ty lhsE rhsE =>
     unless (← whnfR ty).isConstOf ``Nat do throwError "not an equality of naturals"
     let some rhs := rhsE.nat? | throwError "rhs is not a numeral"
-    let some (aE, bE, nE) := lhsE.app3? ``powMod | throwError "lhs is not a pow-mod"
+    let some (aE, bE, nE) := matchPowMod? lhsE | throwError "lhs is not a pow-mod"
     let some a := aE.nat? | throwError "base is not a numeral"
     let some b := bE.nat? | throwError "exponent is not a numeral"
     let some n := nE.nat? | throwError "modulus is not a numeral"
@@ -51,7 +57,7 @@ meta def prove_pow_mod_tac (g : MVarId) : MetaM Unit := do
   | Ne ty lhsE rhsE =>
     unless (← whnfR ty).isConstOf ``Nat do throwError "not an equality of naturals"
     let some rhs := rhsE.nat? | throwError "rhs is not a numeral"
-    let some (aE, bE, nE) := lhsE.app3? ``powMod | throwError "lhs is not a pow-mod"
+    let some (aE, bE, nE) := matchPowMod? lhsE | throwError "lhs is not a pow-mod"
     let some a := aE.nat? | throwError "base is not a numeral"
     let some b := bE.nat? | throwError "exponent is not a numeral"
     let some n := nE.nat? | throwError "modulus is not a numeral"
@@ -61,12 +67,12 @@ meta def prove_pow_mod_tac (g : MVarId) : MetaM Unit := do
 
 /-- Tactic to close goals about modular exponentiation. Handles two goal shapes:
 
-- `powMod a b n = m` — proves the equality by computing `a ^ b % n` at elaboration time
-- `powMod a b n ≠ m` — proves the disequality similarly
+- `a ^ b % n = m` — proves the equality by computing the value at elaboration time
+- `a ^ b % n ≠ m` — proves the disequality similarly
 
-All of `a`, `b`, `n`, `m` must be numeric literals. The computation uses `powModTR'`
+All of `a`, `b`, `n`, `m` must be numeric literals. The computation uses `powMod`
 (the `partial_fixpoint` version) at elaboration time, then produces a kernel proof via
-`powModTR` and `eagerReduce`.
+`powModK` and `eagerReduce`.
 
 ```lean
 example : powMod 11 100002 100003 = 1 := by prove_pow_mod

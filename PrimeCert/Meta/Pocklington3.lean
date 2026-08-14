@@ -141,7 +141,7 @@ meta def parsePock3Spec : PrimeCertMethod `pock3_spec := fun stx dict ↦ do
       pure m
   have mE : Q(ℕ) := mkNatLit m
   let mode ← parsePock3Mode mode dict
-  have pf : Q(Nat.Prime $NE) := mkAppN (mkConst ``pocklington3_certKR)
+  have pf : Q(Nat.Prime $NE) := mkAppN (mkConst ``pocklington3_certK)
     #[NE, rootE, mE, eE, F'E, mode, eagerReflBoolTrue]
   return ⟨N, NE, pf⟩
 

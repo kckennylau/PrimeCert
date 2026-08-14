@@ -115,7 +115,7 @@ meta def parsePockSpec : PrimeCertMethod ``pock_spec := fun stx dict ↦ do
       have a : Q(Nat) := mkNatLit a.getNat
       have (F₁, steps) := parseFactored F₁
       have pred := ← mkPockPred N a F₁ steps dict
-      have pf : Q(Nat.Prime $N) := mkAppN (mkConst ``pocklington_certifyKR)
+      have pf : Q(Nat.Prime $N) := mkAppN (mkConst ``pocklington_certifyK)
         #[N, a, F₁, pred, eagerReflBoolTrue, eagerReflBoolTrue,
           eagerReflBoolTrue, eagerReflBoolTrue]
       return ⟨Nnat, N, pf⟩
