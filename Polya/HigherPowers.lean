@@ -283,21 +283,18 @@ public theorem seed_spec {M w e : ℕ} (lit : ℕ) (hMw : M < 2 ^ w) (hM64 : M <
       congr 1
       omega
     · omega
-  · have hne : (2 : ℕ) ≠ 3 := by omega
+  · have hcross : ∀ a b, a < m₂ → m₂ ≤ b → b < m₂ + m₃ → fieldK V₃ w a ≠ fieldK V₃ w b := by
+      intro a b ha hb hbm heq'
+      obtain ⟨d, hd⟩ : ∃ d, b = m₂ + d := ⟨b - m₂, by omega⟩
+      subst hd
+      rw [hb₃ a ha, hf₂ a ha, hf₃ d (by omega)] at heq'
+      exact absurd (prime_base_eq Nat.prime_two Nat.prime_three (by omega) heq') (by omega)
     rcases Nat.lt_or_ge j₁ m₂ with h₁ | h₁ <;> rcases Nat.lt_or_ge j₂ m₂ with h₂ | h₂
     · rw [hb₃ j₁ h₁, hb₃ j₂ h₂, hf₂ j₁ h₁, hf₂ j₂ h₂] at heq
       have := Nat.pow_right_injective (le_refl 2) heq
       omega
-    · exfalso
-      obtain ⟨d, hd⟩ : ∃ d, j₂ = m₂ + d := ⟨j₂ - m₂, by omega⟩
-      subst hd
-      rw [hb₃ j₁ h₁, hf₂ j₁ h₁, hf₃ d (by omega)] at heq
-      exact hne (prime_base_eq Nat.prime_two Nat.prime_three (by omega) heq)
-    · exfalso
-      obtain ⟨d, hd⟩ : ∃ d, j₁ = m₂ + d := ⟨j₁ - m₂, by omega⟩
-      subst hd
-      rw [hb₃ j₂ h₂, hf₂ j₂ h₂, hf₃ d (by omega)] at heq
-      exact hne (prime_base_eq Nat.prime_two Nat.prime_three (by omega) heq.symm)
+    · exact absurd heq (hcross j₁ j₂ h₁ h₂ hj₂)
+    · exact absurd heq.symm (hcross j₂ j₁ h₂ h₁ hj₁)
     · obtain ⟨d₁, hd₁⟩ : ∃ d, j₁ = m₂ + d := ⟨j₁ - m₂, by omega⟩
       obtain ⟨d₂, hd₂⟩ : ∃ d, j₂ = m₂ + d := ⟨j₂ - m₂, by omega⟩
       subst hd₁
