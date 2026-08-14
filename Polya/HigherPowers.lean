@@ -191,15 +191,15 @@ public theorem hpLoopK_spec {lit M w e st c pw V start : ℕ} (fuel : ℕ) (hsie
           · rw [hfields d hdm]
             exact hlem d hdm
       · -- completeness
+        have hprev : ∀ u, HpVal lit M (start + f) u → ∃ j < c' + m, fieldK V'' w j = u := by
+          intro u hu
+          obtain ⟨j, hj, hjv⟩ := hcomp' u hu
+          exact ⟨j, by omega, by rw [hbelow j hj, hjv]⟩
         rcases hv with h | h | ⟨t, ht1, htlt, htbit, htp, k, hk, hvk, hvM⟩
-        · obtain ⟨j, hj, hjv⟩ := hcomp' v (Or.inl h)
-          exact ⟨j, by omega, by rw [hbelow j hj, hjv]⟩
-        · obtain ⟨j, hj, hjv⟩ := hcomp' v (Or.inr (Or.inl h))
-          exact ⟨j, by omega, by rw [hbelow j hj, hjv]⟩
+        · exact hprev v (Or.inl h)
+        · exact hprev v (Or.inr (Or.inl h))
         · rcases Nat.lt_or_ge t (start + f) with htf | htf
-          · obtain ⟨j, hj, hjv⟩ :=
-              hcomp' v (Or.inr (Or.inr ⟨t, ht1, htf, htbit, htp, k, hk, hvk, hvM⟩))
-            exact ⟨j, by omega, by rw [hbelow j hj, hjv]⟩
+          · exact hprev v (Or.inr (Or.inr ⟨t, ht1, htf, htbit, htp, k, hk, hvk, hvM⟩))
           · have htf' : t = start + f := by omega
             subst htf'
             have hk1 : num (start + f) * num (start + f) ^ (k - 1) = num (start + f) ^ k := by
@@ -212,23 +212,20 @@ public theorem hpLoopK_spec {lit M w e st c pw V start : ℕ} (fuel : ℕ) (hsie
             have hexp : k - 2 + 1 = k - 1 := by omega
             rwa [hexp]
       · -- injectivity
+        have hcross : ∀ a b, a < c' → c' ≤ b → b < c' + m →
+            fieldK V'' w a ≠ fieldK V'' w b := by
+          intro a b ha hb hbm heq'
+          obtain ⟨d, hd⟩ : ∃ d, b = c' + d := ⟨b - c', by omega⟩
+          subst hd
+          rw [hbelow a ha, hfields d (by omega)] at heq'
+          refine (hsound' a ha).ne_pow le_rfl (by omega) hprime (k := d + 2) (by omega) ?_
+          rw [heq', Nat.pow_succ]
+          ring
         rcases Nat.lt_or_ge j₁ c' with h₁ | h₁ <;> rcases Nat.lt_or_ge j₂ c' with h₂ | h₂
         · rw [hbelow j₁ h₁, hbelow j₂ h₂] at heq
           exact hinj' j₁ j₂ h₁ h₂ heq
-        · exfalso
-          obtain ⟨d, hd⟩ : ∃ d, j₂ = c' + d := ⟨j₂ - c', by omega⟩
-          subst hd
-          rw [hbelow j₁ h₁, hfields d (by omega)] at heq
-          refine (hsound' j₁ h₁).ne_pow le_rfl (by omega) hprime (k := d + 2) (by omega) ?_
-          rw [heq, Nat.pow_succ]
-          ring
-        · exfalso
-          obtain ⟨d, hd⟩ : ∃ d, j₁ = c' + d := ⟨j₁ - c', by omega⟩
-          subst hd
-          rw [hbelow j₂ h₂, hfields d (by omega)] at heq
-          refine (hsound' j₂ h₂).ne_pow le_rfl (by omega) hprime (k := d + 2) (by omega) ?_
-          rw [← heq, Nat.pow_succ]
-          ring
+        · exact absurd heq (hcross j₁ j₂ h₁ h₂ hj₂)
+        · exact absurd heq.symm (hcross j₂ j₁ h₂ h₁ hj₁)
         · obtain ⟨d₁, hd₁⟩ : ∃ d, j₁ = c' + d := ⟨j₁ - c', by omega⟩
           obtain ⟨d₂, hd₂⟩ : ∃ d, j₂ = c' + d := ⟨j₂ - c', by omega⟩
           subst hd₁
