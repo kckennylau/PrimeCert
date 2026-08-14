@@ -52,24 +52,21 @@ theorem add_mul_two_pow_lt {V val w c : ℕ} (hV : V < 2 ^ (w * c)) (hval : val 
 @[expose] public def IsPowState (w st c pw V : ℕ) : Prop :=
   st = c + 2 ^ 64 * pw + 2 ^ 128 * V ∧ c < 2 ^ 64 ∧ pw < 2 ^ 64 ∧ V < 2 ^ (w * c)
 
-/-- The state regrouped, so that everything above the count sits in one factor. -/
-theorem IsPowState.eq_regroup {w st c pw V : ℕ} (h : IsPowState w st c pw V) :
-    st = c + 2 ^ 64 * (pw + 2 ^ 64 * V) := by rw [h.1]; ring
+/-- The count, the running power and the values read back off a state. -/
+public theorem IsPowState.split {w st c pw V : ℕ} (h : IsPowState w st c pw V) :
+    st % 2 ^ 64 = c ∧ st / 2 ^ 64 % 2 ^ 64 = pw ∧ st / 2 ^ 128 = V := by
+  obtain ⟨hst, hc, hpw, -⟩ := h
+  omega
 
 public theorem IsPowState.count_eq {w st c pw V : ℕ} (h : IsPowState w st c pw V) :
-    st % 2 ^ 64 = c := by rw [h.eq_regroup, Nat.add_mul_mod_self_left, Nat.mod_eq_of_lt h.2.1]
+    st % 2 ^ 64 = c := h.split.1
 
 theorem IsPowState.pow_eq {w st c pw V : ℕ} (h : IsPowState w st c pw V) :
-    st / 2 ^ 64 % 2 ^ 64 = pw := by
-  rw [h.eq_regroup, Nat.add_mul_div_left _ _ (Nat.two_pow_pos 64), Nat.div_eq_of_lt h.2.1,
-    Nat.zero_add, Nat.add_mul_mod_self_left, Nat.mod_eq_of_lt h.2.2.1]
+    st / 2 ^ 64 % 2 ^ 64 = pw := h.split.2.1
 
 /-- The values sit above bit 128, so they read back by one shift. -/
 public theorem IsPowState.vals_eq {w st c pw V : ℕ} (h : IsPowState w st c pw V) :
-    st / 2 ^ 128 = V := by
-  obtain ⟨hst, hc, hpw, -⟩ := h
-  have hlt : c + 2 ^ 64 * pw < 2 ^ 128 := by omega
-  rw [hst, Nat.add_mul_div_left _ _ (Nat.two_pow_pos 128), Nat.div_eq_of_lt hlt, Nat.zero_add]
+    st / 2 ^ 128 = V := h.split.2.2
 
 /-! ### One step -/
 
@@ -117,10 +114,7 @@ theorem powLoopK_succ_eq (M w q seed st fuel : ℕ) :
 theorem powLoopK_zero {M w q seed st c pw V : ℕ} (h : IsPowState w st c pw V)
     (hseed : seed < 2 ^ 64) : IsPowState w (powLoopK M w q seed st 0) c seed V := by
   obtain ⟨hst, hc64, hpw64, hV⟩ := h
-  have harith : st - st / 2 ^ 64 % 2 ^ 64 * 2 ^ 64 = c + 2 ^ 128 * V := by
-    rw [IsPowState.pow_eq ⟨hst, hc64, hpw64, hV⟩]
-    have hsplit : st = c + 2 ^ 128 * V + pw * 2 ^ 64 := by rw [hst]; ring
-    rw [hsplit, Nat.add_sub_cancel]
+  have harith : st - st / 2 ^ 64 % 2 ^ 64 * 2 ^ 64 = c + 2 ^ 128 * V := by omega
   rw [powLoopK_zero_eq, harith]
   exact ⟨by ring, hc64, hseed, hV⟩
 
