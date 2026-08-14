@@ -112,8 +112,8 @@ public theorem fieldK_of_lor_chain {wb start : ℕ} {F t : ℕ → ℕ} (h0 : t 
   induction fuel with
   | zero =>
     refine ⟨by omega, fun j _ => ?_⟩
-    rw [h0, fieldK_eq_div_mod]
-    simp
+    rw [h0]
+    exact fieldK_eq_zero_of_lt (Nat.two_pow_pos _)
   | succ f ih =>
     obtain ⟨ihfield, ihzero⟩ := ih fun j hj1 hj2 => hval j hj1 (by omega)
     have hlast : F (start + f) < 2 ^ wb := hval _ (by omega) (by omega)
