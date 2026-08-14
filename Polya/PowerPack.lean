@@ -63,22 +63,20 @@ theorem add_mul_two_pow_lt {V val w c : ℕ} (hV : V < 2 ^ (w * c)) (hval : val 
 @[expose] public def IsPowState (w st c pw V : ℕ) : Prop :=
   st = c + 2 ^ 64 * pw + 2 ^ 128 * V ∧ c < 2 ^ 64 ∧ pw < 2 ^ 64 ∧ V < 2 ^ (w * c)
 
+/-- The state regrouped, so that everything above the count sits in one factor. -/
+theorem IsPowState.eq_regroup {w st c pw V : ℕ} (h : IsPowState w st c pw V) :
+    st = c + 2 ^ 64 * (pw + 2 ^ 64 * V) := by
+  rw [h.1]
+  ring
+
 public theorem IsPowState.count_eq {w st c pw V : ℕ} (h : IsPowState w st c pw V) :
     st % 2 ^ 64 = c := by
-  obtain ⟨hst, hc, -, -⟩ := h
-  have hst' : st = c + 2 ^ 64 * (pw + 2 ^ 64 * V) := by
-    rw [hst]
-    ring
-  rw [hst', Nat.add_mul_mod_self_left, Nat.mod_eq_of_lt hc]
+  rw [h.eq_regroup, Nat.add_mul_mod_self_left, Nat.mod_eq_of_lt h.2.1]
 
 theorem IsPowState.pow_eq {w st c pw V : ℕ} (h : IsPowState w st c pw V) :
     st / 2 ^ 64 % 2 ^ 64 = pw := by
-  obtain ⟨hst, hc, hpw, -⟩ := h
-  have hst' : st = c + 2 ^ 64 * (pw + 2 ^ 64 * V) := by
-    rw [hst]
-    ring
-  rw [hst', Nat.add_mul_div_left _ _ (Nat.two_pow_pos 64), Nat.div_eq_of_lt hc, Nat.zero_add,
-    Nat.add_mul_mod_self_left, Nat.mod_eq_of_lt hpw]
+  rw [h.eq_regroup, Nat.add_mul_div_left _ _ (Nat.two_pow_pos 64), Nat.div_eq_of_lt h.2.1,
+    Nat.zero_add, Nat.add_mul_mod_self_left, Nat.mod_eq_of_lt h.2.2.1]
 
 /-- The values sit above bit 128, so they read back by one shift. -/
 public theorem IsPowState.vals_eq {w st c pw V : ℕ} (h : IsPowState w st c pw V) :
