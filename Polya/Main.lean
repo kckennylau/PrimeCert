@@ -64,15 +64,13 @@ public theorem tables_of_data {x M rootx top w r wc chunks off wb qs np cnt chun
     intro p hp
     rw [← hones, ← hlam]
     exact onesBelowK_onesK hw (by omega)
-  have hbelow : ∀ n, bitSum (lamK qs w M r cnt) (n + 1) ≤ n := by
-    intro n
+  have hbelow : ∀ n, bitSum (lamK qs w M r cnt) (n + 1) ≤ n := fun n => by
+    rw [Nat.add_comm, bitSum_add]
     have h0 : (lamK qs w M r cnt).testBit 0 = false := testBit_lamK_zero htab
-    simp only [Nat.testBit_zero, decide_eq_false_iff_not] at h0
     have hone : bitSum (lamK qs w M r cnt) 1 = 0 := by
       simp only [bitSum, Finset.sum_range_one, Nat.shiftRight_zero]
+      simp only [Nat.testBit_zero, decide_eq_false_iff_not] at h0
       omega
-    have hadd := bitSum_add (lamK qs w M r cnt) 1 n
-    rw [Nat.add_comm 1 n, hone] at hadd
     have := bitSum_le (lamK qs w M r cnt / 2 ^ 1) n
     omega
   have hlowbound : ∀ j < rootx + 1, lowVal lam ones wc off j < 2 ^ wb := by
@@ -127,13 +125,13 @@ public theorem isHiTable_step {x rootx off wb low hi hiNext j v s A B S val fuel
     (hblock : blockLoopK x v rootx low hi wb off 2 fuel = S)
     (hok : stepOK x rootx off wb j v s A B S val hi hiNext = true) :
     IsHiTable x rootx off wb hiNext j := by
-  obtain ⟨hj, hjr, hxj, hS, hA, hB2, hB, hv, hv64, hs1, hs2, hval, hvlt, hnext, hoff, hwb,
+  obtain ⟨hj, hjr, hxj, hS, hA, hB2, hB, hv, hv64, hs1, hs2, hval, hvlt, hnext, -, hwb,
     hroot⟩ := of_decide_eq_true hok
   obtain ⟨hk, hA', hB'⟩ := state_split hS (by omega) hA
   have hvals : BlockValues x v rootx low hi wb off := by
     rw [← hxj]
     exact blockValues_of_tables hj hjr hroot hlow hhi
-  have hL := L_eq_of_blockLoopK hoff hv hv64 hwb hvals hblock (by rw [hB']; exact hB2) hk
+  have hL := L_eq_of_blockLoopK hv hv64 hwb hvals hblock (by rw [hB']; exact hB2) hk
     (by rw [hB', hB])
   rw [hA', ← hB, sqrt_eq_of_le_of_lt hs1 hs2] at hL
   rw [← hnext]
@@ -160,13 +158,13 @@ public theorem L_eq_of_final {x rootx off wb low hi s A B S p q fuel : ℕ}
     (hblock : blockLoopK x x rootx low hi wb off 2 fuel = S)
     (hok : finalOK x rootx off wb s A B S p q = true) :
     L x = (p : ℤ) - q := by
-  obtain ⟨hroot1, hS, hA, hB2, hB, hx, hx64, hs1, hs2, hpq, hoff, hwb, hroot⟩ :=
+  obtain ⟨hroot1, hS, hA, hB2, hB, hx, hx64, hs1, hs2, hpq, -, hwb, hroot⟩ :=
     of_decide_eq_true hok
   obtain ⟨hk, hA', hB'⟩ := state_split hS (by omega) hA
   have hvals : BlockValues x x rootx low hi wb off := by
     have h := blockValues_of_tables (j := 1) Nat.one_pos hroot1 hroot hlow hhi
     rwa [Nat.div_one] at h
-  have hL := L_eq_of_blockLoopK hoff hx hx64 hwb hvals hblock (by rw [hB']; exact hB2) hk
+  have hL := L_eq_of_blockLoopK hx hx64 hwb hvals hblock (by rw [hB']; exact hB2) hk
     (by rw [hB', hB])
   rw [hA', ← hB, sqrt_eq_of_le_of_lt hs1 hs2] at hL
   rw [hL]

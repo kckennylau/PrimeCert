@@ -32,7 +32,7 @@ open Nat
 
 /-- The index a high-table read uses inverts the quotient. -/
 theorem div_div_div {x d : ℕ} (hd : 0 < d) (hdx : d ≤ x) : x / (x / (x / d)) = x / d :=
-  div_eq_of_run hd hdx (le_div_div hd hdx) le_rfl
+  div_eq_of_run hd (le_div_div hd hdx) le_rfl
 
 /-- Between them the tables answer every read a block makes at `v = x / j`. -/
 public theorem blockValues_of_tables {x rootx off wb low hi j : ℕ} (hj : 0 < j) (hjr : j ≤ rootx)
@@ -85,14 +85,14 @@ public theorem isHiTable_write {x rootx off wb hi j val : ℕ} (hj : 0 < j) (hjr
     exact hzero m (by omega)
 
 /-- The value a run of blocks produces at `v`: the square root less the accumulated sum. -/
-public theorem L_eq_of_blockLoopK {x v rootx low hi wb off S fuel : ℕ} (hoff : 0 < off)
+public theorem L_eq_of_blockLoopK {x v rootx low hi wb off S fuel : ℕ}
     (hv : 0 < v) (hv64 : v + 1 < 2 ^ 64) (hwb : 2 ^ wb ≤ 2 * off)
     (hvals : BlockValues x v rootx low hi wb off)
     (hfinal : blockLoopK x v rootx low hi wb off 2 fuel = S)
     (hbound : 2 * (S / 2 ^ 128) < 2 ^ 64) (hk : S % 2 ^ 64 = v + 1)
     (hB : S / 2 ^ 128 = off * (v - 1)) :
     L v = (Nat.sqrt v : ℤ) - ((S / 2 ^ 64 % 2 ^ 64 : ℕ) : ℤ) + (off * (v - 1) : ℕ) := by
-  have hsum := blockLoopK_sum hoff hv hv64 hwb hvals hfinal hbound hk hB
+  have hsum := blockLoopK_sum hv hv64 hwb hvals hfinal hbound hk hB
   rw [L_eq_sqrt_sub hv, ← hsum]
   ring
 
