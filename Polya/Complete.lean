@@ -31,21 +31,8 @@ public theorem popcLoopK_eq_bitSum (b acc fuel : ℕ) :
       Nat.shiftLeft_eq', Nat.zero_add]
     rw [Nat.mul_comm f 32, popc32K_chunk, ih, Nat.mul_succ, bitSum_add, Nat.add_assoc]
 
-theorem testBit_iff_shiftRight_mod_two {v t : ℕ} : v.testBit t ↔ (v >>> t) % 2 = 1 := by
-  rw [Nat.testBit_eq_decide_div_mod_eq, Nat.shiftRight_eq_div_pow]
-  simp
-
 /-- The number at an index rises with the index. -/
-theorem num_le_num {t t' : ℕ} (h : t ≤ t') : num t ≤ num t' := by
-  simp only [num]
-  omega
-
-/-- A field that passed its tests is the number at its sieve index. -/
-theorem num_idx_fieldK {qs w lit cnt : ℕ} (h : bitCheckLoopK qs w lit 1 0 cnt % 2 = 1)
-    {i : ℕ} (hi : i < cnt) : num (idx (fieldK qs w i)) = fieldK qs w i := by
-  obtain ⟨htests, -, -⟩ := bitCheckLoopK_spec cnt h
-  obtain ⟨hmod, -, -⟩ := htests i hi
-  exact num_idx (by omega)
+theorem num_le_num {t t' : ℕ} (h : t ≤ t') : num t ≤ num t' := by grind [num]
 
 /-- Every field sits below the cutoff, since the top one does and the fields rise. -/
 theorem fieldK_le {qs w lit cnt M : ℕ} (h : bitCheckLoopK qs w lit 1 0 cnt % 2 = 1)

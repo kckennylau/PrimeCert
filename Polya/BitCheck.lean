@@ -43,12 +43,7 @@ theorem bitCheckStepK_eq (qs w lit st i : ℕ) :
 /-- The flag a step carries is a product of four tests, each `0` or `1`, so an odd state means
 every test passed. -/
 theorem tests_of_flag {a b c d e : ℕ} (ha : a ≤ 1) (hb : b ≤ 1) (hc : c ≤ 1) (hd : d ≤ 1)
-    (h : (e * 2 + a * b * c * d) % 2 = 1) : a = 1 ∧ b = 1 ∧ c = 1 ∧ d = 1 := by
-  have hle : a * b * c * d ≤ 1 :=
-    le_trans (Nat.mul_le_mul (Nat.mul_le_mul (Nat.mul_le_mul ha hb) hc) hd) (by omega)
-  have hprod : a * b * c * d = 1 := by omega
-  simp only [mul_eq_one] at hprod
-  omega
+    (h : (e * 2 + a * b * c * d) % 2 = 1) : a = 1 ∧ b = 1 ∧ c = 1 ∧ d = 1 := by grind
 
 /-- Every field passed its tests, and the sieve indices strictly increase. -/
 public theorem bitCheckLoopK_spec {qs w lit : ℕ} (fuel : ℕ)
@@ -93,21 +88,29 @@ public theorem bitCheckLoopK_spec {qs w lit : ℕ} (fuel : ℕ)
 open PrimeCert.Sieve (IsSieve num)
 
 /-- The index inverts `num` on the numbers coprime to 6. -/
-public theorem num_idx {q : ℕ} (hq : q % 6 = 1 ∨ q % 6 = 5) : num (idx q) = q := by
-  simp only [num, idx]
-  omega
+public theorem num_idx {q : ℕ} (hq : q % 6 = 1 ∨ q % 6 = 5) : num (idx q) = q := by grind [num, idx]
+
+/-- A set position read as a shift and a remainder. -/
+public theorem testBit_iff_shiftRight_mod_two {v t : ℕ} : v.testBit t ↔ (v >>> t) % 2 = 1 := by
+  rw [Nat.testBit_eq_decide_div_mod_eq, Nat.shiftRight_eq_div_pow]
+  simp
+
+/-- A field that passed its tests is the number at its sieve index. -/
+public theorem num_idx_fieldK {qs w lit cnt : ℕ} (h : bitCheckLoopK qs w lit 1 0 cnt % 2 = 1)
+    {i : ℕ} (hi : i < cnt) : num (idx (fieldK qs w i)) = fieldK qs w i := by
+  obtain ⟨htests, -, -⟩ := bitCheckLoopK_spec cnt h
+  obtain ⟨hmod, -, -⟩ := htests i hi
+  exact num_idx (by omega)
 
 /-- A field that passed its tests and sits inside the sieve's range is a prime. -/
 public theorem fieldK_prime {qs w lit M cnt : ℕ} (hsieve : IsSieve M lit)
     (h : bitCheckLoopK qs w lit 1 0 cnt % 2 = 1)
     {i : ℕ} (hi : i < cnt) (hbound : fieldK qs w i ≤ M) : (fieldK qs w i).Prime := by
   obtain ⟨htests, -, -⟩ := bitCheckLoopK_spec cnt h
-  obtain ⟨hmod, hpos, hset⟩ := htests i hi
-  have hnum : num (idx (fieldK qs w i)) = fieldK qs w i := num_idx (by omega)
-  have hbit : lit.testBit (idx (fieldK qs w i)) = true := by
-    rw [Nat.shiftRight_eq_div_pow] at hset
-    simp [Nat.testBit_eq_decide_div_mod_eq, hset]
-  exact hnum ▸ (hsieve _ (by omega) (by rw [hnum]; exact hbound)).1 hbit
+  obtain ⟨-, hpos, hset⟩ := htests i hi
+  have hnum := num_idx_fieldK h hi
+  exact hnum ▸ (hsieve _ (by omega) (by rw [hnum]; exact hbound)).1
+    (testBit_iff_shiftRight_mod_two.2 hset)
 
 /-- A strictly increasing map is injective below the bound. -/
 public theorem eq_of_mono {f : ℕ → ℕ} {n : ℕ} (hmono : ∀ i j, i < j → j < n → f i < f j)
