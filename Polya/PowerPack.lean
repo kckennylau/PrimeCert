@@ -120,8 +120,7 @@ theorem powStepK_of_le {M w q st c pw V : ℕ} (h : IsPowState w st c pw V) (hq 
 
 /-- A step above the cutoff leaves the state alone. -/
 theorem powStepK_of_gt {M w q st c pw V : ℕ} (h : IsPowState w st c pw V) (hgt : M < pw * q) :
-    powStepK M w q st = st := by
-  rw [powStepK_eq, IsPowState.pow_eq h, if_neg (by omega)]
+    powStepK M w q st = st := by rw [powStepK_eq, IsPowState.pow_eq h, if_neg (by omega)]
 
 /-! ### The loop -/
 

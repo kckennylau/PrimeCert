@@ -280,8 +280,7 @@ theorem byte_merge {c0 c1 c2 c3 : ℕ} (h0 : c0 ≤ 8) (h1 : c1 ≤ 8) (h2 : c2 
   have hexp : (c0 + 256 * (c1 + 256 * (c2 + 256 * c3))) * 16843009
       = (c0 + 256 * (c0 + c1) + 65536 * (c0 + c1 + c2)) +
         16777216 * ((c0 + c1 + c2 + c3) +
-          256 * ((c1 + c2 + c3) + 256 * ((c2 + c3) + 256 * c3))) := by
-    ring
+          256 * ((c1 + c2 + c3) + 256 * ((c2 + c3) + 256 * c3))) := by ring
   have hlow : c0 + 256 * (c0 + c1) + 65536 * (c0 + c1 + c2) < 16777216 := by omega
   rw [hexp, Nat.add_mul_div_left _ _ (by omega : 0 < 16777216), Nat.div_eq_of_lt hlow]
   omega
