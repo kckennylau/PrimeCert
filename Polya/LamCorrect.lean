@@ -37,11 +37,9 @@ public theorem testBit_lamK {qs w M r cnt n : ℕ} (htab : IsPrimePowerTable qs 
   obtain ⟨hcover, hfield, hinj⟩ := htab
   have hstep : ∀ i < cnt, 0 < fieldK qs w (0 + i) ∧ M < fieldK qs w (0 + i) * 2 ^ r := by
     intro i hi
-    have hpp := hfield i hi
     rw [Nat.zero_add]
-    have h2 : 2 ≤ fieldK qs w i := hpp.two_le
-    refine ⟨by omega, lt_of_lt_of_le hr ?_⟩
-    exact Nat.le_mul_of_pos_left _ (by omega)
+    have h2 : 2 ≤ fieldK qs w i := (hfield i hi).two_le
+    exact ⟨by omega, lt_of_lt_of_le hr (Nat.le_mul_of_pos_left _ (by omega))⟩
   have hcard : ({i ∈ Finset.range cnt | fieldK qs w (0 + i) ∣ n}).card = cardFactors n := by
     rw [← card_primePow_divisors (n := n) (by omega)]
     refine Finset.card_bij (fun i _ => fieldK qs w (0 + i)) ?_ ?_ ?_
