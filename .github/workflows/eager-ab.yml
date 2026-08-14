@@ -21,7 +21,7 @@ jobs:
       - name: Fetch the mathlib build cache
         run: lake exe cache get
 
-      - name: Alternate the two arms, three rounds
+      - name: Alternate the two arms, five rounds
         run: |
           set -u
           for round in 1 2 3 4 5; do
@@ -33,12 +33,16 @@ jobs:
               export LEAN_PATH=$(lake env printenv LEAN_PATH)
               for target in PrimeCertTest/PrimeListTest.lean PrimeCert/Wieferich.lean; do
                 name=$(basename "$target" .lean)
-                /usr/bin/time -v lean "$target" \
+                /usr/bin/time -v lean -Dtrace.profiler=true -Dtrace.profiler.threshold=1 "$target" \
                   > "out-$arm-$name-$round.txt" 2> "time-$arm-$name-$round.txt" \
                   || echo "RUN FAILED $arm $name round $round"
                 wall=$(grep 'Elapsed (wall clock)' "time-$arm-$name-$round.txt" | awk '{print $8}')
                 peak=$(grep 'Maximum resident set size' "time-$arm-$name-$round.txt" | awk '{print $6}')
-                echo "round $round | $arm | $name | wall $wall | peak ${peak} KB"
+                kern=$(grep -o '\[Kernel\] \[[0-9.]*\]' "out-$arm-$name-$round.txt" \
+                  | grep -o '[0-9]\+\.[0-9]\+' | paste -sd+ | bc)
+                each=$(grep -o '\[Kernel\] \[[0-9.]*\]' "out-$arm-$name-$round.txt" \
+                  | grep -o '[0-9]\+\.[0-9]\+' | sort -rn | head -6 | paste -sd' ')
+                echo "round $round | $arm | $name | kernel total ${kern}s | top: $each | wall $wall | peak ${peak} KB"
               done
             done
           done
