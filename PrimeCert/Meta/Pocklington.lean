@@ -74,16 +74,16 @@ meta def mkPockPred (N a F₁ : Q(Nat)) (steps : Array ParsedPrimePow) (dict : P
       match step, ih? with
       | .prime p, none =>
         return (mkAppN (mkConst ``PocklingtonPred.base) #[N, a, mkNatLit p, ← dict.getM p,
-          eagerReflBoolTrue, eagerReflBoolTrue], mkNatLit p)
+          reflBoolTrue, reflBoolTrue], mkNatLit p)
       | .pow p e, none =>
         return (mkAppN (mkConst ``PocklingtonPred.base_pow) #[N, a, mkNatLit p, mkNatLit e,
-          ← dict.getM p, eagerReflBoolTrue, eagerReflBoolTrue], step.toExpr)
+          ← dict.getM p, reflBoolTrue, reflBoolTrue], step.toExpr)
       | .prime p, some (ih, F₂) =>
         return (mkAppN (mkConst ``PocklingtonPred.step) #[N, a, F₂, mkNatLit p, ← dict.getM p, ih,
-          eagerReflBoolTrue, eagerReflBoolTrue], mkApp2 (mkConst ``Nat.mul) F₂ (mkNatLit p))
+          reflBoolTrue, reflBoolTrue], mkApp2 (mkConst ``Nat.mul) F₂ (mkNatLit p))
       | .pow p e, some (ih, F₂) =>
         return (mkAppN (mkConst ``PocklingtonPred.step_pow) #[N, a, F₂, mkNatLit p, mkNatLit e,
-          ← dict.getM p, ih, eagerReflBoolTrue, eagerReflBoolTrue],
+          ← dict.getM p, ih, reflBoolTrue, reflBoolTrue],
           mkApp2 (mkConst ``Nat.mul) F₂ step.toExpr)
     let mut acc ← mkStep steps[0] none
     for step in steps.drop 1 do
@@ -116,8 +116,8 @@ meta def parsePockSpec : PrimeCertMethod ``pock_spec := fun stx dict ↦ do
       have (F₁, steps) := parseFactored F₁
       have pred := ← mkPockPred N a F₁ steps dict
       have pf : Q(Nat.Prime $N) := mkAppN (mkConst ``pocklington_certifyK)
-        #[N, a, F₁, pred, eagerReflBoolTrue, eagerReflBoolTrue,
-          eagerReflBoolTrue, eagerReflBoolTrue]
+        #[N, a, F₁, pred, reflBoolTrue, reflBoolTrue,
+          reflBoolTrue, reflBoolTrue]
       return ⟨Nnat, N, pf⟩
   | _ => Elab.throwUnsupportedSyntax
 

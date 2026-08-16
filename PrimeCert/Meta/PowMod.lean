@@ -10,8 +10,7 @@ public import Lean.Elab.Tactic
 
 /-! # The `prove_pow_mod` tactic
 
-Elaboration-time evaluation of `a ^ b % n`, producing a kernel proof via `powModK` and
-`eagerReduce`.
+Elaboration-time evaluation of `a ^ b % n`, producing a kernel proof via `powModK`.
 -/
 
 namespace Tactic.powMod
@@ -22,7 +21,7 @@ open Lean Meta Elab Tactic
 meta def mkPowModEq' (a b n : Nat) (aE bE nE : Expr) : MetaM (Nat × Expr × Expr) := do
   let m := powMod a b n
   let mE := mkNatLit m
-  return (m, mE, mkApp5 (mkConst ``powMod_eq_of_powModK) aE bE nE mE eagerReflBoolTrue)
+  return (m, mE, mkApp5 (mkConst ``powMod_eq_of_powModK) aE bE nE mE reflBoolTrue)
 
 /-- Given `a, b, n, m : ℕ`, if `powMod a b n = m` then return a proof of that fact. -/
 meta def provePowModEq' (a b n m : Nat) (aE bE nE : Expr) : MetaM Expr := do
@@ -34,7 +33,7 @@ meta def provePowModEq' (a b n m : Nat) (aE bE nE : Expr) : MetaM Expr := do
 meta def provePowModNe' (a b n m : Nat) (aE bE nE mE : Expr) : MetaM Expr := do
   let m' := powMod a b n
   if m = m' then throwError "attempted to prove {a} ^ {b} % {n} ≠ {m} but it is {m'}"
-  return mkApp5 (mkConst ``powMod_ne_of_powModK) aE bE nE mE eagerReflBoolFalse
+  return mkApp5 (mkConst ``powMod_ne_of_powModK) aE bE nE mE reflBoolFalse
 
 /-- Split `a ^ b % n` into its three arguments. -/
 meta def matchPowMod? (e : Expr) : Option (Expr × Expr × Expr) := do
@@ -72,7 +71,7 @@ meta def prove_pow_mod_tac (g : MVarId) : MetaM Unit := do
 
 All of `a`, `b`, `n`, `m` must be numeric literals. The computation uses `powMod`
 (the `partial_fixpoint` version) at elaboration time, then produces a kernel proof via
-`powModK` and `eagerReduce`.
+`powModK`.
 
 ```lean
 example : powMod 11 100002 100003 = 1 := by prove_pow_mod
