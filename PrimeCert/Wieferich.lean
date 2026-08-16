@@ -1,11 +1,12 @@
 /-
-Copyright (c) 2025 Kenny Lau. All rights reserved.
+Copyright (c) 2025 Kenny Lau, Bhavik Mehta. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Kenny Lau
+Authors: Kenny Lau, Bhavik Mehta
 -/
 
 module
 
+public import Mathlib.Data.Nat.Squarefree
 public import Mathlib.Data.Nat.Totient
 import PrimeCert.ForallB
 import PrimeCert.ForMathlib
@@ -19,8 +20,8 @@ A Wieferich prime satisfies `2^(p-1) ≡ 1 [MOD p²]`; a Mirimanoff prime satisf
 the only known Mirimanoff primes are 11 and 1006003.
 
 The main result `wieferich_mirimanoff` shows that no prime below 6000 is simultaneously
-Wieferich and Mirimanoff. This is used in `miller_rabin_squarefree` to rule out
-squarefree pseudoprimes below 36 million (to bases 2 and 3).
+Wieferich and Mirimanoff. `miller_rabin_squarefree` applies it to prove that a number below
+36 million passing the Fermat test to bases 2 and 3 is squarefree.
 -/
 
 def Wieferich (p : ℕ) : Prop :=
@@ -81,8 +82,10 @@ public theorem _root_.pow_eq_one_of_dvd {M : Type*} [Monoid M] {x : M} {m n : �
   rw [pow_mul, h₁, one_pow]
 
 public theorem miller_rabin_squarefree {n : ℕ} (hn₀ : n ≠ 0) (hn : n < 36000000)
-    (h₂ : 2 ^ (n - 1) ≡ 1 [MOD n]) (h₃ : 3 ^ (n - 1) ≡ 1 [MOD n])
-    {p : ℕ} (hp : p.Prime) (hpn : p ^ 2 ∣ n) : False := by
+    (h₂ : 2 ^ (n - 1) ≡ 1 [MOD n]) (h₃ : 3 ^ (n - 1) ≡ 1 [MOD n]) : Squarefree n := by
+  rw [Nat.squarefree_iff_prime_squarefree]
+  intro p hp hpn
+  rw [← sq] at hpn
   have hn₁ : n ≠ 1 := by
     rintro rfl
     rw [Nat.dvd_one, sq, mul_eq_one, and_self] at hpn
