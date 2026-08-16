@@ -14,7 +14,7 @@ import Mathlib.Tactic.Ring
 /-! # A kernel-reducible bounded `Bool` quantifier
 
 `forallB f start len step` folds `f` over the `len`-term arithmetic progression
-`start, start + step, …`, returning a `Bool` that the kernel can reduce via `eagerReduce`.
+`start, start + step, …`, returning a `Bool` the kernel reduces.
 The `forallB_iff*` lemmas rewrite it as an ordinary `∀`. `List.rec_and` does the same for a
 `List.rec` fold of `&&` over an explicit list.
 -/
@@ -30,7 +30,7 @@ namespace PrimeCert
 
 @[expose] public def forallB (f : ℕ → Bool) (start len : ℕ) (step : ℕ := 1) : Bool :=
   (Nat.rec (motive := fun _ ↦ ℕ × Bool) (start, true)
-    (fun _ ih ↦ ih.rec fun i b ↦ (eagerReduce (i.add step), f i && b)) len).2
+    (fun _ ih ↦ ih.rec fun i b ↦ (i.add step, f i && b)) len).2
 
 theorem forallB_iff_range' (f : ℕ → Bool) (start len step : ℕ) :
     forallB f start len step ↔ ∀ n ∈ List.range' start len step, f n := by
@@ -44,7 +44,7 @@ theorem forallB_iff_range' (f : ℕ → Bool) (start len step : ℕ) :
     clear ih _a
     induction len with
     | zero => simp
-    | succ len ih => simp only; rw [ih, eagerReduce, Nat.add_eq]; ring
+    | succ len ih => simp only; rw [ih, Nat.add_eq]; ring
 
 theorem forallB_iff (f : ℕ → Bool) (start len step : ℕ) :
     forallB f start len step ↔ ∀ n < len, f (n * step + start) := by

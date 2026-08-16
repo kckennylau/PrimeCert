@@ -1,14 +1,13 @@
 /-
-Copyright (c) 2025 Kenny Lau. All rights reserved.
+Copyright (c) 2025 Kenny Lau, Bhavik Mehta. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Kenny Lau
+Authors: Kenny Lau, Bhavik Mehta
 -/
 module
 
 /-! # Efficient computation of `(a - 1) % N`
 
-`predModK` computes `(a + (N - 1)) % N` using `Nat.rec` so the kernel can reduce it
-via `eagerReduce`, avoiding the overhead of general modular arithmetic.
+`predModK` computes `(a + (N - 1)) % N` using `Nat.rec`, in a form the kernel reduces.
 -/
 
 /-- Kernel-reducible predecessor mod: computes `(a + (N - 1)) % N` for `a ≤ N`. -/

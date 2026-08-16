@@ -22,10 +22,8 @@ open Nat
 /-- The pow-mod auxiliary function, named explicitly to allow more precise control of reduction. -/
 def powModAux (a b c n : ℕ) : ℕ := (a ^ b * c) % n
 
-def Nat.eager (k : Nat → Nat) (n : Nat) : Nat := k (eagerReduce n)
-
 /-- Kernel-reducible tail-recursive modular exponentiation: computes `a ^ b % n`.
-Uses `Nat.rec` with bounded fuel so the kernel can reduce it via `eagerReduce`. -/
+Uses `Nat.rec` with bounded fuel, in a form the kernel reduces. -/
 @[expose] public noncomputable def powModK (a b n : Nat) : Nat :=
   aux b.succ (a.mod n) b 1
 where

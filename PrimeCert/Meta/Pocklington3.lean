@@ -74,11 +74,11 @@ meta def parsePrimePow' (stx : TSyntax ``prime_pow) (dict : PrimeDict) :
     have p := p.getNat; have pE := mkNatLit p
     have e := e.getNat; have eE := mkNatLit e
     let pf ← dict.getM p
-    return mkApp4 (mkConst ``PrimeCert.PrimePow.mk) pE eE pf eagerReflBoolTrue
+    return mkApp4 (mkConst ``PrimeCert.PrimePow.mk) pE eE pf reflBoolTrue
   | `(prime_pow| $p:num) => do
     have p := p.getNat; have pE := mkNatLit p
     let pf ← dict.getM p
-    return mkApp4 (mkConst ``PrimeCert.PrimePow.mk) pE (mkNatLit 1) pf eagerReflBoolTrue
+    return mkApp4 (mkConst ``PrimeCert.PrimePow.mk) pE (mkNatLit 1) pf reflBoolTrue
   | _ => Elab.throwUnsupportedSyntax
 
 meta def parseFactored' (stx : TSyntax ``factored) (dict : PrimeDict) :
@@ -142,7 +142,7 @@ meta def parsePock3Spec : PrimeCertMethod `pock3_spec := fun stx dict ↦ do
   have mE : Q(ℕ) := mkNatLit m
   let mode ← parsePock3Mode mode dict
   have pf : Q(Nat.Prime $NE) := mkAppN (mkConst ``pocklington3_certK)
-    #[NE, rootE, mE, eE, F'E, mode, eagerReflBoolTrue]
+    #[NE, rootE, mE, eE, F'E, mode, reflBoolTrue]
   return ⟨N, NE, pf⟩
 
 @[prime_cert pock3] meta def pock3 : PrimeCertExt where
