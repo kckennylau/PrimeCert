@@ -5,7 +5,7 @@ Authors: Bhavik Mehta
 -/
 module
 
-public import Polya.Defs
+public import PrimeCert.Bits
 public import Mathlib.Data.Nat.Bitwise
 public import Mathlib.Algebra.BigOperators.Intervals
 
@@ -22,7 +22,7 @@ multiplication. Each of the three field stages acts byte by byte (`stageA_succ`,
 the four byte counts, giving `popc32K v = bitSum v 32` (`popc32K_eq_bitSum`).
 -/
 
-namespace PrimeCert.Polya
+namespace PrimeCert
 
 open Nat
 
@@ -300,4 +300,4 @@ public theorem popc32K_eq_bitSum (v : ℕ) : popc32K v = bitSum v 32 := by
   rw [hdef, hbytes, Nat.shiftRight_eq_div_pow, hp24, land_255, hcount]
   exact byte_merge (hb v) (hb (v / 256)) (hb (v / 256 / 256)) (hb (v / 256 / 256 / 256))
 
-end PrimeCert.Polya
+end PrimeCert

@@ -90,33 +90,35 @@ Written:
 The whole development is the `Polya` lean_lib, built on demand rather than as a default target.
 
 ```
-Polya/Defs.lean        -- module, imports nothing: strideMaskK, markStrideK, fieldK, lamLoopK,
-                          popc32K, onesLoopK, stFieldK, onesBelowK, lowLoopK, hiLoopK, blockStepK,
-                          blockLoopK, the peel/additivity/chain lemmas, and a compiled twin of
-                          every kernel-reduced definition
-Polya/PowerDefs.lean   -- bitCheckLoopK, popcLoopK, hpLoopK, their chain lemmas, and the twins
+PrimeCert/Bits.lean      -- module, imports nothing: fieldK, popc32K, onesLoopK, onesK,
+                            onesBelowK, popcLoopK, bitCheckStepK, bitCheckLoopK, their
+                            peel/additivity/chain lemmas, and a compiled twin of each
+PrimeCert/Field.lean     -- reading a packed field: bounds and the value at an index
+PrimeCert/PopCount.lean  -- popc32K counts set bits
+PrimeCert/Ones.lean      -- onesK holds the running counts
+PrimeCert/BitCheck.lean  -- what surviving the sieve bit checks says about the packed values
+PrimeCert/Complete.lean  -- equal counts leave no prime out of the packing
+PrimeCert/Runs.lean      -- the run decomposition of Σ_{k=2}^{v} f(⌊v/k⌋)
+
+Polya/Defs.lean        -- strideMaskK, markStrideK, lamLoopK, lamK, stFieldK, lowLoopK, hiLoopK,
+                          blockStepK, blockLoopK, their peel/additivity/chain lemmas, and a
+                          compiled twin of each
+Polya/PowerDefs.lean   -- powStepK, powLoopK, hpLoopK, their chain lemmas, and the twins
 Polya/Meta.lean        -- run_lam n, run_polya x c K, the native prime powers and packing, one
                           emitter per chain, defaultCutoff
 Polya/Main.lean        -- the three lemmas the emitted run applies, one per stage
-
-Polya/Bits/Field.lean     -- reading a packed field: bounds and the value at an index
-Polya/Bits/PopCount.lean  -- popc32K counts set bits
 
 Polya/Theory/Summatory.lean   -- def L, basic lemmas
 Polya/Theory/Identity.lean    -- Σ_{k≤v} L(⌊v/k⌋) = ⌊√v⌋ and the recurrence
 Polya/Theory/Count.lean       -- L from a count of odd Ω
 Polya/Theory/CardFactors.lean -- the prime powers dividing n number Ω n
-Polya/Theory/Runs.lean        -- the run decomposition of Σ_{k=2}^{v} L(⌊v/k⌋)
 
-Polya/Correct/BitCheck.lean     -- what surviving the sieve bit checks says about the packed primes
-Polya/Correct/Complete.lean     -- equal counts leave no prime out of the packing
 Polya/Correct/PowerPack.lean    -- the packed state of the power collection, and what one loop
                                    appends
 Polya/Correct/HigherPowers.lean -- the walk collects the powers with exponent at least two
 Polya/Correct/TableSpec.lean    -- the packed table holds exactly the prime powers
 Polya/Correct/Parity.lean       -- the stride masks mark the multiples
 Polya/Correct/Lam.lean          -- lamK is the parity of Ω
-Polya/Correct/Ones.lean         -- onesK holds the running counts
 Polya/Correct/Tables.lean       -- lowLoopK and hiLoopK hold values of L
 Polya/Correct/Blocks.lean       -- the invariant of blockLoopK over its packed state
 Polya/Correct/Recursion.lean    -- the two tables answer every read one block makes
@@ -140,8 +142,8 @@ stands:
 
 1. **The prime powers come from the sieve, proved.** `isPrimePowerTable_of_checks` in
    `Polya/Correct/TableSpec.lean` turns what the three loops check into `IsPrimePowerTable`. It
-   rests on `bitCheckLoopK_spec` (`Polya/Correct/BitCheck.lean`, what a surviving flag forces),
-   `primeBlock_spec` (`Polya/Correct/Complete.lean`, equal counts leave no prime out), and
+   rests on `bitCheckLoopK_spec` (`PrimeCert/BitCheck.lean`, what a surviving flag forces),
+   `primeBlock_spec` (`PrimeCert/Complete.lean`, equal counts leave no prime out), and
    `hpLoopK_spec` with `hpVal_iff` (`Polya/Correct/HigherPowers.lean`, the walk collects the powers
    with base 2 or 3 and those with exponent at least two), over the packed state of
    `Polya/Correct/PowerPack.lean`.
@@ -149,14 +151,14 @@ stands:
    when `Ω n` is odd, for `1 ≤ n ≤ M`, given `IsPrimePowerTable`. It rests on the stride masks
    marking the multiples (`Polya/Correct/Parity.lean`) and on the prime powers dividing `n`
    numbering `Ω n` (`Polya/Theory/CardFactors.lean`).
-3. **The counts and the value tables, proved.** `popc32K_eq_bitSum` in `Polya/Bits/PopCount.lean`
+3. **The counts and the value tables, proved.** `popc32K_eq_bitSum` in `PrimeCert/PopCount.lean`
    (the byte-wise argument, no `decide` over the word), `fieldK_onesK` and `onesBelowK_eq` in
-   `Polya/Correct/Ones.lean`, `lowLoopK_spec`, `hiLoopK_spec_start` and `lowVal_eq_L` in
+   `PrimeCert/Ones.lean`, `lowLoopK_spec`, `hiLoopK_spec_start` and `lowVal_eq_L` in
    `Polya/Correct/Tables.lean`.
 4. **The block loop, proved.** `blockLoopK_sum` in `Polya/Correct/Blocks.lean`: a run of blocks
    ending at index `v + 1` with the second accumulator at `off * (v - 1)` has covered `2 … v`, so
    the accumulators differ by the sum in the recurrence. It rests on the run decomposition of
-   `Polya/Theory/Runs.lean`.
+   `PrimeCert/Runs.lean`.
 
 The recurrence itself is proved: `Polya/Theory/Summatory.lean` defines `L`, and
 `Polya/Theory/Identity.lean` gives `∑_{k=1}^{v} L ⌊v/k⌋ = ⌊√v⌋` and `L_eq_sqrt_sub`, off the divisor
@@ -203,7 +205,8 @@ twice cancels and the table is wrong.
 
 The strides stay computed by the metaprogram and arrive packed as before, in two blocks: the primes
 from 5 upward in increasing order, then 2, 3 and the powers whose exponent is at least two. Three
-loops in `Polya/PowerDefs.lean` tie both blocks to the sieve, each batched in the house
+loops, two in `PrimeCert/Bits.lean` and one in `Polya/PowerDefs.lean`, tie both blocks to the sieve,
+each batched in the house
 style with a peel lemma by `rfl`, fuel additivity by induction, and a chain lemma.
 
 - `bitCheckLoopK` tests the first block field by field: the value is 1 or 5 modulo 6, its sieve index
@@ -251,11 +254,12 @@ bound of 5, its monotonicity, its injectivity and `num ((q-1)/3) = q` are each o
 ### Files
 
 ```
-Polya/PowerDefs.lean         -- bitCheckLoopK, popcLoopK, hpLoopK, their chain lemmas
-Polya/Correct/BitCheck.lean  -- what the surviving flag says about the packed primes
-Polya/Correct/Complete.lean  -- equal counts leave no prime out
+PrimeCert/Bits.lean          -- bitCheckLoopK, popcLoopK and their chain lemmas
+PrimeCert/BitCheck.lean      -- what the surviving flag says about the packed primes
+PrimeCert/Complete.lean      -- equal counts leave no prime out
+PrimeCert/Field.lean         -- reading a packed field: bounds and the value at an index
+Polya/PowerDefs.lean         -- hpLoopK, powLoopK and their chain lemmas
 Polya/Correct/PowerPack.lean -- the packed state of the power collection
-Polya/Bits/Field.lean        -- reading a packed field: bounds and the value at an index
 Polya/Meta.lean              -- the sieve-cache lookup, the two blocks, one emitter per chain
 ```
 

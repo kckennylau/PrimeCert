@@ -1,11 +1,6 @@
-import Polya.Bits.Field
-import Polya.Bits.PopCount
-import Polya.Correct.BitCheck
 import Polya.Correct.Blocks
-import Polya.Correct.Complete
 import Polya.Correct.HigherPowers
 import Polya.Correct.Lam
-import Polya.Correct.Ones
 import Polya.Correct.Parity
 import Polya.Correct.PowerPack
 import Polya.Correct.Recursion
@@ -18,5 +13,4 @@ import Polya.PowerDefs
 import Polya.Theory.CardFactors
 import Polya.Theory.Count
 import Polya.Theory.Identity
-import Polya.Theory.Runs
 import Polya.Theory.Summatory

@@ -5,7 +5,8 @@ Authors: Bhavik Mehta
 -/
 module
 
-public import Polya.Bits.Field
+public import Polya.Defs
+public import PrimeCert.Field
 public import Mathlib.Data.Nat.Bitwise
 public import Mathlib.Data.Finset.Card
 public import Mathlib.Data.Finset.Range

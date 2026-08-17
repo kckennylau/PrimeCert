@@ -5,8 +5,8 @@ Authors: Bhavik Mehta
 -/
 module
 
-public import Polya.Bits.PopCount
-public import Polya.Bits.Field
+public import PrimeCert.PopCount
+public import PrimeCert.Field
 public import PrimeCert.ForLean
 
 /-!
@@ -17,7 +17,7 @@ Field `i` of `onesK lam w cnt` holds the set bits of `lam` below position `32 * 
 one partial chunk (`onesBelowK_eq`).
 -/
 
-namespace PrimeCert.Polya
+namespace PrimeCert
 
 open Nat
 
@@ -86,4 +86,4 @@ public theorem onesBelowK_eq {lam ones wc p : ℕ}
     Nat.sub_eq, Nat.add_eq, Nat.mul_eq, Nat.one_shiftLeft]
   rw [hfield, hones, hpart, ← bitSum_add, Nat.div_add_mod]
 
-end PrimeCert.Polya
+end PrimeCert

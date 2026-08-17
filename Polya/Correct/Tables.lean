@@ -5,7 +5,7 @@ Authors: Bhavik Mehta
 -/
 module
 
-public import Polya.Correct.Ones
+public import PrimeCert.Ones
 public import Polya.Correct.Lam
 public import Polya.Theory.Count
 

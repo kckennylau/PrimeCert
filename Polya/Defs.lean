@@ -5,6 +5,8 @@ Authors: Bhavik Mehta
 -/
 module
 
+public import PrimeCert.Bits
+
 /-!
 # A kernel-checked parity table for the Liouville function
 
@@ -41,10 +43,6 @@ cleared by `markStrideK`. -/
 @[expose] public noncomputable def markStrideK (lam q M rounds : Nat) : Nat :=
   (lam.xor (strideMaskK q M rounds)).land ((Nat.shiftLeft (nat_lit 1) (Nat.succ M)).sub (nat_lit 1))
 
-/-- Field `i` of `qs`, reading `w` bits from position `w * i`. -/
-@[expose] public def fieldK (qs w i : Nat) : Nat :=
-  (qs.shiftRight (w.mul i)).land ((Nat.shiftLeft (nat_lit 1) w).sub (nat_lit 1))
-
 /-- Perform `fuel` steps on the table `lam`, taking the strides from fields `start, start+1, …` of
 `qs` and flipping the parity bit of each stride's multiples. `lamK` runs this from an empty
 table. -/
@@ -57,42 +55,6 @@ factors counted with multiplicity, given that the `cnt` fields of `qs` are exact
 @[expose] public noncomputable def lamK (qs w M rounds cnt : Nat) : Nat :=
   lamLoopK qs w M rounds (nat_lit 0) (nat_lit 0) cnt
 
-/-- The number of set bits of `v`, for `v < 2 ^ 32`, summing bit counts within fields of 2, 4, 8 and
-then 32 bits (`popc32K_eq_bitSum` in `Polya.PopCount`). The constants are the repeating masks
-`0101…`, `00110011…` and `00001111…`, and `0x01010101`, whose product with a byte-per-field value
-places the sum of the four bytes in the top byte. -/
-@[expose] public def popc32K (v : Nat) : Nat :=
-  let a := v.sub ((v.shiftRight (nat_lit 1)).land (nat_lit 1431655765))
-  let b := (a.land (nat_lit 858993459)).add ((a.shiftRight (nat_lit 2)).land (nat_lit 858993459))
-  let c := (b.add (b.shiftRight (nat_lit 4))).land (nat_lit 252645135)
-  ((c.mul (nat_lit 16843009)).shiftRight (nat_lit 24)).land (nat_lit 255)
-
-/-- Perform `fuel` steps, appending to `tbl` the running count of set bits of `lam`: field `i` holds
-the number of set bits below position `32 * i`, in `w`-bit fields. `onesK` runs this from a table
-holding the single field `0`. -/
-@[expose] public noncomputable def onesLoopK (lam w tbl start fuel : Nat) : Nat :=
-  fuel.rec tbl fun i t =>
-    t.lor
-      (Nat.shiftLeft
-        ((fieldK t w (start.add i)).add
-          (popc32K ((lam.shiftRight (Nat.mul (nat_lit 32) (start.add i))).land
-            ((Nat.shiftLeft (nat_lit 1) (nat_lit 32)).sub (nat_lit 1)))))
-        (w.mul (Nat.succ (start.add i))))
-
-/-- Running counts of the set bits of `lam` at every multiple of 32, covering positions below
-`32 * cnt` (`fieldK_onesK` in `Polya.Ones`). -/
-@[expose] public noncomputable def onesK (lam w cnt : Nat) : Nat :=
-  onesLoopK lam w (nat_lit 0) (nat_lit 0) cnt
-
-/-- Loop recurrence: peel the top step, in the exact form the def uses. -/
-public theorem onesLoopK_succ (lam w tbl start fuel : Nat) :
-    onesLoopK lam w tbl start (fuel + 1)
-      = (onesLoopK lam w tbl start fuel).lor
-          (Nat.shiftLeft
-            ((fieldK (onesLoopK lam w tbl start fuel) w (start + fuel)).add
-              (popc32K ((lam.shiftRight (32 * (start + fuel))).land ((Nat.shiftLeft 1 32).sub 1))))
-            (w * Nat.succ (start + fuel))) := rfl
-
 /-- Loop recurrence: peel the top field `start+fuel`, in the exact form the def uses. -/
 public theorem lamLoopK_succ (qs w M rounds lam start fuel : Nat) :
     lamLoopK qs w M rounds lam start (fuel + 1)
@@ -103,20 +65,6 @@ public theorem lamLoopK_succ (qs w M rounds lam start fuel : Nat) :
 index in field 0 and the two halves of the running sum in fields 1 and 2. -/
 @[expose] public def stFieldK (st i : Nat) : Nat :=
   (st.shiftRight (Nat.mul (nat_lit 64) i)).land ((Nat.shiftLeft (nat_lit 1) (nat_lit 64)).sub 1)
-
-/-- Set bits of `lam` below position `p`, from the recorded count at the nearest lower multiple of
-32 plus the bits of the partial chunk. -/
-@[expose] public noncomputable def onesBelowK (lam ones wc p : Nat) : Nat :=
-  (Nat.shiftRight
-      (ones.land
-        ((((nat_lit 1).shiftLeft wc).sub (nat_lit 1)).shiftLeft (wc.mul (p.div (nat_lit 32)))))
-      (wc.mul (p.div (nat_lit 32)))).add
-    (popc32K
-      (Nat.shiftRight
-        (lam.land
-          ((((nat_lit 1).shiftLeft (p.mod (nat_lit 32))).sub (nat_lit 1)).shiftLeft
-            ((p.div (nat_lit 32)).mul (nat_lit 32))))
-        ((p.div (nat_lit 32)).mul (nat_lit 32))))
 
 /-- Perform `fuel` steps, appending to `tbl` the value `L i + off` for `i = start, start+1, …`,
 each read off the parity table and the running counts. -/
@@ -197,25 +145,13 @@ public def strideMask (q M rounds : Nat) : Nat := Id.run do
 public def markStride (lam q M rounds : Nat) : Nat :=
   (lam ^^^ strideMask q M rounds) &&& ((1 <<< (M + 1)) - 1)
 
-public def field (qs w i : Nat) : Nat := (qs >>> (w * i)) &&& ((1 <<< w) - 1)
-
 public def lamLoop (qs w M rounds lam start fuel : Nat) : Nat := Id.run do
   let mut l := lam
   for i in [0:fuel] do
     l := markStride l (field qs w (start + i)) M rounds
   return l
 
-public def popc32 (v : Nat) : Nat :=
-  let a := v - ((v >>> 1) &&& 1431655765)
-  let b := (a &&& 858993459) + ((a >>> 2) &&& 858993459)
-  let c := (b + (b >>> 4)) &&& 252645135
-  ((c * 16843009) >>> 24) &&& 255
-
 public def stField (st i : Nat) : Nat := (st >>> (64 * i)) &&& ((1 <<< 64) - 1)
-
-public def onesBelow (lam ones wc p : Nat) : Nat :=
-  ((ones &&& (((1 <<< wc) - 1) <<< (wc * (p / 32)))) >>> (wc * (p / 32)))
-    + popc32 ((lam &&& (((1 <<< (p % 32)) - 1) <<< ((p / 32) * 32))) >>> ((p / 32) * 32))
 
 public def blockStep (x v rootx low hi wb off st : Nat) : Nat :=
   let k := st &&& ((1 <<< 64) - 1)
@@ -243,13 +179,6 @@ public def hiLoop (x lam ones wc off wb tbl start fuel : Nat) : Nat := Id.run do
   for i in [0:fuel] do
     let j := start + i
     t := t ||| ((x / j + off - 2 * onesBelow lam ones wc (x / j + 1)) <<< (wb * j))
-  return t
-
-public def onesLoop (lam w tbl start fuel : Nat) : Nat := Id.run do
-  let mut t := tbl
-  for i in [0:fuel] do
-    let j := start + i
-    t := t ||| (((field t w j) + popc32 ((lam >>> (32 * j)) &&& ((1 <<< 32) - 1))) <<< (w * (j + 1)))
   return t
 
 /-- Fuel additivity: running `a + b` steps is running `a` steps, then `b` steps from where the
@@ -314,20 +243,5 @@ public theorem hiLoopK_chain (L x lam ones wc off wb tbl tbl' start len rest : N
     (h : (hiLoopK x lam ones wc off wb tbl start len).beq tbl') :
     L = hiLoopK x lam ones wc off wb tbl' (start.add len) rest := by
   grind [hiLoopK_add, Nat.beq_eq]
-
-/-- Fuel additivity for the running counts, the glue joining consecutive batches. -/
-public theorem onesLoopK_add (lam w tbl start a b : Nat) :
-    onesLoopK lam w tbl start (a + b)
-      = onesLoopK lam w (onesLoopK lam w tbl start a) (start + a) b := by
-  induction b with
-  | zero => rfl
-  | succ b ih => grind [onesLoopK_succ]
-
-/-- One chain step for the running counts, matching `lamLoopK_chain`. -/
-public theorem onesLoopK_chain (L lam w tbl tbl' start len rest : Nat)
-    (hP : L = onesLoopK lam w tbl start (len.add rest))
-    (h : (onesLoopK lam w tbl start len).beq tbl') :
-    L = onesLoopK lam w tbl' (start.add len) rest := by
-  grind [onesLoopK_add, Nat.beq_eq]
 
 end PrimeCert.Polya

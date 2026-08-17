@@ -6,6 +6,7 @@ Authors: Bhavik Mehta
 module
 
 public import Polya.Defs
+public import PrimeCert.Bits
 public import PrimeCert.Sieve
 
 /-!
@@ -20,37 +21,6 @@ at least two through `powLoopK`. What surviving these forces is `Polya.Correct.T
 namespace PrimeCert.Polya
 
 open PrimeCert.Sieve (num numK)
-
-/-! ### Checking the packed primes against the sieve
-
-The state holds the previous field's sieve index above bit 0 and a flag in bit 0, which stays at 1
-while every test has passed. The sieve index of a number `q` coprime to 6 is `(q - 1) / 3`,
-inverting `numK`. -/
-
-/-- Test field `i`: its value is 1 or 5 modulo 6, its sieve index exceeds the previous one, and its
-sieve bit is set. -/
-@[expose] public noncomputable def bitCheckStepK (qs w lit st i : Nat) : Nat :=
-  let q := fieldK qs w i
-  let t := (q.sub (nat_lit 1)).div (nat_lit 3)
-  let prev := st.shiftRight (nat_lit 1)
-  let ok := st.land (nat_lit 1)
-  let okMod :=
-    (Nat.beq ((q.mod (nat_lit 6)).mod (nat_lit 4)) (nat_lit 1)).rec (nat_lit 0) (nat_lit 1)
-  let okRise := (Nat.ble prev.succ t).rec (nat_lit 0) (nat_lit 1)
-  let okSet := (lit.shiftRight t).land (nat_lit 1)
-  (t.shiftLeft (nat_lit 1)).add (((ok.mul okMod).mul okRise).mul okSet)
-
-/-- Perform `fuel` field tests, from field `start`. -/
-@[expose] public noncomputable def bitCheckLoopK (qs w lit st start fuel : Nat) : Nat :=
-  fuel.rec st fun i s => bitCheckStepK qs w lit s (start.add i)
-
-/-- Add to `acc` the set bits of `b` in the 32-position blocks `start, start+1, …`. -/
-@[expose] public noncomputable def popcLoopK (b acc start fuel : Nat) : Nat :=
-  fuel.rec acc fun i a =>
-    a.add
-      (popc32K
-        ((b.shiftRight ((start.add i).mul (nat_lit 32))).land
-          (((nat_lit 1).shiftLeft (nat_lit 32)).sub (nat_lit 1))))
 
 /-! ### Collecting the powers with exponent at least two
 
@@ -85,18 +55,6 @@ sieve bit is set. -/
 
 /-! ### Loop recurrences -/
 
-/-- Peel the top test, in the exact form the def uses. -/
-public theorem bitCheckLoopK_succ (qs w lit st start fuel : Nat) :
-    bitCheckLoopK qs w lit st start (fuel + 1)
-      = bitCheckStepK qs w lit (bitCheckLoopK qs w lit st start fuel) (start + fuel) := rfl
-
-/-- Peel the top block, in the exact form the def uses. -/
-public theorem popcLoopK_succ (b acc start fuel : Nat) :
-    popcLoopK b acc start (fuel + 1)
-      = (popcLoopK b acc start fuel).add
-          (popc32K
-            ((b.shiftRight ((start + fuel).mul 32)).land ((Nat.shiftLeft 1 32).sub 1))) := rfl
-
 /-- Peel the top base, in the exact form the def uses. -/
 public theorem hpLoopK_succ (lit M w e st start fuel : Nat) :
     hpLoopK lit M w e st start (fuel + 1)
@@ -106,35 +64,6 @@ public theorem hpLoopK_succ (lit M w e st start fuel : Nat) :
             (hpLoopK lit M w e st start fuel) e) := rfl
 
 /-! ### Fuel additivity and chaining -/
-
-/-- Fuel additivity: `a + b` tests are `a` tests, then `b` more from where they stopped. -/
-public theorem bitCheckLoopK_add (qs w lit st start a b : Nat) :
-    bitCheckLoopK qs w lit st start (a + b)
-      = bitCheckLoopK qs w lit (bitCheckLoopK qs w lit st start a) (start + a) b := by
-  induction b with
-  | zero => rfl
-  | succ b ih => grind [bitCheckLoopK_succ]
-
-/-- One chain step, matching `lamLoopK_chain`. -/
-public theorem bitCheckLoopK_chain (L qs w lit st st' start len rest : Nat)
-    (hP : L = bitCheckLoopK qs w lit st start (len.add rest))
-    (h : (bitCheckLoopK qs w lit st start len).beq st') :
-    L = bitCheckLoopK qs w lit st' (start.add len) rest := by
-  grind [bitCheckLoopK_add, Nat.beq_eq]
-
-/-- Fuel additivity for the set-bit count. -/
-public theorem popcLoopK_add (b acc start x y : Nat) :
-    popcLoopK b acc start (x + y) = popcLoopK b (popcLoopK b acc start x) (start + x) y := by
-  induction y with
-  | zero => rfl
-  | succ y ih => grind [popcLoopK_succ]
-
-/-- One chain step for the set-bit count. -/
-public theorem popcLoopK_chain (L b acc acc' start len rest : Nat)
-    (hP : L = popcLoopK b acc start (len.add rest))
-    (h : (popcLoopK b acc start len).beq acc') :
-    L = popcLoopK b acc' (start.add len) rest := by
-  grind [popcLoopK_add, Nat.beq_eq]
 
 /-- Replace the starting state by a kernel-checked equal literal, the way the chain is entered from
 the state holding the powers of 2 and 3. -/
@@ -161,28 +90,6 @@ public theorem hpLoopK_chain (L lit M w e st st' start len rest : Nat)
 
 Executable copies used to compute the batch literals; a twin disagreeing with its kernel definition
 would produce a batch equation that fails its kernel check. -/
-
-public def bitCheckStep (qs w lit st i : Nat) : Nat :=
-  let q := field qs w i
-  let t := (q - 1) / 3
-  let prev := st >>> 1
-  let ok := st &&& 1
-  let okMod := if q % 6 % 4 == 1 then 1 else 0
-  let okRise := if prev + 1 ≤ t then 1 else 0
-  let okSet := (lit >>> t) &&& 1
-  (t <<< 1) + ok * okMod * okRise * okSet
-
-public def bitCheckLoop (qs w lit st start fuel : Nat) : Nat := Id.run do
-  let mut s := st
-  for i in [0:fuel] do
-    s := bitCheckStep qs w lit s (start + i)
-  return s
-
-public def popcLoop (b acc start fuel : Nat) : Nat := Id.run do
-  let mut a := acc
-  for i in [0:fuel] do
-    a := a + popc32 ((b >>> ((start + i) * 32)) &&& ((1 <<< 32) - 1))
-  return a
 
 public def powStep (M w q st : Nat) : Nat :=
   let mask := (1 <<< 64) - 1

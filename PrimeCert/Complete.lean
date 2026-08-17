@@ -5,8 +5,8 @@ Authors: Bhavik Mehta
 -/
 module
 
-public import Polya.Correct.BitCheck
-public import Polya.Correct.Ones
+public import PrimeCert.BitCheck
+public import PrimeCert.Ones
 
 /-!
 # The packed primes are every prime up to the cutoff
@@ -16,7 +16,7 @@ counts the set positions. Equal counts make that map onto, so every prime from 5
 in a field (`primeBlock_spec`).
 -/
 
-namespace PrimeCert.Polya
+namespace PrimeCert
 
 open PrimeCert.Sieve (IsSieve num)
 
@@ -112,4 +112,4 @@ public theorem primeBlock_spec {qs w lit M cnt chunks : ℕ} (hsieve : IsSieve M
   obtain ⟨i, hi, hti⟩ := exists_field_of_testBit h hpop hidx hbit hltp
   exact ⟨i, hi, by rw [← num_idx_fieldK h hi, hti, hnum]⟩
 
-end PrimeCert.Polya
+end PrimeCert

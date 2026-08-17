@@ -5,7 +5,7 @@ Authors: Bhavik Mehta
 -/
 module
 
-public import Polya.Theory.Runs
+public import PrimeCert.Runs
 public import Polya.Correct.Tables
 public import Polya.Correct.PowerPack
 

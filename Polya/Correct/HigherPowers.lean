@@ -6,7 +6,7 @@ Authors: Bhavik Mehta
 module
 
 public import Polya.Correct.PowerPack
-public import Polya.Correct.Complete
+public import PrimeCert.Complete
 
 import Mathlib.Tactic.Ring
 

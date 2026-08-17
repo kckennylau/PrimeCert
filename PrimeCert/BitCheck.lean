@@ -5,8 +5,8 @@ Authors: Bhavik Mehta
 -/
 module
 
-public import Polya.PowerDefs
-public import Polya.Bits.Field
+public import PrimeCert.Bits
+public import PrimeCert.Field
 public import PrimeCert.ForLean
 public import PrimeCert.SieveCorrect
 public import Mathlib.Data.Nat.Bitwise
@@ -20,7 +20,7 @@ each field is `1` or `5` modulo 6, its sieve index rises, and its sieve bit is s
 (`bitCheckLoopK_spec`).
 -/
 
-namespace PrimeCert.Polya
+namespace PrimeCert
 
 open Nat
 
@@ -126,4 +126,4 @@ public theorem fieldK_injOn {qs w lit cnt : ℕ} (h : bitCheckLoopK qs w lit 1 0
   obtain ⟨-, hmono, -⟩ := bitCheckLoopK_spec cnt h
   exact eq_of_mono hmono hi hj (congrArg idx heq)
 
-end PrimeCert.Polya
+end PrimeCert

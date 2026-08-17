@@ -5,7 +5,7 @@ Authors: Bhavik Mehta
 -/
 module
 
-public import Polya.Defs
+public import PrimeCert.Bits
 public import Mathlib.Data.Nat.Bitwise
 
 /-!
@@ -19,7 +19,7 @@ other fields keep their values (`fieldK_lor_shiftLeft_ne`), and the result stops
 (`fieldK_eq_zero_of_lt`), which is how the loops meet the first of these.
 -/
 
-namespace PrimeCert.Polya
+namespace PrimeCert
 
 open Nat
 
@@ -135,4 +135,4 @@ public theorem lor_shiftLeft_lt {t val w i : ℕ} (ht : t < 2 ^ (w * i)) (hv : v
     Nat.mul_comm (2 ^ (w * i)) (2 ^ w)]
   exact (Nat.mul_lt_mul_right (Nat.two_pow_pos _)).2 hv
 
-end PrimeCert.Polya
+end PrimeCert

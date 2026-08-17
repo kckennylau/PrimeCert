@@ -5,7 +5,7 @@ Authors: Bhavik Mehta
 -/
 module
 
-public import Polya.Bits.Field
+public import PrimeCert.Field
 public import Polya.PowerDefs
 
 import Mathlib.Tactic.Ring

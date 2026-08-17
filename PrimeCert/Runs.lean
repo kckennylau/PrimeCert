@@ -5,8 +5,8 @@ Authors: Bhavik Mehta
 -/
 module
 
-public import Polya.Theory.Summatory
 public import Mathlib.Algebra.BigOperators.Intervals
+public import Mathlib.Algebra.Ring.Int.Defs
 
 /-!
 # Runs of equal quotients
@@ -16,7 +16,7 @@ The indices `k` with `v / k` equal to a given value form a contiguous run ending
 loop walks those runs.
 -/
 
-namespace PrimeCert.Polya
+namespace PrimeCert
 
 open Finset
 
@@ -46,4 +46,4 @@ public theorem sum_run {v k : ℕ} (hk : 0 < k) (hkv : k ≤ v) (f : ℕ → ℤ
   · simp only [Finset.mem_Icc] at hk'
     rw [div_eq_of_run hk hk'.1 hk'.2]
 
-end PrimeCert.Polya
+end PrimeCert
