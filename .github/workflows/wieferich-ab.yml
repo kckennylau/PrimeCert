@@ -21,24 +21,25 @@ jobs:
       - name: Fetch the mathlib build cache
         run: lake exe cache get
 
-      - name: Build the library
-        run: lake build PrimeCert.Wieferich PrimeCert.Meta.QuickRfl
+      - name: Build the shared definitions
+        run: lake build PrimeCertTest.WieferichBenchDefs PrimeCert.Meta.QuickRfl
 
-      - name: Time every variant, fifteen rounds
+      - name: Time each variant in its own process, five rounds
         run: |
           set -u
           export LEAN_PATH=$(lake env printenv LEAN_PATH)
+          names="Base Filter5 TwoStage SkipAll SkipNone"
           for round in $(seq 1 5); do
-            /usr/bin/time -v lean -Dtrace.profiler=true -Dtrace.profiler.threshold=1 \
-              PrimeCertTest/WieferichBench.lean > "out-$round.txt" 2> "time-$round.txt" \
-              || echo "RUN FAILED round $round"
-            wall=$(grep 'Elapsed (wall clock)' "time-$round.txt" | awk '{print $8}')
-            peak=$(grep 'Maximum resident set size' "time-$round.txt" | awk '{print $6}')
-            line="round $round"
-            for t in base_1 filter5_1 two_stage_1 two_stage_2 filter5_2 base_2 skip_always skip_never; do
-              v=$(grep -o "\[Kernel\] \[[0-9.]*\].*\b$t\b" "out-$round.txt" \
-                | grep -o '\[[0-9]\+\.[0-9]\+\]' | tr -d '[]' | head -1)
-              line="$line | $t ${v}s"
+            # Rotate the order each round so no variant keeps the same process slot.
+            order=$(echo $names | awk -v r="$round" '{n=split($0,a," "); for(i=0;i<n;i++) printf "%s ", a[((i+r-1)%n)+1]}')
+            for name in $order; do
+              /usr/bin/time -v lean -Dtrace.profiler=true -Dtrace.profiler.threshold=1 \
+                "PrimeCertTest/Wieferich$name.lean" > "out-$name-$round.txt" 2> "time-$name-$round.txt" \
+                || echo "RUN FAILED $name round $round"
+              kern=$(grep -o '\[Kernel\] \[[0-9.]*\]' "out-$name-$round.txt" \
+                | grep -o '[0-9]\+\.[0-9]\+' | sort -rn | head -1)
+              wall=$(grep 'Elapsed (wall clock)' "time-$name-$round.txt" | awk '{print $8}')
+              peak=$(grep 'Maximum resident set size' "time-$name-$round.txt" | awk '{print $6}')
+              echo "round $round | $name | kernel ${kern}s | wall $wall | peak ${peak} KB"
             done
-            echo "$line | wall $wall | peak ${peak} KB"
           done
