@@ -24,11 +24,11 @@ public theorem List.rec_and {α : Type*} (f : α → Bool) (b : Bool) (l : List 
     List.rec b (fun hd _ ih ↦ f hd && ih) l = true ↔ b = true ∧ ∀ x ∈ l, f x := by
   induction l with
   | nil => simp
-  | cons _ _ ih => simp only [Bool.and_eq_true, ih, List.mem_cons, forall_eq_or_imp]; tauto
+  | cons _ _ ih => grind
 
 namespace PrimeCert
 
-@[expose] public noncomputable def forallB (f : ℕ → Bool) (start len : ℕ) (step : ℕ := 1) : Bool :=
+@[expose] public noncomputable def forallB (f : ℕ → Bool) (start len : ℕ) (step : ℕ) : Bool :=
   len.rec true fun n b ↦ (f ((n.mul step).add start)).and' b
 
 @[simp, grind =] public theorem forallB_zero (f : ℕ → Bool) (start step : ℕ) :
