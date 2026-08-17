@@ -31,15 +31,18 @@ def Mirimanoff (p : ℕ) : Prop :=
   3 ^ (p - 1) ≡ 1 [MOD p^2]
 
 noncomputable def wieferichK (p : ℕ) : Bool :=
-  powModK 2 p.pred (p.pow 2) |>.beq 1
+  powModK 2 (p.sub 1) (Nat.pow p 2) |>.beq 1
+
+noncomputable def wieferichK' (p : ℕ) : Bool :=
+  ((powModK 2 (p.sub 1) p).beq 1).and' ((powModK 2 (p.sub 1) (Nat.pow p 2)).beq 1)
 
 noncomputable def mirimanoffK (p : ℕ) : Bool :=
-  powModK 3 p.pred (p.pow 2) |>.beq 1
+  powModK 3 (p.sub 1) (p.pow 2) |>.beq 1
 
 @[simp] theorem wieferichK_eq_true_iff (p : ℕ) (hp : p ≠ 1) : wieferichK p ↔ Wieferich p := by
   have hp2 : p ^ 2 ≠ 1 := by rwa [ne_eq, sq, mul_eq_one, and_self]
   rw [Wieferich, wieferichK, Nat.beq_eq, Nat.ModEq, Nat.one_mod_eq_one.mpr hp2,
-    powModK_eq, Nat.pow_eq, Nat.pred_eq_sub_one]
+    powModK_eq, Nat.pow_eq, Nat.sub_eq]
 
 @[simp] theorem wieferichK_eq_false_iff (p : ℕ) (hp : p ≠ 1) :
     wieferichK p = false ↔ ¬Wieferich p := by
@@ -48,7 +51,7 @@ noncomputable def mirimanoffK (p : ℕ) : Bool :=
 @[simp] theorem mirimanoffK_eq_true_iff (p : ℕ) (hp : p ≠ 1) : mirimanoffK p ↔ Mirimanoff p := by
   have hp2 : p ^ 2 ≠ 1 := by rwa [ne_eq, sq, mul_eq_one, and_self]
   rw [Mirimanoff, mirimanoffK, Nat.beq_eq, Nat.ModEq, Nat.one_mod_eq_one.mpr hp2,
-    powModK_eq, Nat.pow_eq, Nat.pred_eq_sub_one]
+    powModK_eq, Nat.pow_eq, Nat.sub_eq]
 
 @[simp] theorem mirimanoffK_eq_false_iff (p : ℕ) (hp : p ≠ 1) :
     mirimanoffK p = false ↔ ¬Mirimanoff p := by
@@ -58,9 +61,29 @@ noncomputable def mirimanoffK (p : ℕ) : Bool :=
 
 open PrimeCert
 
-theorem wieferich_mirimanoff₁ : ∀ n < 6000, n % 6 = 1 →
+#reduce Bool.false.and' sorry
+
+set_option trace.profiler true
+set_option Elab.async false
+-- set_option diagnostics true
+
+theorem wieferich_mirimanoff₁ : ∀ n < 600000, n % 6 = 1 →
+    ((n.mod 5).beq 0).or' ((wieferichK n).not'.or' (mirimanoffK n).not') :=
+  forallB_of_mod _ (start := 1) (len := 100000) (step := 6) (by quickRfl)
+
+theorem wieferich_mirimanoff₁' : ∀ n < 600000, n % 6 = 1 →
     (wieferichK n).not'.or' (mirimanoffK n).not' :=
-  forallB_of_mod _ (start := 1) (len := 1000) (step := 6) (by quickRfl)
+  forallB_of_mod _ (start := 1) (len := 100000) (step := 6) (by quickRfl)
+
+theorem wieferich_mirimanoff₁'' : ∀ n < 600000, n % 6 = 1 →
+    (wieferichK n).not'.or' (mirimanoffK n).not' :=
+  forallB_of_mod _ (start := 1) (len := 100000) (step := 6) (by quickRfl)
+
+theorem wieferich_mirimanoff₁''' : ∀ n < 600000, n % 6 = 1 →
+    (n.mod 5 == 0).or' ((wieferichK n).not'.or' (mirimanoffK n).not') :=
+  forallB_of_mod _ (start := 1) (len := 100000) (step := 6) (by quickRfl)
+
+#exit
 
 theorem wieferich₅ : ∀ n < 6000, n % 6 = 5 → !wieferichK n :=
   forallB_of_mod _ (start := 5) (len := 1000) (step := 6) (by quickRfl)
