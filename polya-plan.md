@@ -123,8 +123,7 @@ PrimeCertTest/PolyaFull.lean      -- the x = 906150257 run, polya_witness, polya
 To write:
 
 ```
-PrimeCertTest/PolyaOracle.lean -- independent compiled implementations, kept untracked for now
-.github/workflows              -- a dispatch-only job for the run at x
+.github/workflows -- a dispatch-only job for the run at x
 ```
 
 ## Status
