@@ -45,4 +45,20 @@ theorem flat_50000 : forallBFlat (fun i ↦ (i.mul 2).ble 700000) 1 50000 6 := b
 set_option maxRecDepth 1000000 in
 theorem single_50000 : forallBSingle (fun i ↦ (i.mul 2).ble 700000) 1 50000 6 := by quickRfl
 
+/-! Which end each shape gives up at. The progression runs `1, 7, …, 299995`, and each predicate
+below is false at exactly one end of it, so the four times say where the fold stops. -/
+
+set_option maxRecDepth 1000000 in
+theorem flat_small_false : (forallBFlat (fun i ↦ (i.beq 1).not) 1 50000 6).not := by quickRfl
+
+set_option maxRecDepth 1000000 in
+theorem flat_large_false : (forallBFlat (fun i ↦ (i.beq 299995).not) 1 50000 6).not := by quickRfl
+
+set_option maxRecDepth 1000000 in
+theorem single_small_false : (forallBSingle (fun i ↦ (i.beq 1).not) 1 50000 6).not := by quickRfl
+
+set_option maxRecDepth 1000000 in
+theorem single_large_false :
+    (forallBSingle (fun i ↦ (i.beq 299995).not) 1 50000 6).not := by quickRfl
+
 end PrimeCert.Bench
