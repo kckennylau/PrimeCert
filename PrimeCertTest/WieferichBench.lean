@@ -44,4 +44,16 @@ theorem base_2 : ∀ n < 600000, n % 6 = 1 →
     (wieferichB n).not'.or' (mirimanoffB n).not' :=
   forallB_of_mod _ (start := 1) (len := 100000) (step := 6) (by quickRfl)
 
+/-! `n.mod 1` is `0` at every term, so `skip_always` takes the left branch throughout, and
+`n.mod 5` is below 5, so `skip_never` takes the right branch throughout. Their two times bound
+what the disjunction can save and what the added test costs. -/
+
+theorem skip_always : ∀ n < 600000, n % 6 = 1 →
+    ((n.mod 1).beq 0).or' ((wieferichB n).not'.or' (mirimanoffB n).not') :=
+  forallB_of_mod _ (start := 1) (len := 100000) (step := 6) (by quickRfl)
+
+theorem skip_never : ∀ n < 600000, n % 6 = 1 →
+    ((n.mod 5).beq 7).or' ((wieferichB n).not'.or' (mirimanoffB n).not') :=
+  forallB_of_mod _ (start := 1) (len := 100000) (step := 6) (by quickRfl)
+
 end PrimeCert.Bench
