@@ -14,7 +14,7 @@ meta import PrimeCert.Meta.QuickRfl
 
 Each theorem below runs the same 100000-term check over `n ≡ 1 mod 6`, varying one thing at a
 time, so the per-declaration `[Kernel]` times the `wieferich-ab` workflow reports isolate that
-one thing. `base_repeat` repeats `base` exactly, giving a measure of run-to-run noise.
+one thing.
 -/
 
 namespace PrimeCert.Bench
@@ -33,10 +33,6 @@ noncomputable def mirimanoffB (p : Nat) : Bool :=
 set_option maxRecDepth 4000000
 
 theorem base : ∀ n < 600000, n % 6 = 1 →
-    (wieferichB n).not'.or' (mirimanoffB n).not' :=
-  forallB_of_mod _ (start := 1) (len := 100000) (step := 6) (by quickRfl)
-
-theorem base_repeat : ∀ n < 600000, n % 6 = 1 →
     (wieferichB n).not'.or' (mirimanoffB n).not' :=
   forallB_of_mod _ (start := 1) (len := 100000) (step := 6) (by quickRfl)
 
