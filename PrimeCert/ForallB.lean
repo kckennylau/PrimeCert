@@ -47,13 +47,21 @@ public theorem forallB_iff (f : ℕ → Bool) (start len step : ℕ) :
   | zero => simp
   | succ n ih => simp [ih, Nat.forall_lt_succ_right, and_comm]
 
+/-- Read the fold starting at `start * step + r` as a statement about the indices from `start`
+to `start + len`. -/
+public theorem forallB_iff' (f : ℕ → Bool) (start r len step : ℕ) :
+    forallB f (start * step + r) len step ↔
+    ∀ n, start ≤ n → n < start + len → f (n * step + r) := by
+  simp_rw [forallB_iff, ← add_assoc, ← add_mul, le_iff_exists_add, exists_imp,
+    forall_eq_apply_imp_iff, add_lt_add_iff_left, add_comm]
+
 theorem forallB_iff_range (f : ℕ → Bool) (start len step : ℕ) :
     forallB f start len step ↔ ∀ n ∈ List.range' start len step, f n := by
   simp only [forallB_iff, List.mem_range', forall_exists_index, and_imp]
   grind
 
-/-- Read the fold over `r, r + step, …` as a statement about every `n` below `len * step` whose
-remainder mod `step` is `r`. -/
+/-- Read the fold over `start, start + step, …` as a statement about every `n` below `len * step`
+whose remainder mod `step` is `start`. -/
 public theorem forallB_of_mod (f : ℕ → Bool) {start len step : ℕ}
     (h : forallB f start len step) : ∀ n < len * step, n % step = start → f n := by
   grind [forallB_iff, Nat.div_lt_of_lt_mul, Nat.div_add_mod']
