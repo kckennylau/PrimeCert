@@ -314,23 +314,21 @@ structure TableData where
   cnt : Nat
   /-- Blocks of 32 positions the counts cover. -/
   chunks : Nat
-  /-- What the checks against the sieve left, absent when they were skipped. -/
-  powers : Option PowerData
+  /-- What the checks against the sieve left. -/
+  powers : PowerData
 
 /-- Build the parity table and the running counts for numbers up to `n`, in batches of `len` steps,
 each kernel-checked separately. The tables and their equations are held by generated declarations;
 their literals and the arguments the assembly needs are returned. -/
-def buildTables (n len : Nat) (check : Bool := true) : MetaM TableData := do
+def buildTables (n len : Nat) : MetaM TableData := do
   let qsName := `PrimeCert.Polya.lamQs
   let litName := `PrimeCert.Polya.lamLit
   let dataName := `PrimeCert.Polya.lamData
   if (← getEnv).contains litName then
     throwError "run_lam: a parity table already exists"
   let w := Nat.log2 n + 1
-  let powers ← if check then (some <$> emitPowerChecks n len) else pure none
-  let qs := match powers with
-    | some p => p.qs
-    | none => packFields (sievedPrimes n ++ collectedPowers n) w
+  let powers ← emitPowerChecks n len
+  let qs := powers.qs
   let fuel := (sievedPrimes n).size + (collectedPowers n).size
   addDecl <| Declaration.defnDecl
     { name := qsName, levelParams := [], type := mkConst ``Nat,
@@ -562,13 +560,13 @@ def cbrt (n : Nat) : Nat := Id.run do
 def defaultCutoff (x : Nat) : Nat := cbrt (x * x)
 
 /-- Compute the running total of the Liouville values at `x`, from the tables below `cutoff` and
-the recurrence at each larger argument `x / j`, taken in increasing order. With the prime powers
-checked against the sieve, the run also emits `polyaValue : L x = p - q`. -/
-def runPolya (x cutoff : Nat) (K? : Option Nat := none) (check : Bool := true) : MetaM Unit := do
+the recurrence at each larger argument `x / j`, taken in increasing order. The run emits
+`polyaValue : L x = p - q`. -/
+def runPolya (x cutoff : Nat) (K? : Option Nat := none) : MetaM Unit := do
   let len := match K? with
     | some K => Nat.max 1 K
     | none => defaultBatchLen
-  let d ← buildTables cutoff len check
+  let d ← buildTables cutoff len
   let lam := d.lam
   let ones := d.ones
   let w := d.w
@@ -588,9 +586,8 @@ def runPolya (x cutoff : Nat) (K? : Option Nat := none) (check : Bool := true) :
   addThm `PrimeCert.Polya.hiData
     (mkNatEqual (mkHiLoopK (mkRawNatLit x) (mkRawNatLit lam) (mkRawNatLit ones) (mkRawNatLit w)
       (mkRawNatLit 0) (top + 1) (rootx - top)) (mkRawNatLit hi0)) hiProof
-  let mut names? ← match d.powers with
-    | some p => some <$> emitTables x cutoff rootx top low hi0 d p
-    | none => pure none
+  let (lowName, hiName0) ← emitTables x cutoff rootx top low hi0 d d.powers
+  let mut hiName := hiName0
   let mut hi := hi0
   let mut last : Int := 0
   for jj in [0:top] do
@@ -608,16 +605,13 @@ def runPolya (x cutoff : Nat) (K? : Option Nat := none) (check : Bool := true) :
     let B := stField st 2
     last := (s : Int) - A + B
     if j == 1 then
-      if let some (lowName, hiName) := names? then
-        let p := if last ≥ 0 then last.toNat else 0
-        let q := if last ≥ 0 then 0 else (-last).toNat
-        emitFinal x rootx low hi s A B st p q fuel lowName hiName dataName
+      let p := if last ≥ 0 then last.toNat else 0
+      let q := if last ≥ 0 then 0 else (-last).toNat
+      emitFinal x rootx low hi s A B st p q fuel lowName hiName dataName
     else
       let val := (last + bigOffset).toNat
       let next := hi ||| (val <<< (bigWidth * j))
-      if let some (lowName, hiName) := names? then
-        names? := some (lowName,
-          ← emitStep x rootx low hi next j v s A B st val fuel lowName hiName dataName)
+      hiName ← emitStep x rootx low hi next j v s A B st val fuel lowName hiName dataName
       hi := next
   logInfo m!"L({x}) = {last}"
 
@@ -626,12 +620,5 @@ sets the cutoff, and `run_polya x c K` also sets the batch length. -/
 elab "run_polya" xStx:num cStx:(num)? kStx:(num)? : command => do
   let x := xStx.getNat
   liftTermElabM <| runPolya x ((cStx.map (·.getNat)).getD (defaultCutoff x)) (kStx.map (·.getNat))
-
-/-- As `run_polya`, taking the prime powers as given, for measuring what the checks against the
-sieve cost. -/
-elab "run_polya_unchecked" xStx:num cStx:(num)? kStx:(num)? : command => do
-  let x := xStx.getNat
-  liftTermElabM <|
-    runPolya x ((cStx.map (·.getNat)).getD (defaultCutoff x)) (kStx.map (·.getNat)) false
 
 end PrimeCert.Polya
