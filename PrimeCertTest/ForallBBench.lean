@@ -11,10 +11,11 @@ import PrimeCert.Meta.QuickRfl
 
 /-! # Benchmark workload for the two `forallB` shapes
 
-`forallBPair` carries the running element beside the accumulated `Bool`, adding `step` once per
-iteration. `forallBSingle` carries the accumulator alone and rebuilds the element as
-`n * step + start`. Both fold the same predicate over the same progression, so the pair of
-`[Kernel]` times reported by the `forallb-ab` workflow differ only in that choice.
+Three shapes folding the same predicate over the same progression, so the `[Kernel]` times the
+`forallb-ab` workflow reports differ only in the shape. `forallBPair` carries the running element
+beside the accumulated `Bool`, adding `step` once per iteration. `forallBFlat` carries the `Bool`
+alone, rebuilding the element as `n * step + start`. `forallBSingle` carries the same one value
+with a function-valued motive.
 -/
 
 namespace PrimeCert.Bench
@@ -29,8 +30,17 @@ namespace PrimeCert.Bench
   Nat.rec (motive := fun _ ↦ Bool → Bool) (fun b ↦ b)
     (fun n r b ↦ r (f ((n.mul step).add start) && b)) len true
 
+/-- The fold carrying the accumulator alone as a plain `Bool`, rebuilding the element from the
+recursion index. -/
+@[expose] public noncomputable def forallBFlat (f : Nat → Bool) (start len step : Nat) : Bool :=
+  Nat.rec (motive := fun _ ↦ Bool) true
+    (fun n b ↦ f ((n.mul step).add start) && b) len
+
 set_option maxRecDepth 1000000 in
 theorem pair_50000 : forallBPair (fun i ↦ (i.mul 2).ble 700000) 1 50000 6 := by quickRfl
+
+set_option maxRecDepth 1000000 in
+theorem flat_50000 : forallBFlat (fun i ↦ (i.mul 2).ble 700000) 1 50000 6 := by quickRfl
 
 set_option maxRecDepth 1000000 in
 theorem single_50000 : forallBSingle (fun i ↦ (i.mul 2).ble 700000) 1 50000 6 := by quickRfl
