@@ -32,18 +32,18 @@ reduces. `forallB_iff` states this as an ordinary `∀`. -/
 @[expose] public noncomputable def forallB (f : ℕ → Bool) (start len : ℕ) (step : ℕ) : Bool :=
   len.rec true fun n b ↦ (f ((n.mul step).add start)).and' b
 
-@[simp, grind =] public theorem forallB_zero (f : ℕ → Bool) (start step : ℕ) :
+@[simp, grind =] theorem forallB_zero (f : ℕ → Bool) (start step : ℕ) :
     forallB f start 0 step = true :=
   rfl
 
 /-- One more term extends the fold by the element at index `len`. -/
-@[simp, grind =] public theorem forallB_succ (f : ℕ → Bool) (start len step : ℕ) :
+@[simp, grind =] theorem forallB_succ (f : ℕ → Bool) (start len step : ℕ) :
     forallB f start (len + 1) step =
       (f ((len.mul step).add start)).and' (forallB f start len step) :=
   rfl
 
 /-- Read the fold as a statement about the `len` indices below `len`. -/
-public theorem forallB_iff (f : ℕ → Bool) (start len step : ℕ) :
+theorem forallB_iff (f : ℕ → Bool) (start len step : ℕ) :
     forallB f start len step ↔ ∀ n < len, f (n * step + start) := by
   induction len with
   | zero => simp
