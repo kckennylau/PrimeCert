@@ -13,10 +13,8 @@ import Mathlib.Tactic.Ring
 /-! # A kernel-reducible bounded `Bool` quantifier
 
 `forallB f start len step` folds `f` over the `len`-term arithmetic progression
-`start, start + step, …`, carrying a single `Bool` and computing each element as
-`n * step + start` from the recursion index. `forallB_succ` and `forallB_zero` give the two
-recursion steps, and the `forallB_iff*` lemmas rewrite the fold as an ordinary `∀`.
-`List.rec_and` does the same for a `List.rec` fold of `&&` over an explicit list.
+`start, start + step, …`. `List.rec_and` does the same for a `List.rec` fold of `&&` over an
+explicit list.
 -/
 
 public theorem List.rec_and {α : Type*} (f : α → Bool) (b : Bool) (l : List α) :
@@ -44,7 +42,7 @@ namespace PrimeCert
 
 /-- Read the fold as a statement about the indices `0` to `len`, whose elements are
 `n * step + start`. -/
-theorem forallB_iff (f : ℕ → Bool) (start len step : ℕ) :
+public theorem forallB_iff (f : ℕ → Bool) (start len step : ℕ) :
     forallB f start len step ↔ ∀ n < len, f (n * step + start) := by
   induction len with
   | zero => simp
