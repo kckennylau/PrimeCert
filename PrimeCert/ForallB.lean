@@ -27,8 +27,8 @@ public theorem List.rec_and {α : Type*} (f : α → Bool) (b : Bool) (l : List 
 
 namespace PrimeCert
 
-/-- `f` holds at each of the `len` elements `start, start + step, …`, as a `Bool` the kernel
-reduces. `forallB_iff` states this as an ordinary `∀`. -/
+/-- `f` holds at each of the `len` elements `start, start + step, …`, as a `Bool`.
+`forallB_iff` states this as an ordinary `∀`. -/
 @[expose] public noncomputable def forallB (f : ℕ → Bool) (start len : ℕ) (step : ℕ) : Bool :=
   len.rec true fun n b ↦ (f ((n.mul step).add start)).and' b
 
@@ -42,7 +42,8 @@ reduces. `forallB_iff` states this as an ordinary `∀`. -/
       (f ((len.mul step).add start)).and' (forallB f start len step) :=
   rfl
 
-/-- Read the fold as a statement about the `len` indices below `len`. -/
+/-- Read the fold as a statement about the indices `0` to `len`, whose elements are
+`n * step + start`. -/
 theorem forallB_iff (f : ℕ → Bool) (start len step : ℕ) :
     forallB f start len step ↔ ∀ n < len, f (n * step + start) := by
   induction len with
