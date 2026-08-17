@@ -9,13 +9,12 @@ public import Polya.Defs
 public import PrimeCert.Sieve
 
 /-!
-# Tying the strides of the parity table to the sieve
+# The loops checking the packed prime powers against the sieve
 
-The strides driving `lamK` are the prime powers `q ≤ M`, packed as `w`-bit fields. The primes from 5
-upward are checked against the sieve: `bitCheckLoopK` tests each one's sieve bit and that the fields
-rise, and `popcLoopK` counts the sieve's set bits, so equal counts leave no prime out. The remaining
-fields, 2, 3 and the powers with exponent at least two, are collected by `hpLoopK` from the sieve
-positions below `√M`.
+Kernel definitions for the three loops the run drives, each with its peel, additivity and chain
+lemmas and a compiled twin: `bitCheckLoopK` tests a field's residue, its rising sieve index and its
+sieve bit, `popcLoopK` adds up the sieve's set bits, and `hpLoopK` collects the powers with exponent
+at least two through `powLoopK`. What surviving these forces is `Polya.Correct.TableSpec`.
 -/
 
 namespace PrimeCert.Polya
