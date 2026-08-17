@@ -14,9 +14,10 @@ import Mathlib.Tactic.Ring
 /-! # A kernel-reducible bounded `Bool` quantifier
 
 `forallB f start len step` folds `f` over the `len`-term arithmetic progression
-`start, start + step, …`, returning a `Bool` the kernel reduces.
-The `forallB_iff*` lemmas rewrite it as an ordinary `∀`. `List.rec_and` does the same for a
-`List.rec` fold of `&&` over an explicit list.
+`start, start + step, …`, carrying a single `Bool` and computing each element as
+`n * step + start` from the recursion index. `forallB_succ` and `forallB_zero` give the two
+recursion steps, and the `forallB_iff*` lemmas rewrite the fold as an ordinary `∀`.
+`List.rec_and` does the same for a `List.rec` fold of `&&` over an explicit list.
 -/
 
 public theorem List.rec_and {α : Type*} (f : α → Bool) (b : Bool) (l : List α) :
@@ -28,23 +29,28 @@ public theorem List.rec_and {α : Type*} (f : α → Bool) (b : Bool) (l : List 
 
 namespace PrimeCert
 
-@[expose] public def forallB (f : ℕ → Bool) (start len : ℕ) (step : ℕ := 1) : Bool :=
-  (Nat.rec (motive := fun _ ↦ ℕ × Bool) (start, true)
-    (fun _ ih ↦ ih.rec fun i b ↦ (i.add step, f i && b)) len).2
+@[expose] public noncomputable def forallB (f : ℕ → Bool) (start len : ℕ) (step : ℕ := 1) : Bool :=
+  Nat.rec (motive := fun _ ↦ Bool) true
+    (fun n b ↦ (f ((n.mul step).add start)).and' b) len
+
+@[simp] public theorem forallB_zero (f : ℕ → Bool) (start step : ℕ) :
+    forallB f start 0 step = true :=
+  rfl
+
+/-- One more term extends the fold by the element at index `len`. -/
+public theorem forallB_succ (f : ℕ → Bool) (start len step : ℕ) :
+    forallB f start (len + 1) step =
+      (f ((len.mul step).add start)).and' (forallB f start len step) :=
+  rfl
 
 theorem forallB_iff_range' (f : ℕ → Bool) (start len step : ℕ) :
     forallB f start len step ↔ ∀ n ∈ List.range' start len step, f n := by
-  unfold forallB
   induction len with
   | zero => simp
   | succ len ih =>
-    simp only [Bool.and_eq_true, ih, List.range'_concat, List.forall_mem_append,
-      List.forall_mem_singleton, and_comm]
-    refine and_congr_left fun _a ↦ Eq.congr_left <| congr_arg f ?_
-    clear ih _a
-    induction len with
-    | zero => simp
-    | succ len ih => simp only; rw [ih, Nat.add_eq]; ring
+    simp only [forallB_succ, Bool.and'_eq_and, Bool.and_eq_true, ih, List.range'_concat,
+      List.forall_mem_append, List.forall_mem_singleton, and_comm, Nat.mul_eq, Nat.add_eq,
+      Nat.mul_comm, Nat.add_comm]
 
 theorem forallB_iff (f : ℕ → Bool) (start len step : ℕ) :
     forallB f start len step ↔ ∀ n < len, f (n * step + start) := by
