@@ -60,10 +60,10 @@ open PrimeCert
 
 theorem wieferich_mirimanoff₁ : ∀ n < 6000, n % 6 = 1 →
     (wieferichK n).not'.or' (mirimanoffK n).not' :=
-  forallB_of_mod _ (r := 1) (len := 1000) (step := 6) (by quickRfl)
+  forallB_of_mod _ (start := 1) (len := 1000) (step := 6) (by quickRfl)
 
 theorem wieferich₅ : ∀ n < 6000, n % 6 = 5 → !wieferichK n :=
-  forallB_of_mod _ (r := 5) (len := 1000) (step := 6) (by quickRfl)
+  forallB_of_mod _ (start := 5) (len := 1000) (step := 6) (by quickRfl)
 
 public theorem wieferich_mirimanoff {p : ℕ} (hp : p.Prime) (p_bound : p < 6000) :
     ¬(2 ^ (p - 1) ≡ 1 [MOD p^2]) ∨ ¬(3 ^ (p - 1) ≡ 1 [MOD p^2]) := by
