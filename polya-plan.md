@@ -145,7 +145,8 @@ stands:
    (`Polya/CardFactors.lean`).
 3. **The counts and the value tables, proved.** `popc32K_eq_bitSum` in `Polya/PopCount.lean`
    (the byte-wise argument, no `decide` over the word), `fieldK_onesK` and `onesBelowK_eq` in
-   `Polya/Ones.lean`, `lowLoopK_spec`, `hiLoopK_spec_start` and `val_eq_L` in `Polya/Tables.lean`.
+   `Polya/Ones.lean`, `lowLoopK_spec`, `hiLoopK_spec_start` and `lowVal_eq_L` in
+   `Polya/Tables.lean`.
 4. **The block loop, proved.** `blockLoopK_sum` in `Polya/BlockCorrect.lean`: a run of blocks
    ending at index `v + 1` with the second accumulator at `off * (v - 1)` has covered `2 … v`, so
    the accumulators differ by the sum in the recurrence. It rests on the run decomposition of
