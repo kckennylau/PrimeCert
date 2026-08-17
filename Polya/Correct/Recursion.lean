@@ -5,8 +5,8 @@ Authors: Bhavik Mehta
 -/
 module
 
-public import Polya.BlockCorrect
-public import Polya.Identity
+public import Polya.Correct.Blocks
+public import Polya.Theory.Identity
 
 /-!
 # The two tables through the recursion

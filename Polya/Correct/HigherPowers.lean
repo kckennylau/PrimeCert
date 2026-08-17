@@ -5,8 +5,8 @@ Authors: Bhavik Mehta
 -/
 module
 
-public import Polya.PowerPack
-public import Polya.Complete
+public import Polya.Correct.PowerPack
+public import Polya.Correct.Complete
 
 import Mathlib.Tactic.Ring
 

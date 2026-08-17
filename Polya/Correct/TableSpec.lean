@@ -5,8 +5,8 @@ Authors: Bhavik Mehta
 -/
 module
 
-public import Polya.HigherPowers
-public import Polya.LamCorrect
+public import Polya.Correct.HigherPowers
+public import Polya.Correct.Lam
 
 /-!
 # The packed table holds exactly the prime powers

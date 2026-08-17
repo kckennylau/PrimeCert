@@ -5,8 +5,8 @@ Authors: Bhavik Mehta
 -/
 module
 
-public import Polya.PrimePowers
-public import Polya.Field
+public import Polya.PowerDefs
+public import Polya.Bits.Field
 public import PrimeCert.ForLean
 public import PrimeCert.SieveCorrect
 public import Mathlib.Data.Nat.Bitwise

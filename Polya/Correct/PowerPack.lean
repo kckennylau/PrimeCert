@@ -5,8 +5,8 @@ Authors: Bhavik Mehta
 -/
 module
 
-public import Polya.Field
-public import Polya.PrimePowers
+public import Polya.Bits.Field
+public import Polya.PowerDefs
 
 import Mathlib.Tactic.Ring
 

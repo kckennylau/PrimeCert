@@ -5,7 +5,7 @@ Authors: Bhavik Mehta
 -/
 module
 
-public import Polya.Summatory
+public import Polya.Theory.Summatory
 public import Mathlib.Algebra.Ring.Parity
 
 /-!

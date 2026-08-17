@@ -5,7 +5,7 @@ Authors: Bhavik Mehta
 -/
 module
 
-public import Polya.Summatory
+public import Polya.Theory.Summatory
 public import Mathlib.NumberTheory.ArithmeticFunction.Misc
 
 /-!

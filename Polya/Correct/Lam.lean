@@ -5,9 +5,9 @@ Authors: Bhavik Mehta
 -/
 module
 
-public import Polya.Parity
-public import Polya.CardFactors
-public import Polya.PopCount
+public import Polya.Correct.Parity
+public import Polya.Theory.CardFactors
+public import Polya.Bits.PopCount
 
 /-!
 # The parity table holds the parity of `Ω`

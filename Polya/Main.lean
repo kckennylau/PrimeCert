@@ -5,9 +5,9 @@ Authors: Bhavik Mehta
 -/
 module
 
-public import Polya.Recursion
-public import Polya.TableSpec
-public import Polya.Tables
+public import Polya.Correct.Recursion
+public import Polya.Correct.TableSpec
+public import Polya.Correct.Tables
 
 /-!
 # The assembly

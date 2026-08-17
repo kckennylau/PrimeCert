@@ -5,8 +5,8 @@ Authors: Bhavik Mehta
 -/
 module
 
-public import Polya.BitCheck
-public import Polya.Ones
+public import Polya.Correct.BitCheck
+public import Polya.Correct.Ones
 
 /-!
 # The packed primes are every prime up to the cutoff

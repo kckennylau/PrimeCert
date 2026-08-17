@@ -5,9 +5,9 @@ Authors: Bhavik Mehta
 -/
 module
 
-public import Polya.Runs
-public import Polya.Tables
-public import Polya.PowerPack
+public import Polya.Theory.Runs
+public import Polya.Correct.Tables
+public import Polya.Correct.PowerPack
 
 /-!
 # The block loop accumulates the recurrence

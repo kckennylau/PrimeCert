@@ -5,9 +5,9 @@ Authors: Bhavik Mehta
 -/
 module
 
-public import Polya.Ones
-public import Polya.LamCorrect
-public import Polya.Count
+public import Polya.Correct.Ones
+public import Polya.Correct.Lam
+public import Polya.Theory.Count
 
 /-!
 # The tables of values of `L`

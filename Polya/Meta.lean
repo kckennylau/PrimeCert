@@ -6,7 +6,7 @@ Authors: Bhavik Mehta
 import Lean.Elab.Command
 import Polya.Defs
 import Polya.Main
-import Polya.PrimePowers
+import Polya.PowerDefs
 import PrimeCert.Meta.Sieve
 
 /-! # The `run_lam` command

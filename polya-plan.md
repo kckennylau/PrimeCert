@@ -94,27 +94,32 @@ Polya/Defs.lean        -- module, imports nothing: strideMaskK, markStrideK, fie
                           popc32K, onesLoopK, stFieldK, onesBelowK, lowLoopK, hiLoopK, blockStepK,
                           blockLoopK, the peel/additivity/chain lemmas, and a compiled twin of
                           every kernel-reduced definition
+Polya/PowerDefs.lean   -- bitCheckLoopK, popcLoopK, hpLoopK, their chain lemmas, and the twins
 Polya/Meta.lean        -- run_lam n, run_polya x c K, the native prime powers and packing, one
                           emitter per chain, defaultCutoff
-Polya/PrimePowers.lean -- bitCheckLoopK, popcLoopK, hpLoopK, their chain lemmas, and the twins
-Polya/Summatory.lean   -- def L, basic lemmas
-Polya/Identity.lean    -- Σ_{k≤v} L(⌊v/k⌋) = ⌊√v⌋ and the recurrence
-Polya/Field.lean       -- reading a packed field: bounds and the value at an index
-Polya/BitCheck.lean    -- what surviving the sieve bit checks says about the packed primes
-Polya/Complete.lean    -- equal counts leave no prime out of the packing
-Polya/PowerPack.lean   -- the packed state of the power collection, and what one loop appends
-Polya/Parity.lean      -- the stride masks mark the multiples
-Polya/CardFactors.lean -- the prime powers dividing n number Ω n
-Polya/LamCorrect.lean  -- lamK is the parity of Ω
-Polya/PopCount.lean    -- popc32K counts set bits
-Polya/Ones.lean        -- onesK holds the running counts
-Polya/Count.lean       -- L from a count of odd Ω
-Polya/Tables.lean      -- lowLoopK and hiLoopK hold values of L
-Polya/Runs.lean        -- the run decomposition of Σ_{k=2}^{v} L(⌊v/k⌋)
-Polya/TableSpec.lean   -- the packed table holds exactly the prime powers
-Polya/BlockCorrect.lean -- the invariant of blockLoopK over its packed state
-Polya/Recursion.lean   -- the two tables answer every read one block makes
 Polya/Main.lean        -- the three lemmas the emitted run applies, one per stage
+
+Polya/Bits/Field.lean     -- reading a packed field: bounds and the value at an index
+Polya/Bits/PopCount.lean  -- popc32K counts set bits
+
+Polya/Theory/Summatory.lean   -- def L, basic lemmas
+Polya/Theory/Identity.lean    -- Σ_{k≤v} L(⌊v/k⌋) = ⌊√v⌋ and the recurrence
+Polya/Theory/Count.lean       -- L from a count of odd Ω
+Polya/Theory/CardFactors.lean -- the prime powers dividing n number Ω n
+Polya/Theory/Runs.lean        -- the run decomposition of Σ_{k=2}^{v} L(⌊v/k⌋)
+
+Polya/Correct/BitCheck.lean     -- what surviving the sieve bit checks says about the packed primes
+Polya/Correct/Complete.lean     -- equal counts leave no prime out of the packing
+Polya/Correct/PowerPack.lean    -- the packed state of the power collection, and what one loop
+                                   appends
+Polya/Correct/HigherPowers.lean -- the walk collects the powers with exponent at least two
+Polya/Correct/TableSpec.lean    -- the packed table holds exactly the prime powers
+Polya/Correct/Parity.lean       -- the stride masks mark the multiples
+Polya/Correct/Lam.lean          -- lamK is the parity of Ω
+Polya/Correct/Ones.lean         -- onesK holds the running counts
+Polya/Correct/Tables.lean       -- lowLoopK and hiLoopK hold values of L
+Polya/Correct/Blocks.lean       -- the invariant of blockLoopK over its packed state
+Polya/Correct/Recursion.lean    -- the two tables answer every read one block makes
 PrimeCertTest/PolyaCertCheck.lean -- the run at 10^6, with L_million read off it
 PrimeCertTest/PolyaFull.lean      -- the x = 906150257 run, polya_witness, polya_disproof,
                                      polya_conjecture_false
@@ -134,29 +139,30 @@ on `propext`, `Classical.choice` and `Quot.sound` alone. Where each of the four 
 stands:
 
 1. **The prime powers come from the sieve, proved.** `isPrimePowerTable_of_checks` in
-   `Polya/TableSpec.lean` turns what the three loops check into `IsPrimePowerTable`. It rests on
-   `bitCheckLoopK_spec` (`Polya/BitCheck.lean`, what a surviving flag forces), `primeBlock_spec`
-   (`Polya/Complete.lean`, equal counts leave no prime out), and `hpLoopK_spec` with `hpVal_iff`
-   (`Polya/HigherPowers.lean`, the walk collects the powers with base 2 or 3 and those with
-   exponent at least two), over the packed state of `Polya/PowerPack.lean`.
-2. **The parity table, proved.** `testBit_lamK` in `Polya/LamCorrect.lean`: bit `n` is set exactly
+   `Polya/Correct/TableSpec.lean` turns what the three loops check into `IsPrimePowerTable`. It
+   rests on `bitCheckLoopK_spec` (`Polya/Correct/BitCheck.lean`, what a surviving flag forces),
+   `primeBlock_spec` (`Polya/Correct/Complete.lean`, equal counts leave no prime out), and
+   `hpLoopK_spec` with `hpVal_iff` (`Polya/Correct/HigherPowers.lean`, the walk collects the powers
+   with base 2 or 3 and those with exponent at least two), over the packed state of
+   `Polya/Correct/PowerPack.lean`.
+2. **The parity table, proved.** `testBit_lamK` in `Polya/Correct/Lam.lean`: bit `n` is set exactly
    when `Ω n` is odd, for `1 ≤ n ≤ M`, given `IsPrimePowerTable`. It rests on the stride masks
-   marking the multiples (`Polya/Parity.lean`) and on the prime powers dividing `n` numbering `Ω n`
-   (`Polya/CardFactors.lean`).
-3. **The counts and the value tables, proved.** `popc32K_eq_bitSum` in `Polya/PopCount.lean`
+   marking the multiples (`Polya/Correct/Parity.lean`) and on the prime powers dividing `n`
+   numbering `Ω n` (`Polya/Theory/CardFactors.lean`).
+3. **The counts and the value tables, proved.** `popc32K_eq_bitSum` in `Polya/Bits/PopCount.lean`
    (the byte-wise argument, no `decide` over the word), `fieldK_onesK` and `onesBelowK_eq` in
-   `Polya/Ones.lean`, `lowLoopK_spec`, `hiLoopK_spec_start` and `lowVal_eq_L` in
-   `Polya/Tables.lean`.
-4. **The block loop, proved.** `blockLoopK_sum` in `Polya/BlockCorrect.lean`: a run of blocks
+   `Polya/Correct/Ones.lean`, `lowLoopK_spec`, `hiLoopK_spec_start` and `lowVal_eq_L` in
+   `Polya/Correct/Tables.lean`.
+4. **The block loop, proved.** `blockLoopK_sum` in `Polya/Correct/Blocks.lean`: a run of blocks
    ending at index `v + 1` with the second accumulator at `off * (v - 1)` has covered `2 … v`, so
    the accumulators differ by the sum in the recurrence. It rests on the run decomposition of
-   `Polya/Runs.lean`.
+   `Polya/Theory/Runs.lean`.
 
-The recurrence itself is proved: `Polya/Summatory.lean` defines `L`, and `Polya/Identity.lean`
-gives `∑_{k=1}^{v} L ⌊v/k⌋ = ⌊√v⌋` and `L_eq_sqrt_sub`, off the divisor sum of `λ` being the
-indicator of the squares.
+The recurrence itself is proved: `Polya/Theory/Summatory.lean` defines `L`, and
+`Polya/Theory/Identity.lean` gives `∑_{k=1}^{v} L ⌊v/k⌋ = ⌊√v⌋` and `L_eq_sqrt_sub`, off the divisor
+sum of `λ` being the indicator of the squares.
 
-`Polya/Recursion.lean` joins the last two: the two tables answer every read a block makes
+`Polya/Correct/Recursion.lean` joins the last two: the two tables answer every read a block makes
 (`blockValues_of_tables`), the value a run of blocks produces goes back into the high table one
 index lower (`isHiTable_write`), and `L_eq_of_blockLoopK` reads `L v` off a finished run.
 
@@ -197,7 +203,7 @@ twice cancels and the table is wrong.
 
 The strides stay computed by the metaprogram and arrive packed as before, in two blocks: the primes
 from 5 upward in increasing order, then 2, 3 and the powers whose exponent is at least two. Three
-loops in `Polya/PrimePowers.lean` tie both blocks to the sieve, each batched in the house
+loops in `Polya/PowerDefs.lean` tie both blocks to the sieve, each batched in the house
 style with a peel lemma by `rfl`, fuel additivity by induction, and a chain lemma.
 
 - `bitCheckLoopK` tests the first block field by field: the value is 1 or 5 modulo 6, its sieve index
@@ -245,12 +251,12 @@ bound of 5, its monotonicity, its injectivity and `num ((q-1)/3) = q` are each o
 ### Files
 
 ```
-Polya/PrimePowers.lean  -- bitCheckLoopK, popcLoopK, hpLoopK, their chain lemmas
-Polya/BitCheck.lean     -- what the surviving flag says about the packed primes
-Polya/Complete.lean     -- equal counts leave no prime out
-Polya/PowerPack.lean    -- the packed state of the power collection
-Polya/Field.lean        -- reading a packed field: bounds and the value at an index
-Polya/Meta.lean         -- the sieve-cache lookup, the two blocks, one emitter per chain
+Polya/PowerDefs.lean         -- bitCheckLoopK, popcLoopK, hpLoopK, their chain lemmas
+Polya/Correct/BitCheck.lean  -- what the surviving flag says about the packed primes
+Polya/Correct/Complete.lean  -- equal counts leave no prime out
+Polya/Correct/PowerPack.lean -- the packed state of the power collection
+Polya/Bits/Field.lean        -- reading a packed field: bounds and the value at an index
+Polya/Meta.lean              -- the sieve-cache lookup, the two blocks, one emitter per chain
 ```
 
 The loops, their emitters and the batching are written and run: `run_polya` prints the published
