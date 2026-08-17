@@ -35,7 +35,7 @@ jobs:
             wall=$(grep 'Elapsed (wall clock)' "time-$round.txt" | awk '{print $8}')
             peak=$(grep 'Maximum resident set size' "time-$round.txt" | awk '{print $6}')
             line="round $round"
-            for t in base_1 filter5_1 filter5_2 base_2 skip_always skip_never; do
+            for t in base_1 filter5_1 two_stage_1 two_stage_2 filter5_2 base_2 skip_always skip_never; do
               v=$(grep -o "\[Kernel\] \[[0-9.]*\].*\b$t\b" "out-$round.txt" \
                 | grep -o '\[[0-9]\+\.[0-9]\+\]' | tr -d '[]' | head -1)
               line="$line | $t ${v}s"

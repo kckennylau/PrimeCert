@@ -26,6 +26,11 @@ noncomputable def wieferichB (p : Nat) : Bool :=
 noncomputable def mirimanoffB (p : Nat) : Bool :=
   powModK 3 (p.sub 1) (Nat.pow p 2) |>.beq 1
 
+/-- The check testing modulo `p` before modulo `p ^ 2`. The second conjunct implies the first,
+so this agrees with `wieferichB` everywhere. -/
+noncomputable def wieferichTwoStage (p : Nat) : Bool :=
+  ((powModK 2 (p.sub 1) p).beq 1).and' ((powModK 2 (p.sub 1) (Nat.pow p 2)).beq 1)
+
 set_option maxRecDepth 4000000
 set_option Elab.async false
 
@@ -39,6 +44,14 @@ theorem filter5_1 : ∀ n < 600000, n % 6 = 1 →
 
 theorem filter5_2 : ∀ n < 600000, n % 6 = 1 →
     ((n.mod 5).beq 0).or' ((wieferichB n).not'.or' (mirimanoffB n).not') :=
+  forallB_of_mod _ (start := 1) (len := 100000) (step := 6) (by quickRfl)
+
+theorem two_stage_1 : ∀ n < 600000, n % 6 = 1 →
+    (wieferichTwoStage n).not'.or' (mirimanoffB n).not' :=
+  forallB_of_mod _ (start := 1) (len := 100000) (step := 6) (by quickRfl)
+
+theorem two_stage_2 : ∀ n < 600000, n % 6 = 1 →
+    (wieferichTwoStage n).not'.or' (mirimanoffB n).not' :=
   forallB_of_mod _ (start := 1) (len := 100000) (step := 6) (by quickRfl)
 
 theorem base_2 : ∀ n < 600000, n % 6 = 1 →
