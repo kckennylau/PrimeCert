@@ -27,6 +27,7 @@ noncomputable def mirimanoffB (p : Nat) : Bool :=
   powModK 3 (p.sub 1) (Nat.pow p 2) |>.beq 1
 
 set_option maxRecDepth 4000000
+set_option Elab.async false
 
 theorem base_1 : ∀ n < 600000, n % 6 = 1 →
     (wieferichB n).not'.or' (mirimanoffB n).not' :=
