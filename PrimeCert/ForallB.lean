@@ -34,7 +34,6 @@ namespace PrimeCert
     forallB f start 0 step = true :=
   rfl
 
-/-- One more term extends the fold by the element at index `len`. -/
 @[simp, grind =] theorem forallB_succ (f : ℕ → Bool) (start len step : ℕ) :
     forallB f start (len + 1) step =
       (f ((len.mul step).add start)).and' (forallB f start len step) :=
