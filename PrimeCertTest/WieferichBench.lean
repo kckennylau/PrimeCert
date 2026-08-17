@@ -1,0 +1,64 @@
+/-
+Copyright (c) 2026 Bhavik Mehta. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Bhavik Mehta
+-/
+
+module
+
+import PrimeCert.ForallB
+import PrimeCert.Wieferich
+meta import PrimeCert.Meta.QuickRfl
+
+/-! # Benchmark workload for the Wieferich range check
+
+Each theorem below runs the same 100000-term check over `n ≡ 1 mod 6`, varying one thing at a
+time, so the per-declaration `[Kernel]` times the `wieferich-ab` workflow reports isolate that
+one thing. `pred_repeat` repeats `pred` exactly, giving a measure of run-to-run noise.
+-/
+
+namespace PrimeCert.Bench
+
+/-- The predicate as `PrimeCert/Wieferich.lean` states it. -/
+noncomputable def wieferichPred (p : Nat) : Bool :=
+  powModK 2 p.pred (p.pow 2) |>.beq 1
+
+/-- The predicate with `p - 1` and `Nat.pow` written out. -/
+noncomputable def wieferichSub (p : Nat) : Bool :=
+  powModK 2 (p.sub 1) (Nat.pow p 2) |>.beq 1
+
+/-- The predicate checking modulo `p` before modulo `p ^ 2`. The second conjunct implies the
+first, so this agrees with `wieferichPred` everywhere. -/
+noncomputable def wieferichTwoStage (p : Nat) : Bool :=
+  ((powModK 2 (p.sub 1) p).beq 1).and' ((powModK 2 (p.sub 1) (Nat.pow p 2)).beq 1)
+
+noncomputable def mirimanoffPred (p : Nat) : Bool :=
+  powModK 3 p.pred (p.pow 2) |>.beq 1
+
+set_option maxRecDepth 4000000
+
+theorem pred : ∀ n < 600000, n % 6 = 1 →
+    (wieferichPred n).not'.or' (mirimanoffPred n).not' :=
+  forallB_of_mod _ (start := 1) (len := 100000) (step := 6) (by quickRfl)
+
+theorem pred_repeat : ∀ n < 600000, n % 6 = 1 →
+    (wieferichPred n).not'.or' (mirimanoffPred n).not' :=
+  forallB_of_mod _ (start := 1) (len := 100000) (step := 6) (by quickRfl)
+
+theorem sub : ∀ n < 600000, n % 6 = 1 →
+    (wieferichSub n).not'.or' (mirimanoffPred n).not' :=
+  forallB_of_mod _ (start := 1) (len := 100000) (step := 6) (by quickRfl)
+
+theorem two_stage : ∀ n < 600000, n % 6 = 1 →
+    (wieferichTwoStage n).not'.or' (mirimanoffPred n).not' :=
+  forallB_of_mod _ (start := 1) (len := 100000) (step := 6) (by quickRfl)
+
+theorem filter5_beq : ∀ n < 600000, n % 6 = 1 →
+    ((n.mod 5).beq 0).or' ((wieferichPred n).not'.or' (mirimanoffPred n).not') :=
+  forallB_of_mod _ (start := 1) (len := 100000) (step := 6) (by quickRfl)
+
+theorem filter5_eq : ∀ n < 600000, n % 6 = 1 →
+    (n.mod 5 == 0).or' ((wieferichPred n).not'.or' (mirimanoffPred n).not') :=
+  forallB_of_mod _ (start := 1) (len := 100000) (step := 6) (by quickRfl)
+
+end PrimeCert.Bench

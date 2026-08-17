@@ -1,0 +1,44 @@
+name: The Wieferich range-check variants
+
+on:
+  push:
+    branches:
+      - 'ci/wieferich-ab'
+
+jobs:
+  ab:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install elan
+        run: |
+          curl -sSfL https://github.com/leanprover/elan/releases/download/v4.1.2/elan-x86_64-unknown-linux-gnu.tar.gz | tar xz
+          ./elan-init -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+
+      - name: Fetch the mathlib build cache
+        run: lake exe cache get
+
+      - name: Build the library
+        run: lake build PrimeCert.Wieferich PrimeCert.Meta.QuickRfl
+
+      - name: Time every variant, fifteen rounds
+        run: |
+          set -u
+          export LEAN_PATH=$(lake env printenv LEAN_PATH)
+          for round in $(seq 1 15); do
+            /usr/bin/time -v lean -Dtrace.profiler=true -Dtrace.profiler.threshold=1 \
+              PrimeCertTest/WieferichBench.lean > "out-$round.txt" 2> "time-$round.txt" \
+              || echo "RUN FAILED round $round"
+            wall=$(grep 'Elapsed (wall clock)' "time-$round.txt" | awk '{print $8}')
+            peak=$(grep 'Maximum resident set size' "time-$round.txt" | awk '{print $6}')
+            line="round $round"
+            for t in pred pred_repeat sub two_stage filter5_beq filter5_eq; do
+              v=$(grep -o "\[Kernel\] \[[0-9.]*\].*\b$t\b" "out-$round.txt" \
+                | grep -o '\[[0-9]\+\.[0-9]\+\]' | tr -d '[]' | head -1)
+              line="$line | $t ${v}s"
+            done
+            echo "$line | wall $wall | peak ${peak} KB"
+          done
