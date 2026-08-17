@@ -18,10 +18,10 @@ explicit list.
 -/
 
 public theorem List.rec_and {α : Type*} (f : α → Bool) (b : Bool) (l : List α) :
-    List.rec b (fun hd _ ih ↦ f hd && ih) l = true ↔ b = true ∧ ∀ x ∈ l, f x := by
+    List.rec b (fun hd _ ih ↦ (f hd).and' ih) l = true ↔ b = true ∧ ∀ x ∈ l, f x := by
   induction l with
   | nil => simp
-  | cons _ _ ih => grind
+  | cons _ _ ih => grind [Bool.and'_eq_and]
 
 namespace PrimeCert
 

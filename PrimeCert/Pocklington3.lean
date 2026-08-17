@@ -173,7 +173,8 @@ theorem PrimePow.prime_dvd_toNat (pp : PrimePow) : pp.prime ∣ pp.toNat :=
   let r := R.mod two_F
   let s := R.div two_F
   F'.rec (powModK root (N.div 2) N |>.pred.gcd N |>.beq 1)
-    (fun pp _ ih ↦ pp.rec fun p _ _ _ ↦ powModK root (N.div p) N |>.pred.gcd N |>.beq 1 && ih) &&
+    (fun pp _ ih ↦ pp.rec fun p _ _ _ ↦
+      (powModK root (N.div p) N |>.pred.gcd N |>.beq 1).and' ih) &&
   (0).blt e &&
   (mode.calculate r s) &&
   (N.mod F |>.beq 1) &&
