@@ -12,9 +12,10 @@ meta import PrimeCert.Meta.QuickRfl
 
 /-! # Benchmark workload for the Wieferich range check
 
-Each theorem below runs the same 100000-term check over `n ≡ 1 mod 6`, varying one thing at a
-time, so the per-declaration `[Kernel]` times the `wieferich-ab` workflow reports isolate that
-one thing.
+Each theorem below runs the same 100000-term check over `n ≡ 1 mod 6`. The plain check and the
+one skipping multiples of 5 appear twice each, ordered plain, skipping, skipping, plain, so that
+the average of each pair sits at the same mean position in the file. The `wieferich-ab` workflow
+reports a `[Kernel]` time per declaration.
 -/
 
 namespace PrimeCert.Bench
@@ -27,12 +28,20 @@ noncomputable def mirimanoffB (p : Nat) : Bool :=
 
 set_option maxRecDepth 4000000
 
-theorem base : ∀ n < 600000, n % 6 = 1 →
+theorem base_1 : ∀ n < 600000, n % 6 = 1 →
     (wieferichB n).not'.or' (mirimanoffB n).not' :=
   forallB_of_mod _ (start := 1) (len := 100000) (step := 6) (by quickRfl)
 
-theorem filter5 : ∀ n < 600000, n % 6 = 1 →
+theorem filter5_1 : ∀ n < 600000, n % 6 = 1 →
     ((n.mod 5).beq 0).or' ((wieferichB n).not'.or' (mirimanoffB n).not') :=
+  forallB_of_mod _ (start := 1) (len := 100000) (step := 6) (by quickRfl)
+
+theorem filter5_2 : ∀ n < 600000, n % 6 = 1 →
+    ((n.mod 5).beq 0).or' ((wieferichB n).not'.or' (mirimanoffB n).not') :=
+  forallB_of_mod _ (start := 1) (len := 100000) (step := 6) (by quickRfl)
+
+theorem base_2 : ∀ n < 600000, n % 6 = 1 →
+    (wieferichB n).not'.or' (mirimanoffB n).not' :=
   forallB_of_mod _ (start := 1) (len := 100000) (step := 6) (by quickRfl)
 
 end PrimeCert.Bench
