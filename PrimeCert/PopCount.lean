@@ -68,10 +68,6 @@ theorem land_split_byte (x m : ℕ) :
 theorem and_shiftRight_le (x m s : ℕ) : (x >>> s) &&& m ≤ x :=
   le_trans Nat.and_le_left (by rw [Nat.shiftRight_eq_div_pow]; exact Nat.div_le_self _ _)
 
-theorem land_85 (x : ℕ) : x &&& 85 = (x % 128) &&& 85 := land_of_lt (t := 7) (by decide)
-
-theorem land_51 (x : ℕ) : x &&& 51 = (x % 64) &&& 51 := land_of_lt (t := 6) (by decide)
-
 theorem land_15 (x : ℕ) : x &&& 15 = x % 16 := Nat.and_two_pow_sub_one_eq_mod x 4
 
 theorem land_255 (x : ℕ) : x &&& 255 = x % 256 := Nat.and_two_pow_sub_one_eq_mod x 8
@@ -256,8 +252,6 @@ theorem rep_85 : rep 85 4 = 1431655765 := rfl
 theorem rep_51 : rep 51 4 = 858993459 := rfl
 
 theorem rep_15 : rep 15 4 = 252645135 := rfl
-
-theorem rep_1 : rep 1 4 = 16843009 := rfl
 
 /-- The multiplication by `rep 1 4` places the sum of the four byte counts in the top byte. -/
 theorem byte_merge {c0 c1 c2 c3 : ℕ} (h0 : c0 ≤ 8) (h1 : c1 ≤ 8) (h2 : c2 ≤ 8) (h3 : c3 ≤ 8) :

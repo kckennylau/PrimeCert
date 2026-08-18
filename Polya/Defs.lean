@@ -61,11 +61,6 @@ public theorem lamLoopK_succ (qs w M rounds lam start fuel : Nat) :
       = markStrideK (lamLoopK qs w M rounds lam start fuel) (fieldK qs w (start + fuel)) M
           rounds := rfl
 
-/-- Field `i` of `st`, reading 64 bits from position `64 * i`. The loop state below holds the next
-index in field 0 and the two halves of the running sum in fields 1 and 2. -/
-@[expose] public def stFieldK (st i : Nat) : Nat :=
-  (st.shiftRight (Nat.mul (nat_lit 64) i)).land ((Nat.shiftLeft (nat_lit 1) (nat_lit 64)).sub 1)
-
 /-- Perform `fuel` steps, appending to `tbl` the value `L i + off` for `i = start, start+1, …`,
 each read off the parity table and the running counts. -/
 @[expose] public noncomputable def lowLoopK (lam ones wc off wb tbl start fuel : Nat) : Nat :=

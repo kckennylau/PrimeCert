@@ -27,8 +27,6 @@ public theorem L_eq_sum_Ioc (v : ℕ) : L v = ∑ n ∈ Finset.Ioc 0 v, liouvill
 
 @[simp] public theorem L_zero : L 0 = 0 := by simp [L]
 
-@[simp] public theorem L_one : L 1 = 1 := by simp [L, liouville_apply_one]
-
 /-- One more term. -/
 public theorem L_succ (v : ℕ) : L (v + 1) = L v + liouville (v + 1) := by
   rw [L, L, Finset.sum_Icc_succ_top (by omega)]
