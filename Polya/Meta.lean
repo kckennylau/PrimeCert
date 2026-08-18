@@ -8,14 +8,14 @@ import Polya.Main
 import Polya.PowerDefs
 import PrimeCert.Meta.Sieve
 
-/-! # The `run_lam` command
+/-! # The commands that drive a run
 
-Builds a certified parity table for the Liouville function up to `n`. Split out from `Polya.Defs`
-so the computational core stays free of metaprogramming.
+`run_lam n` builds a certified parity table for the Liouville function up to `n`, and
+`run_polya x cutoff` builds the two tables of `L` and the block recursion reaching `L x`.
 
 The prime powers are packed here into `w`-bit fields and handed to the table builder. The emitted
 equation holds for that packing whatever it contains; tying its fields to the prime powers is
-`Polya.TableSpec`.
+`Polya.Correct.TableSpec`.
 -/
 
 namespace PrimeCert.Polya

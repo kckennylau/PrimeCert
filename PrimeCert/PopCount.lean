@@ -208,18 +208,21 @@ public theorem bitSum_eq_card (v n : ℕ) :
   rw [bitSum, Finset.card_filter]
   exact Finset.sum_congr rfl fun i _ => shiftRight_mod_two v i
 
+/-- A count over `s` positions reads only the value modulo `2 ^ s`. -/
 public theorem bitSum_mod (v s : ℕ) : bitSum (v % 2 ^ s) s = bitSum v s := by
   refine Finset.sum_congr rfl fun i hi => ?_
   simp only [Finset.mem_range] at hi
   rw [shiftRight_mod_two, shiftRight_mod_two, Nat.testBit_mod_two_pow]
   simp [hi]
 
+/-- Splitting the range at `s` splits the count. -/
 public theorem bitSum_add (v s t : ℕ) : bitSum v (s + t) = bitSum v s + bitSum (v / 2 ^ s) t := by
   rw [bitSum, bitSum, bitSum, Finset.sum_range_add]
   congr 1
   refine Finset.sum_congr rfl fun i _ => ?_
   simp only [Nat.shiftRight_eq_div_pow, Nat.pow_add, Nat.div_div_eq_div_mul]
 
+/-- Zero has no set bits. -/
 @[simp] public theorem bitSum_zero_left (n : ℕ) : bitSum 0 n = 0 := by simp [bitSum]
 
 /-- Positions above the top set bit contribute nothing. -/

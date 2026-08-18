@@ -15,8 +15,8 @@ public import Mathlib.Algebra.Ring.Parity
 # The stride masks and the parity table
 
 `strideMaskK q M rounds` has bit `j` set, for `j ≤ M`, exactly at the positive multiples of `q`
-(`testBit_strideMaskK`), given `M < q * 2 ^ rounds` so that the doubling reaches the top of the
-table. One step of `lamLoopK` flips those bits, so bit `j` of the table counts, modulo 2, the
+(`testBit_strideMaskK`), given `M < q * 2 ^ rounds`, which puts the top of the table within reach of
+the doubling. One step of `lamLoopK` flips those bits, so bit `j` of the table counts, modulo 2, the
 fields dividing `j` (`testBit_lamLoopK`).
 -/
 
@@ -121,7 +121,7 @@ public theorem testBit_markStrideK {lam q M r j : ℕ} (hj : j ≤ M) :
     Nat.and_two_pow_sub_one_eq_mod, Nat.testBit_mod_two_pow, Nat.testBit_xor]
   simp [Nat.lt_succ_of_le hj]
 
-/-- A step leaves the table `M + 1` bits wide. -/
+/-- A step's result is below `2 ^ (M + 1)`. -/
 public theorem markStrideK_lt (lam q M r : ℕ) : markStrideK lam q M r < 2 ^ (M + 1) := by
   simp only [markStrideK, Nat.land_eq, Nat.xor_eq, Nat.sub_eq, Nat.shiftLeft_eq',
     Nat.one_shiftLeft, Nat.and_two_pow_sub_one_eq_mod]

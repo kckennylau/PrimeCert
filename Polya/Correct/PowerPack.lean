@@ -58,9 +58,11 @@ public theorem IsPowState.split {w st c pw V : ℕ} (h : IsPowState w st c pw V)
   obtain ⟨hst, hc, hpw, -⟩ := h
   omega
 
+/-- The count occupies the bottom 64 bits. -/
 public theorem IsPowState.count_eq {w st c pw V : ℕ} (h : IsPowState w st c pw V) :
     st % 2 ^ 64 = c := h.split.1
 
+/-- The running power occupies bits 64 to 127. -/
 theorem IsPowState.pow_eq {w st c pw V : ℕ} (h : IsPowState w st c pw V) :
     st / 2 ^ 64 % 2 ^ 64 = pw := h.split.2.1
 
@@ -94,7 +96,7 @@ theorem powStepK_of_le {M w q st c pw V : ℕ} (h : IsPowState w st c pw V) (hq 
   rw [hst, hd, Nat.pow_add, Nat.add_sub_cancel_left]
   ring
 
-/-- A step above the cutoff leaves the state alone. -/
+/-- A step above the cutoff returns its input state. -/
 theorem powStepK_of_gt {M w q st c pw V : ℕ} (h : IsPowState w st c pw V) (hgt : M < pw * q) :
     powStepK M w q st = st := by rw [powStepK_eq, IsPowState.pow_eq h, if_neg (by omega)]
 

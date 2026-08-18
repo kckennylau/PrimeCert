@@ -15,6 +15,15 @@ Three theorems take the emitted equations to a statement about `L`. `tables_of_d
 loops of the setup into the two table invariants, `isHiTable_step` extends the high table by one
 index, and `L_eq_of_final` reads `L x` off the last run of blocks. Each carries its numeric side
 conditions as one decidable predicate over the emitted literals, checked by the kernel.
+
+The literals: `x` is the target and `M` the cutoff, the bound of both the sieve and the parity
+table; `rootx` is `⌊√x⌋` and `top` is `x / M`; `w`, `wc`, `e` and `wb` are the widths of a packed
+prime power, a count, a collected power and a table value, with `off` the offset added to each
+table value; `r` is the doubling rounds of a stride mask; `chunks` and `chunks2` count the
+32-position blocks of the counts table and of the sieve; `qs` holds the packed prime powers, `np`
+of them prime and `cnt` in total; `fuel` is `(√M - 1) / 3`, the sieve positions walked for the
+powers with exponent at least two; and `st` and `hpSt` are the final states of the field test and
+of that walk.
 -/
 
 namespace PrimeCert.Polya

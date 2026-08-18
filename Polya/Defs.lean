@@ -16,7 +16,7 @@ This file builds the whole table by one exclusive-or per prime power: the state 
 number used as a bitset holding bits `0 … M`, and bit `n` records the parity for `n`.
 
 The prime powers arrive packed into one natural number as `w`-bit fields, lowest first, one field
-per step of the loop; `Polya.TableSpec` derives that packing from the certified sieve.
+per step of the loop; `Polya.Correct.TableSpec` derives that packing from the certified sieve.
 
 The `rounds` argument is the number of doubling rounds in `strideMaskK`, so strides up to
 `2 ^ rounds` times the table width are covered.
@@ -28,8 +28,8 @@ each, and glues them into an equation `lamK qs w M cnt = <literal>`.
 namespace PrimeCert.Polya
 
 /-- The natural number whose bits at positions `0 … M` are set exactly at the positive multiples of
-`q`, namely `q, 2q, 3q, …`; see `testBit_strideMaskK` in `Polya.Parity`. Positions above `M` are
-cleared by `markStrideK`. -/
+`q`, namely `q, 2q, 3q, …`; see `testBit_strideMaskK` in `Polya.Correct.Parity`. Positions above
+`M` are cleared by `markStrideK`. -/
 @[expose] public noncomputable def strideMaskK (q M rounds : Nat) : Nat :=
   Nat.rec
     (Nat.shiftLeft (nat_lit 1) q)
@@ -51,7 +51,7 @@ table. -/
 
 /-- The full parity table for numbers up to `M`: bit `n` is set iff `n` has an odd number of prime
 factors counted with multiplicity, given that the `cnt` fields of `qs` are exactly the prime powers
-`q ≤ M` (`testBit_lamK` in `Polya.LamCorrect`). -/
+`q ≤ M` (`testBit_lamK` in `Polya.Correct.Lam`). -/
 @[expose] public noncomputable def lamK (qs w M rounds cnt : Nat) : Nat :=
   lamLoopK qs w M rounds (nat_lit 0) (nat_lit 0) cnt
 
@@ -122,7 +122,7 @@ public theorem blockLoopK_succ (x v rootx low hi wb off st fuel : Nat) :
 
 /-! ### Compiled twins
 
-Executable copies of the definitions above, used by `run_lam` to compute the batch literals.
+Executable copies of the definitions above, used by the commands to compute the batch literals.
 They appear in no proof: a twin that disagreed with its kernel definition would produce a batch
 equation that fails its kernel check. -/
 

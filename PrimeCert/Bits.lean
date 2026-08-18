@@ -9,7 +9,7 @@ module
 # Bitset arithmetic for kernel-checked certificates
 
 A table is one natural number holding `w`-bit fields, lowest first, read by `fieldK`. `popc32K`
-counts the set bits of a 32-bit word, `onesK` records those counts every 32 positions so that
+counts the set bits of a 32-bit word, `onesK` records those counts every 32 positions, from which
 `onesBelowK` answers a count below an arbitrary position, and `popcLoopK` totals them over a range
 of blocks. `bitCheckLoopK` tests packed values against a sieve, one field per step.
 
