@@ -12,9 +12,9 @@ public import Mathlib.Algebra.Ring.Int.Defs
 # Sums over the intervals where `v / k` is constant
 
 Every `k'` in `Icc k (v / (v / k))` has `v / k' = v / k` (`div_eq_div_of_le`, `le_div_div`), so
-summing `f (v / k')` there gives one term (`sum_Icc_div_div`), which `sum_Icc_split` takes off the
-front of a sum over `Icc k v`; iterating that writes `∑_{k ≤ v} f (v / k)` with one term per
-distinct quotient.
+summing `f (v / k')` there gives one term (`sum_Icc_div_div`), which `sum_Ico_extend` adds to a sum
+already taken over `Ico a k`. Repeating that from `k = 1` builds `∑_{k ≤ v} f (v / k)` with one term
+per distinct quotient.
 -/
 
 namespace PrimeCert
@@ -42,16 +42,14 @@ public theorem sum_Icc_div_div {α : Type*} [AddCommMonoid α] {v k : ℕ} (hk :
   · simp only [Finset.mem_Icc] at hk'
     rw [div_eq_div_of_le hk hk'.1 hk'.2]
 
-/-- Split `Icc k (v / (v / k))` off the front of a sum over `Icc k v`. -/
-public theorem sum_Icc_split {α : Type*} [AddCommMonoid α] {v k : ℕ} (hk : k ≠ 0) (hkv : k ≤ v)
-    (f : ℕ → α) :
-    ∑ k' ∈ Icc k v, f (v / k')
-      = (v / (v / k) - k + 1) • f (v / k) + ∑ k' ∈ Icc (v / (v / k) + 1) v, f (v / k') := by
+/-- Extend a sum over `Ico a k` by the whole interval starting at `k`, which adds one term. -/
+public theorem sum_Ico_extend {α : Type*} [AddCommMonoid α] {v a k : ℕ} (hk : k ≠ 0) (hkv : k ≤ v)
+    (hak : a ≤ k) (f : ℕ → α) :
+    (∑ k' ∈ Ico a k, f (v / k')) + (v / (v / k) - k + 1) • f (v / k)
+      = ∑ k' ∈ Ico a (v / (v / k) + 1), f (v / k') := by
   have hle : k ≤ v / (v / k) := le_div_div hk hkv
-  have hub : v / (v / k) ≤ v := Nat.div_le_self _ _
   rw [← sum_Icc_div_div hk hkv f, ← Finset.Ico_add_one_right_eq_Icc,
-    ← Finset.Ico_add_one_right_eq_Icc, ← Finset.Ico_add_one_right_eq_Icc,
-    ← Finset.Ico_union_Ico_eq_Ico (by omega : k ≤ v / (v / k) + 1) (by omega),
+    ← Finset.Ico_union_Ico_eq_Ico hak (by omega),
     Finset.sum_union (Finset.Ico_disjoint_Ico_consecutive _ _ _)]
 
 end PrimeCert
