@@ -23,14 +23,14 @@ namespace PrimeCert
 
 /-- A comparison of naturals scrutinised by `Bool.rec`, in `if` form. -/
 public theorem bool_rec_beq_eq {α : Sort*} (a b : ℕ) (x y : α) :
-    (a.beq b).rec (motive := fun _ => α) x y = if a = b then y else x := by
+    (a.beq b).rec x y = if a = b then y else x := by
   cases h : a.beq b
   · rw [if_neg (Nat.ne_of_beq_eq_false h)]
   · rw [if_pos (Nat.eq_of_beq_eq_true h)]
 
 /-- An order test of naturals scrutinised by `Bool.rec`, in `if` form. -/
 public theorem bool_rec_ble_eq {α : Sort*} (a b : ℕ) (x y : α) :
-    (a.ble b).rec (motive := fun _ => α) x y = if a ≤ b then y else x := by
+    (a.ble b).rec x y = if a ≤ b then y else x := by
   cases h : a.ble b
   · refine (if_neg fun hle => ?_).symm
     rw [Nat.ble_eq_true_of_le hle] at h
