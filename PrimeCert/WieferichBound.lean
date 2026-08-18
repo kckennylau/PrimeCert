@@ -82,4 +82,13 @@ public theorem not_wieferich_of_check {p : ℕ} (hp : p.Prime) (hb : p < 1000000
     Bool.not_eq_true'] at h
   exact (wieferichK_eq_false_iff p hp.ne_one).mp h
 
+/-- Read the check at one member of a class off that class's fold. -/
+public theorem check_of_class {r m k len : ℕ} (hr : r % 6 = 1 ∨ r % 6 = 5) (hm : m % 6 = 0)
+    (h1 : 1 ≤ r) (hk : k < len)
+    (hfold : forallB wieferichAt (wheelIndex r) len (m / 3)) :
+    wieferichAt (wheelIndex (r + m * k)) := by
+  rw [wheelIndex_add hr hm h1]
+  have := (forallB_iff wieferichAt (wheelIndex r) len (m / 3)).mp hfold k hk
+  simpa [Nat.mul_comm, Nat.add_comm] using this
+
 end PrimeCert.Wieferich
