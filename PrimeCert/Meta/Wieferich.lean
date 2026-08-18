@@ -19,27 +19,28 @@ namespace PrimeCert.Wieferich
 
 open Lean Elab Command Meta PrimeCert
 
-/-- The `Bool` `forallB wieferichAt (index r) len step`, with `r` an arbitrary expression. -/
-meta def mkFold (rE : Expr) (len step : Nat) : Expr :=
-  mkAppN (mkConst ``PrimeCert.forallB)
-    #[mkConst ``wieferichAt, mkApp (mkConst ``PrimeCert.Sieve.index) rE,
-      mkRawNatLit len, mkRawNatLit step]
+/-- The proposition `b = true`, for `b : Bool`. -/
+meta def mkEqTrue (b : Expr) : Expr :=
+  mkApp3 (mkConst ``Eq [Level.succ Level.zero]) (mkConst ``Bool) b (mkConst ``Bool.true)
 
-/-- The statement that the fold at `r` holds. -/
+/-- The `Bool` `forallB wieferichAt start len step`, with `start` an arbitrary expression. -/
+meta def mkFold (startE : Expr) (len step : Nat) : Expr :=
+  mkAppN (mkConst ``PrimeCert.forallB)
+    #[mkConst ``wieferichAt, startE, mkRawNatLit len, mkRawNatLit step]
+
+/-- The sieve index of `n`, as an expression. -/
+meta def mkIndex (nE : Expr) : Expr :=
+  mkApp (mkConst ``PrimeCert.Sieve.index) nE
+
+/-- The statement that the fold over the class of `r` holds. -/
 meta def mkClaim (rE : Expr) (len step : Nat) : Expr :=
-  mkApp3 (mkConst ``Eq [Level.succ Level.zero]) (mkConst ``Bool) (mkFold rE len step)
-    (mkConst ``Bool.true)
+  mkEqTrue (mkFold (mkIndex rE) len step)
 
 /-- The statement for a range starting at position `j` of the class of `r`. -/
 meta def mkClaimAt (r j len step : Nat) : Expr :=
-  let base := mkApp (mkConst ``PrimeCert.Sieve.index) (mkRawNatLit r)
-  let start := mkApp2 (mkConst ``Nat.add) base
+  let start := mkApp2 (mkConst ``Nat.add) (mkIndex (mkRawNatLit r))
     (mkApp2 (mkConst ``Nat.mul) (mkRawNatLit step) (mkRawNatLit j))
-  mkApp3 (mkConst ``Eq [Level.succ Level.zero]) (mkConst ``Bool)
-    (mkAppN (mkConst ``PrimeCert.forallB)
-      #[mkConst ``wieferichAt, start, mkRawNatLit len, mkRawNatLit step])
-    (mkConst ``Bool.true)
-
+  mkEqTrue (mkFold start len step)
 
 /-- The list literal `[r₁, …, rₖ] : List ℕ`. -/
 meta def mkNatList : List Nat → Expr
