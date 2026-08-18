@@ -28,7 +28,7 @@ jobs:
         run: |
           set -u
           export LEAN_PATH=$(lake env printenv LEAN_PATH)
-          names="Base ChunkA ChunkB ChunkC Wheel2310 Wheel30030"
+          names="Wheel30030 Wheel30030Sieve SieveFull"
           for round in $(seq 1 5); do
             order=$(echo $names | awk -v r="$round" '{n=split($0,a," "); for(i=0;i<n;i++) printf "%s ", a[((i+r-1)%n)+1]}')
             for name in $order; do
