@@ -88,7 +88,8 @@ public meta def elabWieferichCheck : CommandElab := fun stx => do
             (mkClaimAt (base + (k + 1) * step) (len - k - 1) step) reflBoolTrue
       -- The list of classes, and the single statement quantified over it.
       let listName := `PrimeCert.Wieferich ++ Name.mkSimple s!"classes_{m}"
-      addDecl <| Declaration.defnDecl
+      -- `forceExpose` keeps the list readable from a module consumer, which `memB` needs.
+      addDecl (forceExpose := true) <| Declaration.defnDecl
         { name := listName, levelParams := [],
           type := mkApp (mkConst ``List [Level.zero]) Nat.mkType,
           value := mkNatList residues, hints := .regular 0, safety := .safe }
