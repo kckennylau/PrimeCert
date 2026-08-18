@@ -1,0 +1,44 @@
+name: The Wieferich wheel moduli
+
+on:
+  push:
+    branches:
+      - 'ci/wieferich-wheel'
+
+jobs:
+  ab:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install elan
+        run: |
+          curl -sSfL https://github.com/leanprover/elan/releases/download/v4.1.2/elan-x86_64-unknown-linux-gnu.tar.gz | tar xz
+          ./elan-init -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+
+      - name: Fetch the mathlib build cache
+        run: lake exe cache get
+
+      - name: Build the shared definitions
+        run: lake build PrimeCertTest.WieferichBenchDefs PrimeCert.Meta.QuickRfl
+
+      - name: Time one residue class of each modulus, five rounds
+        run: |
+          set -u
+          export LEAN_PATH=$(lake env printenv LEAN_PATH)
+          names="Base Wheel210 Wheel2310"
+          for round in $(seq 1 5); do
+            order=$(echo $names | awk -v r="$round" '{n=split($0,a," "); for(i=0;i<n;i++) printf "%s ", a[((i+r-1)%n)+1]}')
+            for name in $order; do
+              /usr/bin/time -v lean -Dtrace.profiler=true -Dtrace.profiler.threshold=1 \
+                "PrimeCertTest/Wieferich$name.lean" > "out-$name-$round.txt" 2> "time-$name-$round.txt" \
+                || echo "RUN FAILED $name round $round"
+              kern=$(grep -o '\[Kernel\] \[[0-9.]*\]' "out-$name-$round.txt" \
+                | grep -o '[0-9]\+\.[0-9]\+' | sort -rn | head -1)
+              wall=$(grep 'Elapsed (wall clock)' "time-$name-$round.txt" | awk '{print $8}')
+              peak=$(grep 'Maximum resident set size' "time-$name-$round.txt" | awk '{print $6}')
+              echo "round $round | $name | kernel ${kern}s | wall $wall | peak ${peak} KB"
+            done
+          done
