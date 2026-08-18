@@ -49,7 +49,7 @@ public theorem sum_Ico_extend {α : Type*} [AddCommMonoid α] {v a k : ℕ} (hk 
       = ∑ k' ∈ Ico a (v / (v / k) + 1), f (v / k') := by
   have hle : k ≤ v / (v / k) := le_div_div hk hkv
   rw [← sum_Icc_div_div hk hkv f, ← Finset.Ico_add_one_right_eq_Icc,
-    ← Finset.Ico_union_Ico_eq_Ico hak (by omega),
-    Finset.sum_union (Finset.Ico_disjoint_Ico_consecutive _ _ _)]
+    ← Finset.sum_union (Finset.Ico_disjoint_Ico_consecutive a k (v / (v / k) + 1)),
+    Finset.Ico_union_Ico_eq_Ico hak (by omega)]
 
 end PrimeCert
