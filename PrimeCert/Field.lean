@@ -21,19 +21,17 @@ other fields keep their values (`fieldK_lor_shiftLeft_ne`), and the result stops
 
 namespace PrimeCert
 
-open Nat
-
 /-- A comparison of naturals scrutinised by `Bool.rec`, in `if` form. -/
 public theorem bool_rec_beq_eq {α : Sort*} (a b : ℕ) (x y : α) :
-    (Nat.beq a b).rec (motive := fun _ => α) x y = if a = b then y else x := by
-  cases h : Nat.beq a b
+    (a.beq b).rec (motive := fun _ => α) x y = if a = b then y else x := by
+  cases h : a.beq b
   · rw [if_neg (Nat.ne_of_beq_eq_false h)]
   · rw [if_pos (Nat.eq_of_beq_eq_true h)]
 
 /-- An order test of naturals scrutinised by `Bool.rec`, in `if` form. -/
 public theorem bool_rec_ble_eq {α : Sort*} (a b : ℕ) (x y : α) :
-    (Nat.ble a b).rec (motive := fun _ => α) x y = if a ≤ b then y else x := by
-  cases h : Nat.ble a b
+    (a.ble b).rec (motive := fun _ => α) x y = if a ≤ b then y else x := by
+  cases h : a.ble b
   · refine (if_neg fun hle => ?_).symm
     rw [Nat.ble_eq_true_of_le hle] at h
     exact Bool.noConfusion h
