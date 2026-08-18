@@ -48,4 +48,18 @@ public theorem wheelIndex_add {r m k : ℕ} (hr : r % 6 = 1 ∨ r % 6 = 5) (hm :
     rw [wheelIndex_five (by omega), wheelIndex_five h]
     omega
 
+/-- Membership in a list of naturals, as a `Bool` the kernel decides by walking the list. -/
+@[expose] public noncomputable def memB (n : ℕ) : List ℕ → Bool :=
+  List.rec false (fun a _ ih ↦ (n.beq a).or' ih)
+
+public theorem memB_cons (n a : ℕ) (l : List ℕ) :
+    memB n (a :: l) = (n.beq a).or' (memB n l) :=
+  rfl
+
+/-- The `Bool` form decides membership. -/
+public theorem memB_iff {n : ℕ} {l : List ℕ} : memB n l ↔ n ∈ l := by
+  induction l with
+  | nil => simp [memB]
+  | cons a t ih => simp [memB_cons, Bool.or'_eq_or, ih]
+
 end PrimeCert.Wieferich
