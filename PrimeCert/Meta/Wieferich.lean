@@ -22,12 +22,20 @@ open Lean Elab Command Meta PrimeCert
 /-- The sieve index of `n`, where `num t = 3 * t + 1 + t % 2`. -/
 meta def indexOf (n : Nat) : Nat := if n % 6 == 1 then (n - 1) / 3 else (n - 2) / 3
 
-/-- The statement `forallB checkAt start len step = true`. -/
-meta def mkClaim (start len step : Nat) : Expr :=
-  mkApp3 (mkConst ``Eq [Level.succ Level.zero]) (mkConst ``Bool)
-    (mkAppN (mkConst ``PrimeCert.forallB)
-      #[mkConst ``checkAt, mkRawNatLit start, mkRawNatLit len, mkRawNatLit step])
+/-- The `Bool` `forallB checkAt (wheelIndex r) len step`, with `r` an arbitrary expression. -/
+meta def mkFold (rE : Expr) (len step : Nat) : Expr :=
+  mkAppN (mkConst ``PrimeCert.forallB)
+    #[mkConst ``checkAt, mkApp (mkConst ``wheelIndex) rE, mkRawNatLit len, mkRawNatLit step]
+
+/-- The statement that the fold at `r` holds. -/
+meta def mkClaim (rE : Expr) (len step : Nat) : Expr :=
+  mkApp3 (mkConst ``Eq [Level.succ Level.zero]) (mkConst ``Bool) (mkFold rE len step)
     (mkConst ``Bool.true)
+
+/-- The list literal `[r₁, …, rₖ] : List ℕ`. -/
+meta def mkNatList : List Nat → Expr
+  | [] => mkApp (mkConst ``List.nil [Level.zero]) Nat.mkType
+  | r :: rs => mkApp3 (mkConst ``List.cons [Level.zero]) Nat.mkType (mkRawNatLit r) (mkNatList rs)
 
 meta def addThm (name : Name) (type value : Expr) : MetaM Unit :=
   addDecl <| Declaration.thmDecl { name, levelParams := [], type, value }
@@ -43,13 +51,41 @@ public meta def elabWieferichCheck : CommandElab := fun stx => do
     let m := mStx.getNat
     let n := nStx.getNat
     liftTermElabM do
-      let mut count := 0
+      let len := n / m + 1
+      let step := m / 3
+      let mut acc : List Nat := []
       for r in [1:m] do
-        if Nat.gcd r m == 1 && r % 2 == 1 && r % 3 == 1 || Nat.gcd r m == 1 && r % 6 == 5 then
-          let name := `PrimeCert.Wieferich ++ Name.mkSimple s!"class_{m}_{r}"
-          addThm name (mkClaim (indexOf r) ((n - r) / m + 1) (m / 3)) reflBoolTrue
-          count := count + 1
-      logInfo s!"emitted {count} class lemmas for modulus {m} below {n}"
+        if Nat.gcd r m == 1 && (r % 6 == 1 || r % 6 == 5) then
+          acc := r :: acc
+      let residues := acc.reverse
+      -- One theorem per class, each its own kernel check.
+      for r in residues do
+        let name := `PrimeCert.Wieferich ++ Name.mkSimple s!"class_{m}_{r}"
+        addThm name (mkClaim (mkRawNatLit r) len step) reflBoolTrue
+      -- The list of classes, and the single statement quantified over it.
+      let listName := `PrimeCert.Wieferich ++ Name.mkSimple s!"classes_{m}"
+      addDecl <| Declaration.defnDecl
+        { name := listName, levelParams := [],
+          type := mkApp (mkConst ``List [Level.zero]) Nat.mkType,
+          value := mkNatList residues, hints := .regular 0, safety := .safe }
+      let motive ← withLocalDeclD `r Nat.mkType fun r =>
+        mkLambdaFVars #[r] (mkClaim r len step)
+      let mut proof := mkApp2 (mkConst ``List.forall_mem_nil [Level.zero]) Nat.mkType motive
+      let mut tail : List Nat := []
+      for r in residues.reverse do
+        let name := `PrimeCert.Wieferich ++ Name.mkSimple s!"class_{m}_{r}"
+        proof := mkAppN (mkConst ``forall_mem_cons_of [Level.zero])
+          #[Nat.mkType, motive, mkRawNatLit r, mkNatList tail, mkConst name, proof]
+        tail := r :: tail
+      let allName := `PrimeCert.Wieferich ++ Name.mkSimple s!"all_classes_{m}"
+      let allType ← withLocalDeclD `r Nat.mkType fun r => do
+        let mem := mkAppN (mkConst ``Membership.mem [Level.zero, Level.zero])
+          #[Nat.mkType, mkApp (mkConst ``List [Level.zero]) Nat.mkType,
+            mkAppN (mkConst ``List.instMembership [Level.zero]) #[Nat.mkType],
+            mkConst listName, r]
+        mkForallFVars #[r] (← mkArrow mem (mkClaim r len step))
+      addThm allName allType proof
+      logInfo s!"emitted {residues.length} class lemmas for modulus {m} below {n}"
   | _ => throwUnsupportedSyntax
 
 end PrimeCert.Wieferich
