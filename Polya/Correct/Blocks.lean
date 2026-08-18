@@ -20,8 +20,6 @@ second accumulator at `off * (v - 1)` says the run covered `2 … v` exactly (`b
 
 namespace PrimeCert.Polya
 
-open Nat
-
 set_option maxRecDepth 100000
 
 /-- One block in arithmetic form. -/

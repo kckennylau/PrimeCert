@@ -22,8 +22,6 @@ fields dividing `j` (`testBit_lamLoopK`).
 
 namespace PrimeCert.Polya
 
-open Nat
-
 /-! ## The stride mask -/
 
 theorem strideMaskK_zero (q M : ℕ) : strideMaskK q M 0 = 2 ^ q := Nat.one_shiftLeft q

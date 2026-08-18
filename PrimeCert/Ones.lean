@@ -19,8 +19,6 @@ one partial chunk (`onesBelowK_eq`).
 
 namespace PrimeCert
 
-open Nat
-
 /-- Masking a window and shifting it down reads the window in place. -/
 theorem land_shiftLeft_shiftRight (x M s : ℕ) : (x &&& (M <<< s)) >>> s = (x >>> s) &&& M := by
   refine Nat.eq_of_testBit_eq fun i => ?_

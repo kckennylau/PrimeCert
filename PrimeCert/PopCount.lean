@@ -24,8 +24,6 @@ the four byte counts, giving `popc32K v = bitSum v 32` (`popc32K_eq_bitSum`).
 
 namespace PrimeCert
 
-open Nat
-
 /-- Set bits of `v` below position `n`. -/
 @[expose] public def bitSum (v n : ℕ) : ℕ := ∑ i ∈ Finset.range n, (v >>> i) % 2
 

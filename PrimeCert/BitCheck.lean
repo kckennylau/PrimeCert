@@ -22,8 +22,6 @@ each field is `1` or `5` modulo 6, its sieve index rises, and its sieve bit is s
 
 namespace PrimeCert
 
-open Nat
-
 /-- The sieve index of a number coprime to 6. -/
 @[expose] public def idx (q : ℕ) : ℕ := (q - 1) / 3
 

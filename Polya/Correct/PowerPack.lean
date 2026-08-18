@@ -21,8 +21,6 @@ the powers `seed * q ^ 1, …, seed * q ^ m` for the largest such `m` (`powLoopK
 
 namespace PrimeCert.Polya
 
-open Nat
-
 /-! ### Writing a field by addition -/
 
 /-- Writing above a table adds, since the two parts share no bits. -/

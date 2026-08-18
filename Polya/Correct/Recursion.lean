@@ -19,8 +19,6 @@ goes back into the high table one index lower (`isHiTable_write`).
 
 namespace PrimeCert.Polya
 
-open Nat
-
 /-- The low table holds `L q + off` at every index up to `rootx`. -/
 @[expose] public def IsLowTable (rootx off wb low : ℕ) : Prop :=
   ∀ q, q ≤ rootx → ((fieldK low wb q : ℕ) : ℤ) = L q + off

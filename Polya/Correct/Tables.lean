@@ -19,7 +19,7 @@ The same holds for `hiLoopK` at the quotients `x / j`.
 
 namespace PrimeCert.Polya
 
-open Nat ArithmeticFunction
+open ArithmeticFunction
 
 /-- The value written into field `j` of the low table. -/
 @[expose] public noncomputable def lowVal (lam ones wc off j : ℕ) : ℕ :=
