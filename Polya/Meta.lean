@@ -111,39 +111,6 @@ def packFields (qs : Array Nat) (w : Nat) : Nat := Id.run do
     out := out ||| (qs[i] <<< (w * i))
   return out
 
-/-- Returns a table `lam` and a proof of `lamLoopK qs w M 0 0 fuel = lam`, split into batches of at
-most `len` steps; `n` only distinguishes the names of the emitted batch lemmas. -/
-private def emitChain (n M fuel len w rounds qs : Nat) : MetaM (Nat × Expr) := do
-  let qsE := mkRawNatLit qs
-  let wE := mkRawNatLit w
-  let mE := mkRawNatLit M
-  let rE := mkRawNatLit rounds
-  -- the fixed left-hand side of the chain: the full loop on the empty table
-  let lhsLoop := mkLamLoopK qsE wE mE rE (mkRawNatLit 0) 0 fuel
-  let mut lam := 0
-  let mut lamE := mkRawNatLit 0
-  -- invariant: proof : lhsLoop = lamLoopK qs w M lam start remaining, and the empty table needs no
-  -- step to enter the chain
-  let mut proof := mkApp2 (mkConst ``Eq.refl [Level.succ Level.zero]) (mkConst ``Nat) lhsLoop
-  let mut start := 0
-  let mut remaining := fuel
-  for i in [0:(fuel + len - 1) / len] do
-    let step := Nat.min len remaining
-    let rest := remaining - step
-    let next := lamLoop qs w M rounds lam start step
-    let nextE := mkRawNatLit next
-    let stepName := Name.mkSimple s!"lam_step_{n}_{i}"
-    addThm stepName (mkBeqTrue (mkLamLoopK qsE wE mE rE lamE start step) nextE) Lean.reflBoolTrue
-    proof := mkAppN (mkConst ``lamLoopK_chain)
-      #[lhsLoop, qsE, wE, mE, rE, lamE, nextE, mkRawNatLit start, mkRawNatLit step,
-        mkRawNatLit rest, proof, mkConst stepName]
-    lam := next
-    lamE := nextE
-    start := start + step
-    remaining := rest
-  -- the chain ends at a zero-step loop on `lam`, which is definitionally `lam` itself
-  return (lam, ← mkExpectedTypeHint proof (mkNatEqual lhsLoop lamE))
-
 /-- Emit `fuel` steps of one loop in batches of `len`, each batch kernel-checked. `mk st start len`
 builds the loop's application, `run st start len` is its compiled twin, and `chain` with `chainArgs`
 glues consecutive batches. Returns the final state and the glued proof. -/
@@ -151,9 +118,12 @@ private def emitLoopChain (tag : String) (fuel len st0 start0 : Nat)
     (mk : Expr → Nat → Nat → Expr) (run : Nat → Nat → Nat → Nat)
     (chain : Name) (chainArgs : Expr → Expr → Nat → Nat → Nat → Array Expr) :
     MetaM (Nat × Expr) := do
+  -- the fixed left-hand side of the chain: the full loop on the starting state
   let lhsLoop := mk (mkRawNatLit st0) start0 fuel
   let mut st := st0
   let mut stE := mkRawNatLit st0
+  -- invariant: proof : lhsLoop = <loop> st start remaining, and the starting state enters the chain
+  -- in no steps
   let mut proof := mkApp2 (mkConst ``Eq.refl [Level.succ Level.zero]) (mkConst ``Nat) lhsLoop
   let mut start := start0
   let mut remaining := fuel
@@ -170,7 +140,21 @@ private def emitLoopChain (tag : String) (fuel len st0 start0 : Nat)
     stE := nextE
     start := start + step
     remaining := rest
+  -- the chain ends at a zero-step loop on `st`, which is definitionally `st` itself
   return (st, ← mkExpectedTypeHint proof (mkNatEqual lhsLoop stE))
+
+/-- Returns a table `lam` and a proof of `lamLoopK qs w M 0 0 fuel = lam`, split into batches of at
+most `len` steps; `n` only distinguishes the names of the emitted batch lemmas. -/
+private def emitChain (n M fuel len w rounds qs : Nat) : MetaM (Nat × Expr) := do
+  let qsE := mkRawNatLit qs
+  let wE := mkRawNatLit w
+  let mE := mkRawNatLit M
+  let rE := mkRawNatLit rounds
+  emitLoopChain s!"lam_{n}" fuel len 0 0 (mkLamLoopK qsE wE mE rE)
+    (fun lam start step => lamLoop qs w M rounds lam start step)
+    ``lamLoopK_chain
+    (fun lamE nextE start step rest =>
+      #[qsE, wE, mE, rE, lamE, nextE, mkRawNatLit start, mkRawNatLit step, mkRawNatLit rest])
 
 /-- The certified sieve covering exactly `n`. Returns the declarations holding its bitset and its
 `IsSieve` statement, with that bitset's value. -/
@@ -272,27 +256,11 @@ batches of at most `len` steps. -/
 private def emitOnesChain (n fuel len w lam : Nat) : MetaM (Nat × Expr) := do
   let lamE := mkRawNatLit lam
   let wE := mkRawNatLit w
-  let lhsLoop := mkOnesLoopK lamE wE (mkRawNatLit 0) 0 fuel
-  let mut tbl := 0
-  let mut tblE := mkRawNatLit 0
-  let mut proof := mkApp2 (mkConst ``Eq.refl [Level.succ Level.zero]) (mkConst ``Nat) lhsLoop
-  let mut start := 0
-  let mut remaining := fuel
-  for i in [0:(fuel + len - 1) / len] do
-    let step := Nat.min len remaining
-    let rest := remaining - step
-    let next := onesLoop lam w tbl start step
-    let nextE := mkRawNatLit next
-    let stepName := Name.mkSimple s!"ones_step_{n}_{i}"
-    addThm stepName (mkBeqTrue (mkOnesLoopK lamE wE tblE start step) nextE) Lean.reflBoolTrue
-    proof := mkAppN (mkConst ``onesLoopK_chain)
-      #[lhsLoop, lamE, wE, tblE, nextE, mkRawNatLit start, mkRawNatLit step, mkRawNatLit rest,
-        proof, mkConst stepName]
-    tbl := next
-    tblE := nextE
-    start := start + step
-    remaining := rest
-  return (tbl, ← mkExpectedTypeHint proof (mkNatEqual lhsLoop tblE))
+  emitLoopChain s!"ones_{n}" fuel len 0 0 (mkOnesLoopK lamE wE)
+    (fun tbl start step => onesLoop lam w tbl start step)
+    ``onesLoopK_chain
+    (fun tblE nextE start step rest =>
+      #[lamE, wE, tblE, nextE, mkRawNatLit start, mkRawNatLit step, mkRawNatLit rest])
 
 /-- What the parity table and the running counts leave for the assembly. -/
 structure TableData where
@@ -387,28 +355,12 @@ private def emitLowChain (lam ones wc stop len : Nat) : MetaM (Nat × Expr) := d
   let lamE := mkRawNatLit lam
   let onesE := mkRawNatLit ones
   let wcE := mkRawNatLit wc
-  let fuel := stop + 1
-  let lhsLoop := mkLowLoopK lamE onesE wcE (mkRawNatLit 0) 0 fuel
-  let mut tbl := 0
-  let mut tblE := mkRawNatLit 0
-  let mut proof := mkApp2 (mkConst ``Eq.refl [Level.succ Level.zero]) (mkConst ``Nat) lhsLoop
-  let mut start := 0
-  let mut remaining := fuel
-  for i in [0:(fuel + len - 1) / len] do
-    let step := Nat.min len remaining
-    let rest := remaining - step
-    let next := lowLoop lam ones wc bigOffset bigWidth tbl start step
-    let nextE := mkRawNatLit next
-    let stepName := Name.mkSimple s!"low_step_{i}"
-    addThm stepName (mkBeqTrue (mkLowLoopK lamE onesE wcE tblE start step) nextE) Lean.reflBoolTrue
-    proof := mkAppN (mkConst ``lowLoopK_chain)
-      #[lhsLoop, lamE, onesE, wcE, mkRawNatLit bigOffset, mkRawNatLit bigWidth, tblE, nextE,
-        mkRawNatLit start, mkRawNatLit step, mkRawNatLit rest, proof, mkConst stepName]
-    tbl := next
-    tblE := nextE
-    start := start + step
-    remaining := rest
-  return (tbl, ← mkExpectedTypeHint proof (mkNatEqual lhsLoop tblE))
+  emitLoopChain "low" (stop + 1) len 0 0 (mkLowLoopK lamE onesE wcE)
+    (fun tbl start step => lowLoop lam ones wc bigOffset bigWidth tbl start step)
+    ``lowLoopK_chain
+    (fun tblE nextE start step rest =>
+      #[lamE, onesE, wcE, mkRawNatLit bigOffset, mkRawNatLit bigWidth, tblE, nextE,
+        mkRawNatLit start, mkRawNatLit step, mkRawNatLit rest])
 
 /-- Builds the table of `L (x / m) + bigOffset` for `m = from … stop`, in batches of `len`, each
 kernel-checked, and returns it with a proof. -/
@@ -417,29 +369,12 @@ private def emitHiChain (x lam ones wc from_ stop len : Nat) : MetaM (Nat × Exp
   let lamE := mkRawNatLit lam
   let onesE := mkRawNatLit ones
   let wcE := mkRawNatLit wc
-  let fuel := stop + 1 - from_
-  let lhsLoop := mkHiLoopK xE lamE onesE wcE (mkRawNatLit 0) from_ fuel
-  let mut tbl := 0
-  let mut tblE := mkRawNatLit 0
-  let mut proof := mkApp2 (mkConst ``Eq.refl [Level.succ Level.zero]) (mkConst ``Nat) lhsLoop
-  let mut start := from_
-  let mut remaining := fuel
-  for i in [0:(fuel + len - 1) / len] do
-    let step := Nat.min len remaining
-    let rest := remaining - step
-    let next := hiLoop x lam ones wc bigOffset bigWidth tbl start step
-    let nextE := mkRawNatLit next
-    let stepName := Name.mkSimple s!"hi_step_{i}"
-    addThm stepName (mkBeqTrue (mkHiLoopK xE lamE onesE wcE tblE start step) nextE)
-      Lean.reflBoolTrue
-    proof := mkAppN (mkConst ``hiLoopK_chain)
-      #[lhsLoop, xE, lamE, onesE, wcE, mkRawNatLit bigOffset, mkRawNatLit bigWidth, tblE, nextE,
-        mkRawNatLit start, mkRawNatLit step, mkRawNatLit rest, proof, mkConst stepName]
-    tbl := next
-    tblE := nextE
-    start := start + step
-    remaining := rest
-  return (tbl, ← mkExpectedTypeHint proof (mkNatEqual lhsLoop tblE))
+  emitLoopChain "hi" (stop + 1 - from_) len 0 from_ (mkHiLoopK xE lamE onesE wcE)
+    (fun tbl start step => hiLoop x lam ones wc bigOffset bigWidth tbl start step)
+    ``hiLoopK_chain
+    (fun tblE nextE start step rest =>
+      #[xE, lamE, onesE, wcE, mkRawNatLit bigOffset, mkRawNatLit bigWidth, tblE, nextE,
+        mkRawNatLit start, mkRawNatLit step, mkRawNatLit rest])
 
 /-- The number of runs of equal quotients in the recurrence for `L v`. -/
 def blockCount (v : Nat) : Nat := Id.run do
@@ -458,26 +393,15 @@ private def emitBlockChain (x v rootx low hi fuel len : Nat) : MetaM (Nat × Exp
   let rE := mkRawNatLit rootx
   let lowE := mkRawNatLit low
   let hiE := mkRawNatLit hi
-  -- the loop starts at index 2 with both halves of the sum empty
-  let lhsLoop := mkBlockLoopK xE vE rE lowE hiE (mkRawNatLit 2) fuel
-  let mut st := 2
-  let mut stE := mkRawNatLit 2
-  let mut proof := mkApp2 (mkConst ``Eq.refl [Level.succ Level.zero]) (mkConst ``Nat) lhsLoop
-  let mut remaining := fuel
-  for i in [0:(fuel + len - 1) / len] do
-    let step := Nat.min len remaining
-    let rest := remaining - step
-    let next := blockLoop x v rootx low hi bigWidth bigOffset st step
-    let nextE := mkRawNatLit next
-    let stepName := Name.mkSimple s!"block_step_{v}_{i}"
-    addThm stepName (mkBeqTrue (mkBlockLoopK xE vE rE lowE hiE stE step) nextE) Lean.reflBoolTrue
-    proof := mkAppN (mkConst ``blockLoopK_chain)
-      #[lhsLoop, xE, vE, rE, lowE, hiE, mkRawNatLit bigWidth, mkRawNatLit bigOffset, stE, nextE,
-        mkRawNatLit step, mkRawNatLit rest, proof, mkConst stepName]
-    st := next
-    stE := nextE
-    remaining := rest
-  return (st, ← mkExpectedTypeHint proof (mkNatEqual lhsLoop stE))
+  -- the loop starts at index 2 with both halves of the sum empty, and each block reads its index
+  -- out of the state, so the chain's running start is idle here
+  emitLoopChain s!"block_{v}" fuel len 2 0
+    (fun stE _ step => mkBlockLoopK xE vE rE lowE hiE stE step)
+    (fun st _ step => blockLoop x v rootx low hi bigWidth bigOffset st step)
+    ``blockLoopK_chain
+    (fun stE nextE _ step rest =>
+      #[xE, vE, rE, lowE, hiE, mkRawNatLit bigWidth, mkRawNatLit bigOffset, stE, nextE,
+        mkRawNatLit step, mkRawNatLit rest])
 
 /-! ### The assembly
 
