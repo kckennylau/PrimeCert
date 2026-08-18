@@ -91,4 +91,13 @@ public theorem check_of_class {r m k len : ℕ} (hr : r % 6 = 1 ∨ r % 6 = 5) (
   have := (forallB_iff wieferichAt (wheelIndex r) len (m / 3)).mp hfold k hk
   simpa [Nat.mul_comm, Nat.add_comm] using this
 
+/-- A prime whose class's generated theorem covers its position fails the Wieferich condition. -/
+public theorem not_wieferich_of_fold {p m len : ℕ} (hp : p.Prime) (hb : p < 1000000)
+    (hm : m % 6 = 0) (hc : p % 6 = 1 ∨ p % 6 = 5) (h1 : 1 ≤ p % m)
+    (hr : p % m % 6 = 1 ∨ p % m % 6 = 5) (hk : p / m < len)
+    (hfold : forallB wieferichAt (wheelIndex (p % m)) len (m / 3)) : ¬ Wieferich p := by
+  refine not_wieferich_of_check hp hb hc ?_
+  have := check_of_class (k := p / m) hr hm h1 hk hfold
+  rwa [Nat.mod_add_div] at this
+
 end PrimeCert.Wieferich
