@@ -70,6 +70,12 @@ public theorem hpLoopK_congr (lit M w e s s' start fuel : Nat) (h : s.beq s') :
     hpLoopK lit M w e s start fuel = hpLoopK lit M w e s' start fuel := by
   rw [Nat.eq_of_beq_eq_true h]
 
+/-- The chain read from the seed state: its value from the equal literal `s'` is its value from
+`s`. -/
+public theorem hpLoopK_entry (lit M w e s s' start fuel v : Nat) (h : s.beq s')
+    (hv : hpLoopK lit M w e s' start fuel = v) : hpLoopK lit M w e s start fuel = v := by
+  rw [hpLoopK_congr lit M w e s s' start fuel h, hv]
+
 /-- Fuel additivity for the collection of higher powers. -/
 public theorem hpLoopK_add (lit M w e st start a b : Nat) :
     hpLoopK lit M w e st start (a + b)

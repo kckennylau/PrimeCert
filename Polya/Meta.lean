@@ -256,14 +256,9 @@ private def emitPowerChecks (n len : Nat) : MetaM PowerData := do
     ``hpLoopK_chain
     (fun stE nextE start step rest =>
       #[litE, mE, wE, eE, stE, nextE, mkRawNatLit start, mkRawNatLit step, mkRawNatLit rest])
-  let entry := mkAppN (mkConst ``hpLoopK_congr)
+  let full := mkAppN (mkConst ``hpLoopK_entry)
     #[litE, mE, wE, eE, seedE, mkRawNatLit seed, mkRawNatLit 1, mkRawNatLit hpFuel,
-      mkConst `PrimeCert.Polya.hpSeed]
-  let full ← mkExpectedTypeHint
-    (mkAppN (mkConst ``Eq.trans [Level.succ Level.zero])
-      #[mkConst ``Nat, mkHp seedE 1 hpFuel, mkHp (mkRawNatLit seed) 1 hpFuel, mkRawNatLit hpSt,
-        entry, hpProof])
-    (mkNatEqual (mkHp seedE 1 hpFuel) (mkRawNatLit hpSt))
+      mkRawNatLit hpSt, mkConst `PrimeCert.Polya.hpSeed, hpProof]
   addThm `PrimeCert.Polya.hpData (mkNatEqual (mkHp seedE 1 hpFuel) (mkRawNatLit hpSt)) full
   if hpSt >>> 128 != packFields others w || hpSt &&& ((1 <<< 64) - 1) != others.size then
     throwError "run_lam: the collected powers differ from the packed ones"
