@@ -36,4 +36,16 @@ public theorem residue_cases {r : ℕ} (hr : r < 2310) (hg : Nat.gcd r 2310 = 1)
   · exact Or.inr (Or.inl h)
   · exact Or.inr (Or.inr h)
 
+/-- A prime above 11 shares no factor with 2310. -/
+public theorem gcd_2310_of_prime {p : ℕ} (hp : p.Prime) (h : 11 < p) : Nat.gcd p 2310 = 1 := by
+  have hc : Nat.Coprime p 2310 := by
+    rw [Nat.Prime.coprime_iff_not_dvd hp]
+    intro hdvd
+    rw [show (2310 : ℕ) = 2 * 3 * 5 * 7 * 11 by norm_num] at hdvd
+    simp only [Nat.Prime.dvd_mul hp] at hdvd
+    rcases hdvd with ((((h | h) | h) | h) | h) <;>
+      · have := Nat.le_of_dvd (by norm_num) h
+        omega
+  exact hc
+
 end PrimeCert.Wieferich
