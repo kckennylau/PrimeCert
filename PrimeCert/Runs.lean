@@ -11,25 +11,21 @@ public import Mathlib.Algebra.Ring.Int.Defs
 /-!
 # Runs of equal quotients
 
-Fix `v`. As `k` runs over `1, 2, …, v`, the quotient `v / k` repeats: every index from `k` up to
-`v / (v / k)` inclusive gives the same quotient (`div_eq_of_run`), and that range does start at `k`
-(`le_div_div`). Call such a range the run at `k`.
-
-So a sum of `f (v / k')` over the run at `k` is the run's length times `f (v / k)` (`sum_run`), and
-that run splits off the front of a sum over `Icc k v`, leaving the sum from `v / (v / k) + 1`
-(`sum_Icc_peel_run`). Iterating the split from `k = 1` writes `∑_{k ≤ v} f (v / k)` as one term per
-distinct quotient, which is the form a certificate for such a sum is emitted in.
+The run at `k` is the block of indices `Icc k (v / (v / k))`, on which `v / k'` is constant
+(`div_eq_of_run`, `le_div_div`). Summing `f (v / k')` over it gives one term (`sum_run`), which
+`sum_Icc_peel_run` splits off a sum over `Icc k v`; iterating that writes `∑_{k ≤ v} f (v / k)` with
+one term per distinct quotient.
 -/
 
 namespace PrimeCert
 
-/-- Every index from `k` up to the end of its run has the quotient `v / k`. -/
+/-- The quotient is `v / k` throughout the run at `k`. -/
 public theorem div_eq_of_run {v k k' : ℕ} (hk : k ≠ 0) (hkk' : k ≤ k')
     (hk' : k' ≤ v / (v / k)) : v / k' = v / k := by
   refine (Nat.div_le_div_left hkk' (Nat.pos_of_ne_zero hk)).antisymm ?_
   grw [Nat.le_div_iff_mul_le (by lia), hk', Nat.mul_div_le]
 
-/-- The run at `k` contains `k`, so it is a range from `k` upwards. -/
+/-- The run at `k` contains `k`. -/
 public theorem le_div_div {v k : ℕ} (hk : k ≠ 0) (hkv : k ≤ v) : k ≤ v / (v / k) := by
   grw [Nat.le_div_iff_mul_le (Nat.div_pos hkv (Nat.pos_of_ne_zero hk)), Nat.mul_div_le]
 
@@ -46,8 +42,7 @@ public theorem sum_run {α : Type*} [AddCommMonoid α] {v k : ℕ} (hk : k ≠ 0
   · simp only [Finset.mem_Icc] at hk'
     rw [div_eq_of_run hk hk'.1 hk'.2]
 
-/-- Peel the run at `k` off a sum over `Icc k v`, leaving the sum from the next run's first
-index. -/
+/-- Split the run at `k` off the front of a sum over `Icc k v`. -/
 public theorem sum_Icc_peel_run {α : Type*} [AddCommMonoid α] {v k : ℕ} (hk : k ≠ 0) (hkv : k ≤ v)
     (f : ℕ → α) :
     ∑ k' ∈ Icc k v, f (v / k')
