@@ -49,7 +49,7 @@ public theorem tables_of_data {x M rootx top w r wc chunks off wb qs np cnt chun
     (hones : onesK lam wc chunks = ones)
     (hlow : lowLoopK lam ones wc off wb 0 0 (rootx + 1) = low)
     (hhi : hiLoopK x lam ones wc off wb 0 (top + 1) (rootx - top) = hi)
-    (hok : setupOK x M rootx top w r wc chunks off wb qs np cnt chunks2 e fuel st hpSt = true) :
+    (hok : setupOK x M rootx top w r wc chunks off wb qs np cnt chunks2 e fuel st hpSt) :
     IsLowTable rootx off wb low ∧ IsHiTable x rootx off wb hi (top + 1) := by
   obtain ⟨hflag, hnum, hchunks2, hfuelup, hfueldn, hMw, hM64, hMe, hroom, hlink, hcnt, hr, hwc,
     hchunk, hroot, hMoff, hwbM, htop, hcut⟩ := of_decide_eq_true hok
@@ -121,7 +121,7 @@ theorem sqrt_eq_of_le_of_lt {v s : ℕ} (h1 : s * s ≤ v) (h2 : v < (s + 1) * (
 public theorem isHiTable_step {x rootx off wb low hi hiNext j v s A B S val fuel : ℕ}
     (hlow : IsLowTable rootx off wb low) (hhi : IsHiTable x rootx off wb hi (j + 1))
     (hblock : blockLoopK x v rootx low hi wb off 2 fuel = S)
-    (hok : stepOK x rootx off wb j v s A B S val hi hiNext = true) :
+    (hok : stepOK x rootx off wb j v s A B S val hi hiNext) :
     IsHiTable x rootx off wb hiNext j := by
   obtain ⟨hj, hjr, hxj, hS, hA, hB2, hB, hv, hv64, hs1, hs2, hval, hvlt, hnext, -, hwb,
     hroot⟩ := of_decide_eq_true hok
@@ -154,7 +154,7 @@ public abbrev FinalOK (x rootx off wb s A B S p q : ℕ) : Prop :=
 public theorem L_eq_of_final {x rootx off wb low hi s A B S p q fuel : ℕ}
     (hlow : IsLowTable rootx off wb low) (hhi : IsHiTable x rootx off wb hi 2)
     (hblock : blockLoopK x x rootx low hi wb off 2 fuel = S)
-    (hok : finalOK x rootx off wb s A B S p q = true) :
+    (hok : finalOK x rootx off wb s A B S p q) :
     L x = (p : ℤ) - q := by
   obtain ⟨hroot1, hS, hA, hB2, hB, hx, hx64, hs1, hs2, hpq, -, hwb, hroot⟩ :=
     of_decide_eq_true hok

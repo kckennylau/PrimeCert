@@ -44,7 +44,7 @@ theorem strideMaskK_succ_of_gt {q M r : ℕ} (h : M < q <<< r) :
 
 /-- Every set bit of a stride mask sits at a positive multiple of `q`. -/
 public theorem dvd_of_testBit_strideMaskK {q M r j : ℕ} (hq : 0 < q)
-    (h : (strideMaskK q M r).testBit j = true) : q ∣ j ∧ j ≠ 0 := by
+    (h : (strideMaskK q M r).testBit j) : q ∣ j ∧ j ≠ 0 := by
   induction r generalizing j with
   | zero =>
     rw [strideMaskK_zero, Nat.testBit_two_pow] at h
@@ -70,7 +70,7 @@ public theorem dvd_of_testBit_strideMaskK {q M r j : ℕ} (hq : 0 < q)
 /-- Every positive multiple of `q` inside the table is a set bit, once the doubling has run far
 enough to reach it. -/
 public theorem testBit_strideMaskK_of_dvd {q M r j : ℕ} (hq : 0 < q) (hdvd : q ∣ j) (hj : 0 < j)
-    (hjM : j ≤ M) (hjr : j ≤ q * 2 ^ r) : (strideMaskK q M r).testBit j = true := by
+    (hjM : j ≤ M) (hjr : j ≤ q * 2 ^ r) : (strideMaskK q M r).testBit j := by
   induction r generalizing j with
   | zero =>
     obtain ⟨c, rfl⟩ := hdvd
@@ -93,7 +93,7 @@ public theorem testBit_strideMaskK_of_dvd {q M r j : ℕ} (hq : 0 < q) (hdvd : q
         exact hprev
     · have hsM : q <<< r ≤ M := by omega
       rw [strideMaskK_succ_of_le hsM, Nat.testBit_or, Nat.testBit_shiftLeft]
-      have hsub : (strideMaskK q M r).testBit (j - q <<< r) = true :=
+      have hsub : (strideMaskK q M r).testBit (j - q <<< r) :=
         ih (Nat.dvd_sub hdvd (by rw [hs]; exact ⟨2 ^ r, rfl⟩)) (by omega) (by omega) (by omega)
       simp [hsub, (by omega : q <<< r ≤ j)]
 
