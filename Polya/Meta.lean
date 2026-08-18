@@ -4,7 +4,6 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Bhavik Mehta
 -/
 import Lean.Elab.Command
-import Polya.Defs
 import Polya.Main
 import Polya.PowerDefs
 import PrimeCert.Meta.Sieve

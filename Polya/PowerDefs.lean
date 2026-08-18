@@ -6,7 +6,6 @@ Authors: Bhavik Mehta
 module
 
 public import Polya.Defs
-public import PrimeCert.Bits
 public import PrimeCert.Sieve
 
 /-!

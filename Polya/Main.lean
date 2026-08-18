@@ -7,7 +7,6 @@ module
 
 public import Polya.Correct.Recursion
 public import Polya.Correct.TableSpec
-public import Polya.Correct.Tables
 
 /-!
 # The assembly
