@@ -51,12 +51,6 @@ theorem land_split (x m t : ℕ) :
   rw [land_mod_two_pow, land_div_two_pow]
   omega
 
-/-- A mask below `2 ^ t` reads only the low `t` bits. -/
-theorem land_of_lt {x m t : ℕ} (hm : m < 2 ^ t) : x &&& m = (x % 2 ^ t) &&& m := by
-  conv_lhs => rw [land_split x m t]
-  rw [Nat.mod_eq_of_lt hm, Nat.div_eq_of_lt hm]
-  simp
-
 /-- The byte-wide split, the form the stages use. -/
 theorem land_split_byte (x m : ℕ) :
     x &&& m = ((x % 256) &&& (m % 256)) + 256 * ((x / 256) &&& (m / 256)) :=
