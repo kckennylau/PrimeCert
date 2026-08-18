@@ -180,7 +180,8 @@ public def onesLoop (lam w tbl start fuel : Nat) : Nat := Id.run do
   let mut t := tbl
   for i in [0:fuel] do
     let j := start + i
-    t := t ||| (((field t w j) + popc32 ((lam >>> (32 * j)) &&& ((1 <<< 32) - 1))) <<< (w * (j + 1)))
+    let c := popc32 ((lam >>> (32 * j)) &&& ((1 <<< 32) - 1))
+    t := t ||| ((field t w j + c) <<< (w * (j + 1)))
   return t
 
 public def bitCheckStep (qs w lit st i : Nat) : Nat :=
