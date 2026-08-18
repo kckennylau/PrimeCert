@@ -107,8 +107,9 @@ public theorem fieldK_prime {qs w lit M cnt : ℕ} (hsieve : IsSieve M lit)
   obtain ⟨htests, -, -⟩ := bitCheckLoopK_spec cnt h
   obtain ⟨-, hpos, hset⟩ := htests i hi
   have hnum := num_idx_fieldK h hi
-  exact hnum ▸ (hsieve _ (by omega) (by rw [hnum]; exact hbound)).1
+  have hprime := (hsieve _ (by omega) (by rw [hnum]; exact hbound)).1
     (testBit_iff_shiftRight_mod_two.2 hset)
+  rwa [hnum] at hprime
 
 /-- A strictly increasing map is injective below the bound. -/
 public theorem eq_of_mono {f : ℕ → ℕ} {n : ℕ} (hmono : ∀ i j, i < j → j < n → f i < f j)

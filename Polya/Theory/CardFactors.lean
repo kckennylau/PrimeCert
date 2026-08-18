@@ -47,8 +47,10 @@ public theorem card_primePow_divisors {n : ℕ} (hn : n ≠ 0) :
     rintro q ⟨k, ⟨hk, -⟩, rfl⟩ ⟨k', ⟨hk', -⟩, heq⟩
     have hpp : p.Prime := Nat.prime_of_mem_primeFactors hp
     have hpp' : p'.Prime := Nat.prime_of_mem_primeFactors hp'
-    exact hne ((Nat.prime_dvd_prime_iff_eq hpp' hpp).1
-      (hpp'.dvd_of_dvd_pow (heq ▸ dvd_pow_self p' (by omega)))).symm
+    have hdvd : p' ∣ p ^ k := by
+      rw [← heq]
+      exact dvd_pow_self p' (by omega)
+    exact hne ((Nat.prime_dvd_prime_iff_eq hpp' hpp).1 (hpp'.dvd_of_dvd_pow hdvd)).symm
   rw [hbi, Finset.card_biUnion hdisj, cardFactors_eq_sum_factorization, Finsupp.sum,
     Nat.support_factorization]
   refine Finset.sum_congr rfl fun p hp => ?_

@@ -29,8 +29,10 @@ public theorem div_eq_of_run {v k k' : ℕ} (hk : 0 < k) (hkk' : k ≤ k')
     _ ≤ v := Nat.div_mul_le_self v (v / k)
 
 /-- The run starting at `k` ends at or after `k`. -/
-public theorem le_div_div {v k : ℕ} (hk : 0 < k) (hkv : k ≤ v) : k ≤ v / (v / k) :=
-  (Nat.le_div_iff_mul_le (Nat.div_pos hkv hk)).2 (Nat.mul_comm k (v / k) ▸ Nat.div_mul_le_self v k)
+public theorem le_div_div {v k : ℕ} (hk : 0 < k) (hkv : k ≤ v) : k ≤ v / (v / k) := by
+  refine (Nat.le_div_iff_mul_le (Nat.div_pos hkv hk)).2 ?_
+  rw [Nat.mul_comm]
+  exact Nat.div_mul_le_self v k
 
 /-- A sum over one run is its length times the value at the run's quotient. -/
 public theorem sum_run {v k : ℕ} (hk : 0 < k) (hkv : k ≤ v) (f : ℕ → ℤ) :

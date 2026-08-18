@@ -86,7 +86,8 @@ public theorem isPrimePowerTable_of_checks {qs w lit M np cnt chunks e fuel st h
       rw [← hfield j] at heq'
       obtain ⟨p, k, hp, hk, hvk, -, hpcase⟩ := (hpVal_iff hsieve hfuelup).1 (hs1 j (by omega))
       obtain ⟨hprime, hfive, -⟩ := hp1 a ha
-      exact not_prime_five_le hvk hpcase ⟨heq' ▸ hprime, heq' ▸ hfive⟩
+      rw [heq'] at hprime hfive
+      exact not_prime_five_le hvk hpcase ⟨hprime, hfive⟩
     rcases Nat.lt_or_ge i₁ np with h₁ | h₁ <;> rcases Nat.lt_or_ge i₂ np with h₂ | h₂
     · exact hp3 i₁ i₂ h₁ h₂ heq
     · exact absurd heq (hcross i₁ i₂ h₁ h₂ hi₂)

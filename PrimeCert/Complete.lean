@@ -45,8 +45,10 @@ theorem fieldK_le {qs w lit cnt M : ℕ} (h : bitCheckLoopK qs w lit 1 0 cnt % 2
     rcases Nat.lt_or_ge i (cnt - 1) with hlt | hge
     · exact Nat.le_of_lt (hmono i (cnt - 1) hlt (by omega))
     · rw [(by omega : i = cnt - 1)]
+  have htopnum := htop hcnt
+  rw [htopidx] at htopnum
   rw [← num_idx_fieldK h hi]
-  exact le_trans (num_le_num hle) (htopidx ▸ htop hcnt)
+  exact le_trans (num_le_num hle) htopnum
 
 /-- The set positions of the sieve are exactly the sieve indices of the packed fields: the fields
 inject into them and the counts agree. -/
