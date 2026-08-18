@@ -6,7 +6,7 @@ Authors: Bhavik Mehta
 module
 
 public import Polya.Defs
-public import PrimeCert.Field
+public import PrimeCert.Entry
 public import Mathlib.Data.Finset.Card
 public import Mathlib.Data.Finset.Range
 public import Mathlib.Algebra.Ring.Parity
@@ -17,7 +17,7 @@ public import Mathlib.Algebra.Ring.Parity
 `strideMaskK q M rounds` has bit `j` set, for `j ≤ M`, exactly at the positive multiples of `q`
 (`testBit_strideMaskK`), given `M < q * 2 ^ rounds`, which puts the top of the table within reach of
 the doubling. One step of `lamLoopK` flips those bits, so bit `j` of the table counts, modulo 2, the
-fields dividing `j` (`testBit_lamLoopK`).
+entries dividing `j` (`testBit_lamLoopK`).
 -/
 
 namespace PrimeCert.Polya
@@ -139,20 +139,20 @@ public theorem lamK_lt (qs w M r cnt : ℕ) : lamK qs w M r cnt < 2 ^ (M + 1) :=
 
 /-! ## The parity table -/
 
-/-- Bit `j` of the table after `fuel` steps flips once per field dividing `j`. -/
+/-- Bit `j` of the table after `fuel` steps flips once per entry dividing `j`. -/
 public theorem testBit_lamLoopK {qs w M r lam start fuel j : ℕ} (hj : j ≤ M) (hjpos : 0 < j)
-    (hfield : ∀ i < fuel, 0 < fieldK qs w (start + i) ∧ M < fieldK qs w (start + i) * 2 ^ r) :
+    (hentry : ∀ i < fuel, 0 < entryK qs w (start + i) ∧ M < entryK qs w (start + i) * 2 ^ r) :
     (lamLoopK qs w M r lam start fuel).testBit j
       = Bool.xor (lam.testBit j)
-          (decide (Odd ({i ∈ Finset.range fuel | fieldK qs w (start + i) ∣ j}).card)) := by
+          (decide (Odd ({i ∈ Finset.range fuel | entryK qs w (start + i) ∣ j}).card)) := by
   induction fuel with
   | zero => simp [lamLoopK]
   | succ f ih =>
-    obtain ⟨hpos, hround⟩ := hfield f (by omega)
-    rw [lamLoopK_succ, testBit_markStrideK hj, ih fun i hi => hfield i (by omega),
+    obtain ⟨hpos, hround⟩ := hentry f (by omega)
+    rw [lamLoopK_succ, testBit_markStrideK hj, ih fun i hi => hentry i (by omega),
       testBit_strideMaskK hpos hj hround, Finset.range_add_one, Finset.filter_insert]
-    have hnot : f ∉ {i ∈ Finset.range f | fieldK qs w (start + i) ∣ j} := by simp
-    by_cases hdvd : fieldK qs w (start + f) ∣ j
+    have hnot : f ∉ {i ∈ Finset.range f | entryK qs w (start + i) ∣ j} := by simp
+    by_cases hdvd : entryK qs w (start + f) ∣ j
     · rw [if_pos hdvd, Finset.card_insert_of_notMem hnot]
       simp [hdvd, hjpos.ne', Nat.odd_add_one, -Nat.not_odd_iff_even]
     · rw [if_neg hdvd]
@@ -160,13 +160,13 @@ public theorem testBit_lamLoopK {qs w M r lam start fuel j : ℕ} (hj : j ≤ M)
 
 /-- Position `0` stays clear: every stride is positive. -/
 public theorem testBit_lamLoopK_zero {qs w M r lam start fuel : ℕ} (h0 : lam.testBit 0 = false)
-    (hfield : ∀ i < fuel, 0 < fieldK qs w (start + i)) :
+    (hentry : ∀ i < fuel, 0 < entryK qs w (start + i)) :
     (lamLoopK qs w M r lam start fuel).testBit 0 = false := by
   induction fuel with
   | zero => simpa [lamLoopK] using h0
   | succ f ih =>
-    rw [lamLoopK_succ, testBit_markStrideK (Nat.zero_le M), ih fun i hi => hfield i (by omega),
-      testBit_strideMaskK_zero (hfield f (by omega))]
+    rw [lamLoopK_succ, testBit_markStrideK (Nat.zero_le M), ih fun i hi => hentry i (by omega),
+      testBit_strideMaskK_zero (hentry f (by omega))]
     simp
 
 end PrimeCert.Polya

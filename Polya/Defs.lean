@@ -15,7 +15,7 @@ dividing `n`, so the parity of that count is the exclusive-or over prime powers 
 This file builds the whole table by one exclusive-or per prime power: the state is a natural
 number used as a bitset holding bits `0 … M`, and bit `n` records the parity for `n`.
 
-The prime powers arrive packed into one natural number as `w`-bit fields, lowest first, one field
+The prime powers arrive packed into one natural number as `w`-bit entries, lowest first, one entry
 per step of the loop; `Polya.Correct.TableSpec` derives that packing from the certified sieve.
 
 The `rounds` argument is the number of doubling rounds in `strideMaskK`, so strides up to
@@ -43,22 +43,22 @@ namespace PrimeCert.Polya
 @[expose] public noncomputable def markStrideK (lam q M rounds : Nat) : Nat :=
   (lam.xor (strideMaskK q M rounds)).land ((Nat.shiftLeft (nat_lit 1) M.succ).sub (nat_lit 1))
 
-/-- Perform `fuel` steps on the table `lam`, taking the strides from fields `start, start+1, …` of
+/-- Perform `fuel` steps on the table `lam`, taking the strides from entries `start, start+1, …` of
 `qs` and flipping the parity bit of each stride's multiples. `lamK` runs this from an empty
 table. -/
 @[expose] public noncomputable def lamLoopK (qs w M rounds lam start fuel : Nat) : Nat :=
-  fuel.rec lam fun i l => markStrideK l (fieldK qs w (start.add i)) M rounds
+  fuel.rec lam fun i l => markStrideK l (entryK qs w (start.add i)) M rounds
 
 /-- The full parity table for numbers up to `M`: bit `n` is set iff `n` has an odd number of prime
-factors counted with multiplicity, given that the `cnt` fields of `qs` are exactly the prime powers
+factors counted with multiplicity, given that the `cnt` entries of `qs` are exactly the prime powers
 `q ≤ M` (`testBit_lamK` in `Polya.Correct.Lam`). -/
 @[expose] public noncomputable def lamK (qs w M rounds cnt : Nat) : Nat :=
   lamLoopK qs w M rounds (nat_lit 0) (nat_lit 0) cnt
 
-/-- Loop recurrence: peel the top field `start+fuel`, in the exact form the def uses. -/
+/-- Loop recurrence: peel the top entry `start+fuel`, in the exact form the def uses. -/
 public theorem lamLoopK_succ (qs w M rounds lam start fuel : Nat) :
     lamLoopK qs w M rounds lam start (fuel + 1)
-      = markStrideK (lamLoopK qs w M rounds lam start fuel) (fieldK qs w (start + fuel)) M
+      = markStrideK (lamLoopK qs w M rounds lam start fuel) (entryK qs w (start + fuel)) M
           rounds := rfl
 
 /-- Perform `fuel` steps, appending to `tbl` the value `L i + off` for `i = start, start+1, …`,
@@ -95,17 +95,17 @@ public theorem hiLoopK_succ (x lam ones wc off wb tbl start fuel : Nat) :
               ((onesBelowK lam ones wc (x / (start + fuel)).succ).mul 2)).shiftLeft
             (wb * (start + fuel))) := rfl
 
-/-- One block of the recurrence for `L v`. The index `k` in field 0 gives the quotient `q = v / k`,
+/-- One block of the recurrence for `L v`. The index `k` in entry 0 gives the quotient `q = v / k`,
 which repeats for every index up to `v / q`; the run length times `L q` is added into the running
-sum, held as fields 1 and 2 standing for their difference. `L q` comes from field `q` of `low` when
-`q` is at most `rootx`, and from field `x / q` of `hi` otherwise, both holding `L` offset by `off`.
+sum, held as entries 1 and 2 standing for their difference. `L q` comes from entry `q` of `low` when
+`q` is at most `rootx`, and from entry `x / q` of `hi` otherwise, both holding `L` offset by `off`.
 The step count is exact, so the index stays at or below `v` throughout. -/
 @[expose] public noncomputable def blockStepK
     (x v rootx low hi wb off st : Nat) : Nat :=
   let k := st.land ((Nat.shiftLeft (nat_lit 1) (nat_lit 64)).sub (nat_lit 1))
   let q := v.div k
   let run := ((v.div q).sub k).succ
-  let val := (q.ble rootx).rec (fieldK hi wb (x.div q)) (fieldK low wb q)
+  let val := (q.ble rootx).rec (entryK hi wb (x.div q)) (entryK low wb q)
   ((st.sub k).add (v.div q).succ).add
     (((run.mul val).shiftLeft (nat_lit 64)).add ((run.mul off).shiftLeft (nat_lit 128)))
 
@@ -140,17 +140,17 @@ public def markStride (lam q M rounds : Nat) : Nat :=
 public def lamLoop (qs w M rounds lam start fuel : Nat) : Nat := Id.run do
   let mut l := lam
   for i in [0:fuel] do
-    l := markStride l (field qs w (start + i)) M rounds
+    l := markStride l (entry qs w (start + i)) M rounds
   return l
 
-public def stField (st i : Nat) : Nat := (st >>> (64 * i)) &&& ((1 <<< 64) - 1)
+public def stEntry (st i : Nat) : Nat := (st >>> (64 * i)) &&& ((1 <<< 64) - 1)
 
 public def blockStep (x v rootx low hi wb off st : Nat) : Nat :=
   let k := st &&& ((1 <<< 64) - 1)
   let q := v / k
   let k2 := v / q
   let run := k2 - k + 1
-  let val := if q ≤ rootx then field low wb q else field hi wb (x / q)
+  let val := if q ≤ rootx then entry low wb q else entry hi wb (x / q)
   ((st - k) + (k2 + 1)) + ((run * val) <<< 64) + ((run * off) <<< 128)
 
 public def blockLoop (x v rootx low hi wb off st fuel : Nat) : Nat := Id.run do
@@ -183,7 +183,7 @@ public theorem lamLoopK_add (qs w M rounds lam start a b : Nat) :
   | succ b ih => grind [lamLoopK_succ]
 
 /-- One chain step: given `L = lamLoopK qs w M lam start (len + rest)` and a kernel-checked batch
-equation saying `len` steps from `lam` reach `lam'`, restate `L` as a loop from `lam'` at field
+equation saying `len` steps from `lam` reach `lam'`, restate `L` as a loop from `lam'` at entry
 `start + len` with `rest` steps left. -/
 public theorem lamLoopK_chain (L qs w M rounds lam lam' start len rest : Nat)
     (hP : L = lamLoopK qs w M rounds lam start (len.add rest))

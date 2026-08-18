@@ -12,8 +12,8 @@ public import Polya.Theory.Count
 /-!
 # The tables of values of `L`
 
-Field `j` of `lowLoopK` holds `j + off - 2 * (set bits below j + 1)` (`fieldK_lowLoopK`), which is
-`L j + off` once the parity table and the counts are what they claim to be (`fieldK_low_eq_L`).
+Entry `j` of `lowLoopK` holds `j + off - 2 * (set bits below j + 1)` (`entryK_lowLoopK`), which is
+`L j + off` once the parity table and the counts are what they claim to be (`entryK_low_eq_L`).
 The same holds for `hiLoopK` at the quotients `x / j`.
 -/
 
@@ -21,33 +21,33 @@ namespace PrimeCert.Polya
 
 open ArithmeticFunction
 
-/-- The value written into field `j` of the low table. -/
+/-- The value written into entry `j` of the low table. -/
 @[expose] public noncomputable def lowVal (lam ones wc off j : ℕ) : ℕ :=
   (j + off) - onesBelowK lam ones wc (j + 1) * 2
 
-/-- The low table after `fuel` steps: field `j` holds `lowVal`. -/
+/-- The low table after `fuel` steps: entry `j` holds `lowVal`. -/
 public theorem lowLoopK_spec {lam ones wc off wb : ℕ} (fuel : ℕ)
     (hval : ∀ j < fuel, lowVal lam ones wc off j < 2 ^ wb) :
-    ∀ j < fuel, fieldK (lowLoopK lam ones wc off wb 0 0 fuel) wb j = lowVal lam ones wc off j := by
+    ∀ j < fuel, entryK (lowLoopK lam ones wc off wb 0 0 fuel) wb j = lowVal lam ones wc off j := by
   intro j hj
-  refine (fieldK_of_lor_chain (start := 0) (F := lowVal lam ones wc off) rfl (fun f => ?_) fuel
+  refine (entryK_of_lor_chain (start := 0) (F := lowVal lam ones wc off) rfl (fun f => ?_) fuel
     (fun i _ hi => hval i (by omega))).1 j (Nat.zero_le j) (by omega)
   rw [lowLoopK_succ]
   simp only [Nat.lor_eq, Nat.shiftLeft_eq', lowVal, Nat.succ_eq_add_one, Nat.sub_eq, Nat.mul_eq]
 
-/-- The value written into field `j` of the high table. -/
+/-- The value written into entry `j` of the high table. -/
 @[expose] public noncomputable def hiVal (x lam ones wc off j : ℕ) : ℕ :=
   ((x / j) + off) - onesBelowK lam ones wc (x / j + 1) * 2
 
-/-- The high table built from an empty table at `start`: the fields it covers hold `hiVal`, and the
-fields outside stay clear. -/
+/-- The high table built from an empty table at `start`: the entries it covers hold `hiVal`, and the
+entries outside stay clear. -/
 public theorem hiLoopK_spec_start {x lam ones wc off wb start : ℕ} (fuel : ℕ)
     (hval : ∀ j, start ≤ j → j < start + fuel → hiVal x lam ones wc off j < 2 ^ wb) :
     (∀ j, start ≤ j → j < start + fuel →
-        fieldK (hiLoopK x lam ones wc off wb 0 start fuel) wb j = hiVal x lam ones wc off j) ∧
+        entryK (hiLoopK x lam ones wc off wb 0 start fuel) wb j = hiVal x lam ones wc off j) ∧
       ∀ j, (j < start ∨ start + fuel ≤ j) →
-        fieldK (hiLoopK x lam ones wc off wb 0 start fuel) wb j = 0 := by
-  refine fieldK_of_lor_chain (F := hiVal x lam ones wc off) rfl (fun f => ?_) fuel hval
+        entryK (hiLoopK x lam ones wc off wb 0 start fuel) wb j = 0 := by
+  refine entryK_of_lor_chain (F := hiVal x lam ones wc off) rfl (fun f => ?_) fuel hval
   rw [hiLoopK_succ]
   simp only [Nat.lor_eq, Nat.shiftLeft_eq', hiVal, Nat.succ_eq_add_one, Nat.sub_eq, Nat.mul_eq]
 
@@ -56,7 +56,7 @@ public theorem hiLoopK_spec_start {x lam ones wc off wb start : ℕ} (fuel : ℕ
 /-- The counts table reads back the count below any position it covers. -/
 public theorem onesBelowK_onesK {lam wc chunks p : ℕ} (hw : ∀ n, bitSum lam n < 2 ^ wc)
     (hp : p / 32 ≤ chunks) : onesBelowK lam (onesK lam wc chunks) wc p = bitSum lam p :=
-  onesBelowK_eq (fieldK_onesK hw hp)
+  onesBelowK_eq (entryK_onesK hw hp)
 
 /-- A low-table entry against `L`: the set bits below `n + 1` count the numbers up to `n` with an
 odd number of prime factors, so the entry is `L n` offset by `off`. -/

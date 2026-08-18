@@ -5,7 +5,7 @@ Authors: Bhavik Mehta
 -/
 module
 
-public import PrimeCert.Field
+public import PrimeCert.Entry
 public import Polya.PowerDefs
 
 import Mathlib.Tactic.Ring
@@ -14,29 +14,29 @@ import Mathlib.Tactic.Ring
 # The packed state of the power collection
 
 The state of `powStepK` holds a count of collected values in its low 64 bits, the running power in
-the next 64, and the values as `w`-bit fields above bit 128 (`IsPowState`). One step appends the
+the next 64, and the values as `w`-bit entries above bit 128 (`IsPowState`). One step appends the
 next power of the base while it stays below the cutoff (`powStepK_of_le`), and `powLoopK` appends
 the powers `seed * q ^ 1, …, seed * q ^ m` for the largest such `m` (`powLoopK_spec`).
 -/
 
 namespace PrimeCert.Polya
 
-/-! ### Writing a field by addition -/
+/-! ### Writing a entry by addition -/
 
 /-- Writing above a table adds, since the two parts share no bits. -/
 theorem add_mul_eq_lor {V val w c : ℕ} (hV : V < 2 ^ (w * c)) :
     V + val * 2 ^ (w * c) = V ||| val <<< (w * c) := by
   rw [Nat.add_comm, ← Nat.shiftLeft_eq, Nat.shiftLeft_add_eq_or_of_lt hV, Nat.lor_comm]
 
-/-- Fields other than the one being written keep their values. -/
-theorem fieldK_add_mul_ne {V val w c j : ℕ} (hV : V < 2 ^ (w * c)) (hval : val < 2 ^ w)
-    (hj : j ≠ c) : fieldK (V + val * 2 ^ (w * c)) w j = fieldK V w j := by
-  rw [add_mul_eq_lor hV, fieldK_lor_shiftLeft_ne hval hj]
+/-- Entries other than the one being written keep their values. -/
+theorem entryK_add_mul_ne {V val w c j : ℕ} (hV : V < 2 ^ (w * c)) (hval : val < 2 ^ w)
+    (hj : j ≠ c) : entryK (V + val * 2 ^ (w * c)) w j = entryK V w j := by
+  rw [add_mul_eq_lor hV, entryK_lor_shiftLeft_ne hval hj]
 
-/-- The value written reads back from its own field. -/
-theorem fieldK_add_mul_self {V val w c : ℕ} (hV : V < 2 ^ (w * c)) (hval : val < 2 ^ w) :
-    fieldK (V + val * 2 ^ (w * c)) w c = val := by
-  rw [add_mul_eq_lor hV, fieldK_lor_shiftLeft_of_zero (fieldK_eq_zero_of_lt hV) hval]
+/-- The value written reads back from its own entry. -/
+theorem entryK_add_mul_self {V val w c : ℕ} (hV : V < 2 ^ (w * c)) (hval : val < 2 ^ w) :
+    entryK (V + val * 2 ^ (w * c)) w c = val := by
+  rw [add_mul_eq_lor hV, entryK_lor_shiftLeft_of_zero (entryK_eq_zero_of_lt hV) hval]
 
 /-- The table with one more value written stops below position `w * (c + 1)`. -/
 theorem add_mul_two_pow_lt {V val w c : ℕ} (hV : V < 2 ^ (w * c)) (hval : val < 2 ^ w) :
@@ -123,20 +123,20 @@ public theorem powLoopK_spec {M w q seed st c pw V : ℕ} (fuel : ℕ) (h : IsPo
     (hq : 2 ≤ q) (hseed : seed < 2 ^ 64) (hM : M < 2 ^ w) (hM64 : M < 2 ^ 64)
     (hroom : c + fuel + 1 < 2 ^ 64) :
     ∃ m ≤ fuel, ∃ V', IsPowState w (powLoopK M w q seed st fuel) (c + m) (seed * q ^ m) V' ∧
-      (∀ j < c, fieldK V' w j = fieldK V w j) ∧
-        (∀ j < m, fieldK V' w (c + j) = seed * q ^ (j + 1)) ∧
+      (∀ j < c, entryK V' w j = entryK V w j) ∧
+        (∀ j < m, entryK V' w (c + j) = seed * q ^ (j + 1)) ∧
           (∀ j < m, seed * q ^ (j + 1) ≤ M) ∧ (m < fuel → M < seed * q ^ (m + 1)) := by
   induction fuel with
   | zero =>
     refine ⟨0, le_rfl, V, ?_, fun j _ => rfl, by omega, by omega, by omega⟩
     simpa using powLoopK_zero h hseed
   | succ f ih =>
-    obtain ⟨m, hmf, V', hstate, hbelow, hfields, hle, htop⟩ := ih (by omega)
+    obtain ⟨m, hmf, V', hstate, hbelow, hentries, hle, htop⟩ := ih (by omega)
     rw [powLoopK_succ_eq]
     obtain ⟨hst', hc', hpw', hV'⟩ := hstate
     have hpow : seed * q ^ m * q = seed * q ^ (m + 1) := by rw [Nat.pow_succ]; ring
     rcases Nat.lt_or_ge M (seed * q ^ m * q) with hgt | hnext
-    · refine ⟨m, by omega, V', ?_, hbelow, hfields, hle, fun _ => ?_⟩
+    · refine ⟨m, by omega, V', ?_, hbelow, hentries, hle, fun _ => ?_⟩
       · rw [powStepK_of_gt ⟨hst', hc', hpw', hV'⟩ hgt]
         exact ⟨hst', hc', hpw', hV'⟩
       · rw [← hpow]
@@ -147,14 +147,14 @@ public theorem powLoopK_spec {M w q seed st c pw V : ℕ} (fuel : ℕ) (h : IsPo
         fun j hj => ?_, fun j hj => ?_, fun hlt => ?_⟩
       · rw [← Nat.add_assoc]
         exact hstep
-      · rw [fieldK_add_mul_ne hV' (by rw [← hpow]; omega) (by omega)]
+      · rw [entryK_add_mul_ne hV' (by rw [← hpow]; omega) (by omega)]
         exact hbelow j hj
       · rcases Nat.lt_or_ge j m with hjm | hjm
-        · rw [fieldK_add_mul_ne hV' (by rw [← hpow]; omega) (by omega)]
-          exact hfields j hjm
+        · rw [entryK_add_mul_ne hV' (by rw [← hpow]; omega) (by omega)]
+          exact hentries j hjm
         · have hjm' : j = m := by omega
           subst hjm'
-          exact fieldK_add_mul_self hV' (by rw [← hpow]; omega)
+          exact entryK_add_mul_self hV' (by rw [← hpow]; omega)
       · rcases Nat.lt_or_ge j m with hjm | hjm
         · exact hle j hjm
         · have hjm' : j = m := by omega

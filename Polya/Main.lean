@@ -22,7 +22,7 @@ prime power, a count, a collected power and a table value, with `off` the offset
 table value; `r` is the doubling rounds of a stride mask; `chunks` and `chunks2` count the
 32-position blocks of the counts table and of the sieve; `qs` holds the packed prime powers, `np`
 of them prime and `cnt` in total; `fuel` is `(√M - 1) / 3`, the sieve positions walked for the
-powers with exponent at least two; and `st` and `hpSt` are the final states of the field test and
+powers with exponent at least two; and `st` and `hpSt` are the final states of the entry test and
 of that walk.
 -/
 
@@ -33,7 +33,7 @@ open PrimeCert.Sieve (IsSieve num)
 /-! ## The setup -/
 
 /-- What the setup checks on its literals: the side conditions of `isPrimePowerTable_of_checks`,
-the width of a count and of a table field, and the range the high table covers. -/
+the width of a count and of a table entry, and the range the high table covers. -/
 public abbrev SetupOK (x M rootx top w r wc chunks off wb qs np cnt chunks2 e fuel st
     hpSt : ℕ) : Prop :=
   st % 2 = 1 ∧ num (st / 2) ≤ M ∧ (M - 1) / 3 < 32 * chunks2 ∧
@@ -91,12 +91,12 @@ public theorem tables_of_data {x M rootx top w r wc chunks off wb qs np cnt chun
     have := hdiv j hj1
     simp only [hiVal]
     omega
-  obtain ⟨hfields, hzero⟩ := hiLoopK_spec_start (rootx - top) hhibound
+  obtain ⟨hentries, hzero⟩ := hiLoopK_spec_start (rootx - top) hhibound
   refine ⟨fun q hq => ?_, fun m hm1 hm2 => ?_, fun m hm => ?_⟩
   · rw [← hlow, lowLoopK_spec (rootx + 1) hlowbound q (by omega), ← hlam]
     exact lowVal_eq_L htab hr (hcount (q + 1) (by omega)) (by omega)
       (by have := hbelow q; omega)
-  · rw [← hhi, hfields m hm1 (by omega), ← hlam]
+  · rw [← hhi, hentries m hm1 (by omega), ← hlam]
     exact hiVal_eq_L htab hr (hcount (x / m + 1) (by have := hdiv m hm1; omega)) (hdiv m hm1)
       (by have := hbelow (x / m); have := hdiv m hm1; omega)
   · rw [← hhi]

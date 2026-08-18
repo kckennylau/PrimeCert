@@ -27,8 +27,8 @@ theorem blockStepK_eq (x v rootx low hi wb off st : ℕ) :
     blockStepK x v rootx low hi wb off st =
       st - st % 2 ^ 64 + (v / (v / (st % 2 ^ 64)) + 1) +
         ((v / (v / (st % 2 ^ 64)) - st % 2 ^ 64 + 1) *
-            (if v / (st % 2 ^ 64) ≤ rootx then fieldK low wb (v / (st % 2 ^ 64))
-              else fieldK hi wb (x / (v / (st % 2 ^ 64)))) * 2 ^ 64 +
+            (if v / (st % 2 ^ 64) ≤ rootx then entryK low wb (v / (st % 2 ^ 64))
+              else entryK hi wb (x / (v / (st % 2 ^ 64)))) * 2 ^ 64 +
           (v / (v / (st % 2 ^ 64)) - st % 2 ^ 64 + 1) * off * 2 ^ 128) := by
   unfold blockStepK
   simp only [bool_rec_ble_eq, Nat.land_eq, Nat.shiftLeft_eq', Nat.shiftLeft_eq, Nat.one_mul,
@@ -38,7 +38,7 @@ theorem blockStepK_eq (x v rootx low hi wb off st : ℕ) :
 /-- The tables hold `L` at every quotient of `v`, offset by `off`. -/
 @[expose] public def BlockValues (x v rootx low hi wb off : ℕ) : Prop :=
   ∀ k, 2 ≤ k → k ≤ v →
-    ((if v / k ≤ rootx then fieldK low wb (v / k) else fieldK hi wb (x / (v / k))) : ℤ)
+    ((if v / k ≤ rootx then entryK low wb (v / k) else entryK hi wb (x / (v / k))) : ℤ)
       = L (v / k) + off
 
 /-- The loop from a state covering `2 … k₀ - 1`: either it covers an initial segment of the
@@ -60,16 +60,16 @@ theorem blockLoopK_spec {x v rootx low hi wb off st k₀ A₀ B₀ : ℕ} (hv : 
     rw [blockLoopK_succ, hstate, blockStepK_eq,
       (by omega : (k + 2 ^ 64 * A + 2 ^ 128 * B) % 2 ^ 64 = k),
       (by omega : k + 2 ^ 64 * A + 2 ^ 128 * B - k = 2 ^ 64 * A + 2 ^ 128 * B)]
-    have hvallt : (if v / k ≤ rootx then fieldK low wb (v / k)
-        else fieldK hi wb (x / (v / k))) < 2 ^ wb := by split <;> exact fieldK_lt _ _ _
+    have hvallt : (if v / k ≤ rootx then entryK low wb (v / k)
+        else entryK hi wb (x / (v / k))) < 2 ^ wb := by split <;> exact entryK_lt _ _ _
     refine ⟨v / (v / k) + 1,
       A + (v / (v / k) - k + 1) *
-        (if v / k ≤ rootx then fieldK low wb (v / k) else fieldK hi wb (x / (v / k))),
+        (if v / k ≤ rootx then entryK low wb (v / k) else entryK hi wb (x / (v / k))),
       B + (v / (v / k) - k + 1) * off, by ring, ?_, ?_, ?_⟩
     · have hdle : v / (v / k) ≤ v := Nat.div_le_self _ _
       omega
     · have hstep : (v / (v / k) - k + 1) *
-          (if v / k ≤ rootx then fieldK low wb (v / k) else fieldK hi wb (x / (v / k)))
+          (if v / k ≤ rootx then entryK low wb (v / k) else entryK hi wb (x / (v / k)))
             ≤ 2 * ((v / (v / k) - k + 1) * off) := by
         rw [Nat.mul_left_comm]
         exact Nat.mul_le_mul_left _ (by omega)
@@ -94,14 +94,14 @@ theorem blockLoopK_spec {x v rootx low hi wb off st k₀ A₀ B₀ : ℕ} (hv : 
               exact sum_run (by omega) hle _
             rw [← Finset.Ico_union_Ico_eq_Ico (by omega : 2 ≤ k) (by omega),
               Finset.sum_union (Finset.Ico_disjoint_Ico_consecutive 2 k _), ← hsum, hblock]
-            have hvalL : ((if v / k ≤ rootx then fieldK low wb (v / k)
-                else fieldK hi wb (x / (v / k))) : ℤ) = L (v / k) + off := hvals k (by omega) hle
+            have hvalL : ((if v / k ≤ rootx then entryK low wb (v / k)
+                else entryK hi wb (x / (v / k))) : ℤ) = L (v / k) + off := hvals k (by omega) hle
             push_cast
             rw [hvalL]
             ring
       · exact Or.inr (by omega)
 
-/-- Reading the three fields back off a state. -/
+/-- Reading the three entries back off a state. -/
 public theorem state_split {S k A B : ℕ} (h : S = k + 2 ^ 64 * A + 2 ^ 128 * B) (hk : k < 2 ^ 64)
     (hA : A < 2 ^ 64) : S % 2 ^ 64 = k ∧ S / 2 ^ 64 % 2 ^ 64 = A ∧ S / 2 ^ 128 = B := by omega
 

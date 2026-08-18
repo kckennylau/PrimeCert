@@ -8,10 +8,10 @@ module
 /-!
 # Bitset arithmetic for kernel-checked certificates
 
-A table is one natural number holding `w`-bit fields, lowest first, read by `fieldK`. `popc32K`
+A table is one natural number holding `w`-bit entries, lowest first, read by `entryK`. `popc32K`
 counts the set bits of a 32-bit word, `onesK` records those counts every 32 positions, from which
 `onesBelowK` answers a count below an arbitrary position, and `popcLoopK` totals them over a range
-of blocks. `bitCheckLoopK` tests packed values against a sieve, one field per step.
+of blocks. `bitCheckLoopK` tests packed values against a sieve, one entry per step.
 
 Each loop carries a peel lemma by `rfl`, fuel additivity by induction, and a chain lemma, which
 together let an emitter split a run into kernel-checked batches. The compiled twins at the end
@@ -20,33 +20,33 @@ compute the batch literals.
 
 namespace PrimeCert
 
-/-- Field `i` of `qs`, reading `w` bits from position `w * i`. -/
-@[expose] public def fieldK (qs w i : Nat) : Nat :=
+/-- Entry `i` of `qs`, reading `w` bits from position `w * i`. -/
+@[expose] public def entryK (qs w i : Nat) : Nat :=
   (qs.shiftRight (w.mul i)).land ((Nat.shiftLeft (nat_lit 1) w).sub (nat_lit 1))
 
-/-- The number of set bits of `v`, for `v < 2 ^ 32`, summing bit counts within fields of 2, 4, 8 and
-then 32 bits (`popc32K_eq_bitSum` in `PrimeCert.PopCount`). The constants are the repeating masks
-`0101…`, `00110011…` and `00001111…`, and `0x01010101`, whose product with a byte-per-field value
-places the sum of the four bytes in the top byte. -/
+/-- The number of set bits of `v`, for `v < 2 ^ 32`, summing bit counts within groups of 2, 4, 8
+and then 32 bits (`popc32K_eq_bitSum` in `PrimeCert.PopCount`). The constants are the repeating
+masks `0101…`, `00110011…` and `00001111…`, and `0x01010101`, whose product with a byte-per-group
+value places the sum of the four bytes in the top byte. -/
 @[expose] public def popc32K (v : Nat) : Nat :=
   let a := v.sub ((v.shiftRight (nat_lit 1)).land (nat_lit 1431655765))
   let b := (a.land (nat_lit 858993459)).add ((a.shiftRight (nat_lit 2)).land (nat_lit 858993459))
   let c := (b.add (b.shiftRight (nat_lit 4))).land (nat_lit 252645135)
   ((c.mul (nat_lit 16843009)).shiftRight (nat_lit 24)).land (nat_lit 255)
 
-/-- Perform `fuel` steps, appending to `tbl` the running count of set bits of `lam`: field `i` holds
-the number of set bits below position `32 * i`, in `w`-bit fields. `onesK` runs this from a table
-holding the single field `0`. -/
+/-- Perform `fuel` steps, appending to `tbl` the running count of set bits of `lam`: entry `i` holds
+the number of set bits below position `32 * i`, in `w`-bit entries. `onesK` runs this from a table
+holding the single entry `0`. -/
 @[expose] public noncomputable def onesLoopK (lam w tbl start fuel : Nat) : Nat :=
   fuel.rec tbl fun i t =>
     t.lor
-      (((fieldK t w (start.add i)).add
+      (((entryK t w (start.add i)).add
           (popc32K ((lam.shiftRight (Nat.mul (nat_lit 32) (start.add i))).land
             ((Nat.shiftLeft (nat_lit 1) (nat_lit 32)).sub (nat_lit 1))))).shiftLeft
         (w.mul (start.add i).succ))
 
 /-- Running counts of the set bits of `lam` at every multiple of 32, covering positions below
-`32 * cnt` (`fieldK_onesK` in `PrimeCert.Ones`). -/
+`32 * cnt` (`entryK_onesK` in `PrimeCert.Ones`). -/
 @[expose] public noncomputable def onesK (lam w cnt : Nat) : Nat :=
   onesLoopK lam w (nat_lit 0) (nat_lit 0) cnt
 
@@ -71,10 +71,10 @@ holding the single field `0`. -/
         ((b.shiftRight ((start.add i).mul (nat_lit 32))).land
           (((nat_lit 1).shiftLeft (nat_lit 32)).sub (nat_lit 1))))
 
-/-- Test field `i`: its value is 1 or 5 modulo 6, its sieve index exceeds the previous one, and its
+/-- Test entry `i`: its value is 1 or 5 modulo 6, its sieve index exceeds the previous one, and its
 sieve bit is set. -/
 @[expose] public noncomputable def bitCheckStepK (qs w lit st i : Nat) : Nat :=
-  let q := fieldK qs w i
+  let q := entryK qs w i
   let t := (q.sub (nat_lit 1)).div (nat_lit 3)
   let prev := st.shiftRight (nat_lit 1)
   let ok := st.land (nat_lit 1)
@@ -84,7 +84,7 @@ sieve bit is set. -/
   let okSet := (lit.shiftRight t).land (nat_lit 1)
   (t.shiftLeft (nat_lit 1)).add (((ok.mul okMod).mul okRise).mul okSet)
 
-/-- Perform `fuel` field tests, from field `start`. -/
+/-- Perform `fuel` entry tests, from entry `start`. -/
 @[expose] public noncomputable def bitCheckLoopK (qs w lit st start fuel : Nat) : Nat :=
   fuel.rec st fun i s => bitCheckStepK qs w lit s (start.add i)
 
@@ -94,7 +94,7 @@ sieve bit is set. -/
 public theorem onesLoopK_succ (lam w tbl start fuel : Nat) :
     onesLoopK lam w tbl start (fuel + 1)
       = (onesLoopK lam w tbl start fuel).lor
-          (((fieldK (onesLoopK lam w tbl start fuel) w (start + fuel)).add
+          (((entryK (onesLoopK lam w tbl start fuel) w (start + fuel)).add
               (popc32K ((lam.shiftRight (32 * (start + fuel))).land
                 ((Nat.shiftLeft 1 32).sub 1)))).shiftLeft
             (w * (start + fuel).succ)) := rfl
@@ -164,7 +164,7 @@ Executable copies of the definitions above, used to compute the batch literals. 
 proof: a twin that disagreed with its kernel definition would produce a batch equation that fails
 its kernel check. -/
 
-public def field (qs w i : Nat) : Nat := (qs >>> (w * i)) &&& ((1 <<< w) - 1)
+public def entry (qs w i : Nat) : Nat := (qs >>> (w * i)) &&& ((1 <<< w) - 1)
 
 public def popc32 (v : Nat) : Nat :=
   let a := v - ((v >>> 1) &&& 1431655765)
@@ -181,11 +181,11 @@ public def onesLoop (lam w tbl start fuel : Nat) : Nat := Id.run do
   for i in [0:fuel] do
     let j := start + i
     let c := popc32 ((lam >>> (32 * j)) &&& ((1 <<< 32) - 1))
-    t := t ||| ((field t w j + c) <<< (w * (j + 1)))
+    t := t ||| ((entry t w j + c) <<< (w * (j + 1)))
   return t
 
 public def bitCheckStep (qs w lit st i : Nat) : Nat :=
-  let q := field qs w i
+  let q := entry qs w i
   let t := (q - 1) / 3
   let prev := st >>> 1
   let ok := st &&& 1

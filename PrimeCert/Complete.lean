@@ -11,9 +11,9 @@ public import PrimeCert.Ones
 /-!
 # The packed primes are every prime up to the cutoff
 
-`bitCheckLoopK` sends each packed field to a distinct set position of the sieve, and `popcLoopK`
+`bitCheckLoopK` sends each packed entry to a distinct set position of the sieve, and `popcLoopK`
 counts the set positions. Equal counts make that map onto, so every prime from 5 to the cutoff sits
-in a field (`primeBlock_spec`).
+in a entry (`primeBlock_spec`).
 -/
 
 namespace PrimeCert
@@ -34,43 +34,43 @@ public theorem popcLoopK_eq_bitSum (b acc fuel : ℕ) :
 /-- The number at an index rises with the index. -/
 theorem num_le_num {t t' : ℕ} (h : t ≤ t') : num t ≤ num t' := by grind [num]
 
-/-- Every field sits below the cutoff, since the top one does and the fields rise. -/
-theorem fieldK_le {qs w lit cnt M : ℕ} (h : bitCheckLoopK qs w lit 1 0 cnt % 2 = 1)
+/-- Every entry sits below the cutoff, since the top one does and the entries rise. -/
+theorem entryK_le {qs w lit cnt M : ℕ} (h : bitCheckLoopK qs w lit 1 0 cnt % 2 = 1)
     (htop : 0 < cnt → num (bitCheckLoopK qs w lit 1 0 cnt / 2) ≤ M)
-    {i : ℕ} (hi : i < cnt) : fieldK qs w i ≤ M := by
+    {i : ℕ} (hi : i < cnt) : entryK qs w i ≤ M := by
   obtain ⟨-, hmono, hlast⟩ := bitCheckLoopK_spec cnt h
   have hcnt : 0 < cnt := by omega
-  have htopidx : bitCheckLoopK qs w lit 1 0 cnt / 2 = idx (fieldK qs w (cnt - 1)) := hlast hcnt
-  have hle : idx (fieldK qs w i) ≤ idx (fieldK qs w (cnt - 1)) := by
+  have htopidx : bitCheckLoopK qs w lit 1 0 cnt / 2 = idx (entryK qs w (cnt - 1)) := hlast hcnt
+  have hle : idx (entryK qs w i) ≤ idx (entryK qs w (cnt - 1)) := by
     rcases Nat.lt_or_ge i (cnt - 1) with hlt | hge
     · exact Nat.le_of_lt (hmono i (cnt - 1) hlt (by omega))
     · rw [(by omega : i = cnt - 1)]
   have htopnum := htop hcnt
   rw [htopidx] at htopnum
-  rw [← num_idx_fieldK h hi]
+  rw [← num_idx_entryK h hi]
   exact le_trans (num_le_num hle) htopnum
 
-/-- The set positions of the sieve are exactly the sieve indices of the packed fields: the fields
+/-- The set positions of the sieve are exactly the sieve indices of the packed entries: the entries
 inject into them and the counts agree. -/
-theorem exists_field_of_testBit {qs w lit cnt chunks : ℕ}
+theorem exists_entry_of_testBit {qs w lit cnt chunks : ℕ}
     (h : bitCheckLoopK qs w lit 1 0 cnt % 2 = 1) (hpop : popcLoopK lit 0 0 chunks = cnt)
-    (hlt : ∀ i, i < cnt → idx (fieldK qs w i) < 32 * chunks)
+    (hlt : ∀ i, i < cnt → idx (entryK qs w i) < 32 * chunks)
     {t : ℕ} (ht : lit.testBit t) (htlt : t < 32 * chunks) :
-    ∃ i < cnt, idx (fieldK qs w i) = t := by
+    ∃ i < cnt, idx (entryK qs w i) = t := by
   obtain ⟨htests, hmono, -⟩ := bitCheckLoopK_spec cnt h
   have hcard : ({i ∈ Finset.range (32 * chunks) | lit.testBit i}).card = cnt := by
     rw [← bitSum_eq_card, ← Nat.zero_add (bitSum lit (32 * chunks)), ← popcLoopK_eq_bitSum, hpop]
-  have hsub : (Finset.range cnt).image (fun i => idx (fieldK qs w i))
+  have hsub : (Finset.range cnt).image (fun i => idx (entryK qs w i))
       ⊆ {i ∈ Finset.range (32 * chunks) | lit.testBit i} := by
     intro x hx
     simp only [Finset.mem_image, Finset.mem_range] at hx
     obtain ⟨i, hi, rfl⟩ := hx
     simp only [Finset.mem_filter, Finset.mem_range]
     exact ⟨hlt i hi, testBit_iff_shiftRight_mod_two.2 (htests i hi).2.2⟩
-  have himg : ((Finset.range cnt).image (fun i => idx (fieldK qs w i))).card = cnt := by
+  have himg : ((Finset.range cnt).image (fun i => idx (entryK qs w i))).card = cnt := by
     rw [Finset.card_image_of_injOn, Finset.card_range]
     exact fun a ha b hb hab => eq_of_mono hmono (by simpa using ha) (by simpa using hb) hab
-  have hmem : t ∈ (Finset.range cnt).image (fun i => idx (fieldK qs w i)) := by
+  have hmem : t ∈ (Finset.range cnt).image (fun i => idx (entryK qs w i)) := by
     rw [Finset.eq_of_subset_of_card_le hsub (by omega)]
     exact Finset.mem_filter.2 ⟨Finset.mem_range.2 htlt, ht⟩
   simpa only [Finset.mem_image, Finset.mem_range] using hmem
@@ -82,36 +82,36 @@ public theorem mod_six_of_prime {p : ℕ} (hp : p.Prime) (h5 : 5 ≤ p) : p % 6 
   rw [Nat.dvd_iff_mod_eq_zero] at h2 h3
   omega
 
-/-- What the two loops say about the block of packed primes: every field is a prime from 5 to the
-cutoff, every such prime is a field, and the fields are distinct. -/
+/-- What the two loops say about the block of packed primes: every entry is a prime from 5 to the
+cutoff, every such prime is a entry, and the entries are distinct. -/
 public theorem primeBlock_spec {qs w lit M cnt chunks : ℕ} (hsieve : IsSieve M lit)
     (h : bitCheckLoopK qs w lit 1 0 cnt % 2 = 1)
     (htop : 0 < cnt → num (bitCheckLoopK qs w lit 1 0 cnt / 2) ≤ M)
     (hpop : popcLoopK lit 0 0 chunks = cnt) (hchunks : (M - 1) / 3 < 32 * chunks) :
-    (∀ i < cnt, (fieldK qs w i).Prime ∧ 5 ≤ fieldK qs w i ∧ fieldK qs w i ≤ M) ∧
-      (∀ p, p.Prime → 5 ≤ p → p ≤ M → ∃ i < cnt, fieldK qs w i = p) ∧
-        (∀ i j, i < cnt → j < cnt → fieldK qs w i = fieldK qs w j → i = j) := by
-  have hbound : ∀ i, i < cnt → fieldK qs w i ≤ M := fun i hi => fieldK_le h htop hi
-  have hfive : ∀ i, i < cnt → 5 ≤ fieldK qs w i := by
+    (∀ i < cnt, (entryK qs w i).Prime ∧ 5 ≤ entryK qs w i ∧ entryK qs w i ≤ M) ∧
+      (∀ p, p.Prime → 5 ≤ p → p ≤ M → ∃ i < cnt, entryK qs w i = p) ∧
+        (∀ i j, i < cnt → j < cnt → entryK qs w i = entryK qs w j → i = j) := by
+  have hbound : ∀ i, i < cnt → entryK qs w i ≤ M := fun i hi => entryK_le h htop hi
+  have hfive : ∀ i, i < cnt → 5 ≤ entryK qs w i := by
     intro i hi
     obtain ⟨htests, -, -⟩ := bitCheckLoopK_spec cnt h
     obtain ⟨hmod, hpos, -⟩ := htests i hi
     simp only [idx] at hpos
     omega
-  have hidx : ∀ i, i < cnt → idx (fieldK qs w i) < 32 * chunks := by
+  have hidx : ∀ i, i < cnt → idx (entryK qs w i) < 32 * chunks := by
     intro i hi
-    have hnum : num (idx (fieldK qs w i)) ≤ M := by rw [num_idx_fieldK h hi]; exact hbound i hi
+    have hnum : num (idx (entryK qs w i)) ≤ M := by rw [num_idx_entryK h hi]; exact hbound i hi
     simp only [num] at hnum
     omega
-  refine ⟨fun i hi => ⟨fieldK_prime hsieve h hi (hbound i hi), hfive i hi, hbound i hi⟩,
+  refine ⟨fun i hi => ⟨entryK_prime hsieve h hi (hbound i hi), hfive i hi, hbound i hi⟩,
     fun p hp h5 hpM => ?_,
-    fun i j hi hj hij => fieldK_injOn h hi hj hij⟩
+    fun i j hi hj hij => entryK_injOn h hi hj hij⟩
   have hmod : p % 6 = 1 ∨ p % 6 = 5 := mod_six_of_prime hp h5
   have hnum : num (idx p) = p := num_idx hmod
   have hidxpos : idx p ≠ 0 := by simp only [idx]; omega
   have hbit : lit.testBit (idx p) := (hsieve _ hidxpos (by rwa [hnum])).2 (by rwa [hnum])
   have hltp : idx p < 32 * chunks := by simp only [idx]; omega
-  obtain ⟨i, hi, hti⟩ := exists_field_of_testBit h hpop hidx hbit hltp
-  exact ⟨i, hi, by rw [← num_idx_fieldK h hi, hti, hnum]⟩
+  obtain ⟨i, hi, hti⟩ := exists_entry_of_testBit h hpop hidx hbit hltp
+  exact ⟨i, hi, by rw [← num_idx_entryK h hi, hti, hnum]⟩
 
 end PrimeCert

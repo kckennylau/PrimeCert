@@ -21,12 +21,12 @@ namespace PrimeCert.Polya
 
 /-- The low table holds `L q + off` at every index up to `rootx`. -/
 @[expose] public def IsLowTable (rootx off wb low : ℕ) : Prop :=
-  ∀ q, q ≤ rootx → ((fieldK low wb q : ℕ) : ℤ) = L q + off
+  ∀ q, q ≤ rootx → ((entryK low wb q : ℕ) : ℤ) = L q + off
 
 /-- The high table holds `L (x / m) + off` from index `j` up to `rootx`, and is clear below. -/
 @[expose] public def IsHiTable (x rootx off wb hi j : ℕ) : Prop :=
-  (∀ m, j ≤ m → m ≤ rootx → ((fieldK hi wb m : ℕ) : ℤ) = L (x / m) + off) ∧
-    ∀ m, m < j → fieldK hi wb m = 0
+  (∀ m, j ≤ m → m ≤ rootx → ((entryK hi wb m : ℕ) : ℤ) = L (x / m) + off) ∧
+    ∀ m, m < j → entryK hi wb m = 0
 
 /-- The index a high-table read uses inverts the quotient. -/
 theorem div_div_div {x d : ℕ} (hd : 0 < d) (hdx : d ≤ x) : x / (x / (x / d)) = x / d :=
@@ -54,7 +54,7 @@ public theorem blockValues_of_tables {x rootx off wb low hi j : ℕ} (hj : 0 < j
       have h2 : (rootx + 1) * (x / (j * k)) ≤ x := (Nat.le_div_iff_mul_le (by omega)).1 (by omega)
       nlinarith
     obtain ⟨hval, -⟩ := hhi
-    have hread : ((fieldK hi wb (x / (x / j / k)) : ℕ) : ℤ)
+    have hread : ((entryK hi wb (x / (x / j / k)) : ℕ) : ℤ)
         = L (x / (x / (x / j / k))) + off := by
       refine hval _ ?_ hmle
       rw [hjk]
@@ -71,15 +71,15 @@ public theorem blockValues_of_tables {x rootx off wb low hi j : ℕ} (hj : 0 < j
 public theorem isHiTable_write {x rootx off wb hi j val : ℕ} (hj : 0 < j) (hjr : j ≤ rootx)
     (h : IsHiTable x rootx off wb hi (j + 1)) (hval : (val : ℤ) = L (x / j) + off)
     (hvlt : val < 2 ^ wb) : IsHiTable x rootx off wb (hi ||| val <<< (wb * j)) j := by
-  obtain ⟨hfields, hzero⟩ := h
+  obtain ⟨hentries, hzero⟩ := h
   refine ⟨fun m hm hmr => ?_, fun m hm => ?_⟩
   · rcases Nat.lt_or_ge j m with hlt | hge
-    · rw [fieldK_lor_shiftLeft_ne hvlt (by omega)]
-      exact hfields m (by omega) hmr
+    · rw [entryK_lor_shiftLeft_ne hvlt (by omega)]
+      exact hentries m (by omega) hmr
     · have hmj : m = j := by omega
       subst hmj
-      rwa [fieldK_lor_shiftLeft_of_zero (hzero m (by omega)) hvlt]
-  · rw [fieldK_lor_shiftLeft_ne hvlt (by omega)]
+      rwa [entryK_lor_shiftLeft_of_zero (hzero m (by omega)) hvlt]
+  · rw [entryK_lor_shiftLeft_ne hvlt (by omega)]
     exact hzero m (by omega)
 
 /-- The value a run of blocks produces at `v`: the square root less the accumulated sum. -/

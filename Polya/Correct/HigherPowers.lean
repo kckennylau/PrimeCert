@@ -30,12 +30,12 @@ theorem powLoopK_base {M w q seed st c pw V e : ℕ} (h : IsPowState w st c pw V
     (hseed : 1 ≤ seed) (hseed64 : seed < 2 ^ 64) (hMw : M < 2 ^ w) (hM64 : M < 2 ^ 64)
     (hMe : M < 2 ^ e) (hroom : c + e + 1 < 2 ^ 64) :
     ∃ m ≤ e, ∃ V', IsPowState w (powLoopK M w q seed st e) (c + m) (seed * q ^ m) V' ∧
-      (∀ j < c, fieldK V' w j = fieldK V w j) ∧
-        (∀ j < m, fieldK V' w (c + j) = seed * q ^ (j + 1)) ∧
+      (∀ j < c, entryK V' w j = entryK V w j) ∧
+        (∀ j < m, entryK V' w (c + j) = seed * q ^ (j + 1)) ∧
           (∀ j < m, seed * q ^ (j + 1) ≤ M) ∧ (∀ k, 1 ≤ k → seed * q ^ k ≤ M → k ≤ m) := by
-  obtain ⟨m, hme, V', hstate, hbelow, hfields, hle, htop⟩ :=
+  obtain ⟨m, hme, V', hstate, hbelow, hentries, hle, htop⟩ :=
     powLoopK_spec e h hq hseed64 hMw hM64 hroom
-  refine ⟨m, hme, V', hstate, hbelow, hfields, hle, fun k hk hkM => ?_⟩
+  refine ⟨m, hme, V', hstate, hbelow, hentries, hle, fun k hk hkM => ?_⟩
   by_contra hgt
   have hmlt : m < e := by
     by_contra hge
@@ -117,19 +117,19 @@ theorem HpVal.of_not_testBit {lit M pos v : ℕ} (h : HpVal lit M (pos + 1) v)
     · rw [(by omega : t = pos), hbit] at htbit
       exact absurd htbit (by simp)
 
-/-- What the walk holds: the values named by `HpVal`, each in exactly one field. -/
+/-- What the walk holds: the values named by `HpVal`, each in exactly one entry. -/
 public theorem hpLoopK_spec {lit M w e st c pw V start : ℕ} (fuel : ℕ) (hsieve : IsSieve M lit)
     (hstate : IsPowState w st c pw V) (hMw : M < 2 ^ w) (hM64 : M < 2 ^ 64) (hMe : M < 2 ^ e)
     (hroom : c + e * fuel + e + 1 < 2 ^ 64) (hstart : 1 ≤ start)
     (hnum : ∀ t, t < start + fuel → num t ≤ M)
-    (hsound : ∀ j < c, HpVal lit M start (fieldK V w j))
-    (hcomp : ∀ v, HpVal lit M start v → ∃ j < c, fieldK V w j = v)
-    (hinj : ∀ j₁ j₂, j₁ < c → j₂ < c → fieldK V w j₁ = fieldK V w j₂ → j₁ = j₂) :
+    (hsound : ∀ j < c, HpVal lit M start (entryK V w j))
+    (hcomp : ∀ v, HpVal lit M start v → ∃ j < c, entryK V w j = v)
+    (hinj : ∀ j₁ j₂, j₁ < c → j₂ < c → entryK V w j₁ = entryK V w j₂ → j₁ = j₂) :
     ∃ c' pw' V', IsPowState w (hpLoopK lit M w e st start fuel) c' pw' V' ∧
       c ≤ c' ∧ c' ≤ c + e * fuel ∧
-        (∀ j < c', HpVal lit M (start + fuel) (fieldK V' w j)) ∧
-          (∀ v, HpVal lit M (start + fuel) v → ∃ j < c', fieldK V' w j = v) ∧
-            (∀ j₁ j₂, j₁ < c' → j₂ < c' → fieldK V' w j₁ = fieldK V' w j₂ → j₁ = j₂) := by
+        (∀ j < c', HpVal lit M (start + fuel) (entryK V' w j)) ∧
+          (∀ v, HpVal lit M (start + fuel) v → ∃ j < c', entryK V' w j = v) ∧
+            (∀ j₁ j₂, j₁ < c' → j₂ < c' → entryK V' w j₁ = entryK V' w j₂ → j₁ = j₂) := by
   induction fuel with
   | zero =>
     exact ⟨c, pw, V, hstate, le_rfl, by omega, by simpa using hsound, by simpa using hcomp, hinj⟩
@@ -152,7 +152,7 @@ public theorem hpLoopK_spec {lit M w e st c pw V start : ℕ} (fuel : ℕ) (hsie
       have h1q : 1 ≤ num (start + f) := by omega
       have hq64 : num (start + f) < 2 ^ 64 := by omega
       have hroom' : c' + e + 1 < 2 ^ 64 := by omega
-      obtain ⟨m, hme, V'', hstate'', hbelow, hfields, hlem, hall⟩ :=
+      obtain ⟨m, hme, V'', hstate'', hbelow, hentries, hlem, hall⟩ :=
         powLoopK_base hstate' h2q h1q hq64 hMw hM64 hMe hroom'
       refine ⟨c' + m, num (start + f) * num (start + f) ^ m, V'', hstate'', by omega, by omega,
         fun j hj => ?_, fun v hv => ?_, fun j₁ j₂ hj₁ hj₂ heq => ?_⟩
@@ -164,12 +164,12 @@ public theorem hpLoopK_spec {lit M w e st c pw V start : ℕ} (fuel : ℕ) (hsie
           have hdm : d < m := by omega
           refine Or.inr (Or.inr
             ⟨start + f, by omega, by omega, hbit, hprime, d + 2, by omega, ?_, ?_⟩)
-          · rw [hfields d hdm, Nat.pow_succ]
+          · rw [hentries d hdm, Nat.pow_succ]
             ring
-          · rw [hfields d hdm]
+          · rw [hentries d hdm]
             exact hlem d hdm
       · -- completeness
-        have hprev : ∀ u, HpVal lit M (start + f) u → ∃ j < c' + m, fieldK V'' w j = u := by
+        have hprev : ∀ u, HpVal lit M (start + f) u → ∃ j < c' + m, entryK V'' w j = u := by
           intro u hu
           obtain ⟨j, hj, hjv⟩ := hcomp' u hu
           exact ⟨j, by omega, by rw [hbelow j hj, hjv]⟩
@@ -185,14 +185,14 @@ public theorem hpLoopK_spec {lit M w e st c pw V start : ℕ} (fuel : ℕ) (hsie
               omega
             have hkm : k - 1 ≤ m := hall (k - 1) (by omega) (by rwa [hk1, ← hvk])
             refine ⟨c' + (k - 2), by omega, ?_⟩
-            rw [hfields (k - 2) (by omega), hvk]
+            rw [hentries (k - 2) (by omega), hvk]
             rwa [(by omega : k - 2 + 1 = k - 1)]
       · -- injectivity
         have hcross : ∀ a b, a < c' → c' ≤ b → b < c' + m →
-            fieldK V'' w a ≠ fieldK V'' w b := by
+            entryK V'' w a ≠ entryK V'' w b := by
           intro a b ha hb hbm heq'
           obtain ⟨d, rfl⟩ := Nat.exists_eq_add_of_le hb
-          rw [hbelow a ha, hfields d (by omega)] at heq'
+          rw [hbelow a ha, hentries d (by omega)] at heq'
           refine (hsound' a ha).ne_pow le_rfl (by omega) hprime (k := d + 2) (by omega) ?_
           rw [heq', Nat.pow_succ]
           ring
@@ -203,19 +203,20 @@ public theorem hpLoopK_spec {lit M w e st c pw V start : ℕ} (fuel : ℕ) (hsie
         · exact absurd heq.symm (hcross j₂ j₁ h₂ h₁ hj₁)
         · obtain ⟨d₁, rfl⟩ := Nat.exists_eq_add_of_le h₁
           obtain ⟨d₂, rfl⟩ := Nat.exists_eq_add_of_le h₂
-          rw [hfields d₁ (by omega), hfields d₂ (by omega), ← Nat.pow_succ', ← Nat.pow_succ'] at heq
+          rw [hentries d₁ (by omega), hentries d₂ (by omega), ← Nat.pow_succ',
+            ← Nat.pow_succ'] at heq
           have := Nat.pow_right_injective h2q heq
           omega
 
 /-! ### The seed -/
 
-/-- The state seeding the walk holds the powers of 2 and of 3 up to `M`, each in one field. -/
+/-- The state seeding the walk holds the powers of 2 and of 3 up to `M`, each in one entry. -/
 public theorem seed_spec {M w e : ℕ} (lit : ℕ) (hMw : M < 2 ^ w) (hM64 : M < 2 ^ 64)
     (hMe : M < 2 ^ e) (hroom : e + e + 1 < 2 ^ 64) :
     ∃ c pw V, IsPowState w (powLoopK M w 3 1 (powLoopK M w 2 1 0 e) e) c pw V ∧ c ≤ e + e ∧
-      (∀ j < c, HpVal lit M 1 (fieldK V w j)) ∧
-        (∀ v, HpVal lit M 1 v → ∃ j < c, fieldK V w j = v) ∧
-          (∀ j₁ j₂, j₁ < c → j₂ < c → fieldK V w j₁ = fieldK V w j₂ → j₁ = j₂) := by
+      (∀ j < c, HpVal lit M 1 (entryK V w j)) ∧
+        (∀ v, HpVal lit M 1 v → ∃ j < c, entryK V w j = v) ∧
+          (∀ j₁ j₂, j₁ < c → j₂ < c → entryK V w j₁ = entryK V w j₂ → j₁ = j₂) := by
   have h164 : (1 : ℕ) < 2 ^ 64 := by norm_num
   have hzero : IsPowState w 0 0 0 0 := ⟨by simp, Nat.two_pow_pos 64, Nat.two_pow_pos 64, by simp⟩
   obtain ⟨m₂, hm₂, V₂, hst₂, -, hf₂, hle₂, hall₂⟩ :=
@@ -244,7 +245,7 @@ public theorem seed_spec {M w e : ℕ} (lit : ℕ) (hMw : M < 2 ^ w) (hM64 : M <
       congr 1
       omega
     · omega
-  · have hcross : ∀ a b, a < m₂ → m₂ ≤ b → b < m₂ + m₃ → fieldK V₃ w a ≠ fieldK V₃ w b := by
+  · have hcross : ∀ a b, a < m₂ → m₂ ≤ b → b < m₂ + m₃ → entryK V₃ w a ≠ entryK V₃ w b := by
       intro a b ha hb hbm heq'
       obtain ⟨d, rfl⟩ := Nat.exists_eq_add_of_le hb
       rw [hb₃ a ha, hf₂ a ha, hf₃ d (by omega)] at heq'

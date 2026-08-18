@@ -13,8 +13,8 @@ import PrimeCert.Meta.Sieve
 `run_lam n` builds a certified parity table for the Liouville function up to `n`, and
 `run_polya x cutoff` builds the two tables of `L` and the block recursion reaching `L x`.
 
-The prime powers are packed here into `w`-bit fields and handed to the table builder. The emitted
-equation holds for that packing whatever it contains; tying its fields to the prime powers is
+The prime powers are packed here into `w`-bit entries and handed to the table builder. The emitted
+equation holds for that packing whatever it contains; tying its entries to the prime powers is
 `Polya.Correct.TableSpec`.
 -/
 
@@ -104,8 +104,8 @@ def collectedPowers (M : Nat) : Array Nat := Id.run do
     t := t + 1
   return out
 
-/-- Pack `qs` into one natural number as `w`-bit fields, lowest first. -/
-def packFields (qs : Array Nat) (w : Nat) : Nat := Id.run do
+/-- Pack `qs` into one natural number as `w`-bit entries, lowest first. -/
+def packEntries (qs : Array Nat) (w : Nat) : Nat := Id.run do
   let mut out := 0
   for h : i in [0:qs.size] do
     out := out ||| (qs[i] <<< (w * i))
@@ -170,15 +170,15 @@ private def sieveFor (n : Nat) : MetaM (Name × Name × Nat) := do
 structure PowerData where
   /-- The packed prime powers. -/
   qs : Nat
-  /-- Fields in the first block, the primes from 5 upward. -/
+  /-- Entries in the first block, the primes from 5 upward. -/
   np : Nat
   /-- Final state of the bit checks: the top sieve position and the flag. -/
   st : Nat
-  /-- Final state of the power collection: its count, its running power and its fields. -/
+  /-- Final state of the power collection: its count, its running power and its entries. -/
   hpSt : Nat
   /-- Blocks of 32 sieve positions counted. -/
   chunks : Nat
-  /-- Fields the collection may append at one sieve position. -/
+  /-- Entries the collection may append at one sieve position. -/
   e : Nat
   /-- Sieve positions the collection walks. -/
   fuel : Nat
@@ -197,7 +197,7 @@ private def emitPowerChecks (n len : Nat) : MetaM PowerData := do
   let e := Nat.log2 n + 1
   let primes := sievedPrimes n
   let others := collectedPowers n
-  let qs := packFields (primes ++ others) w
+  let qs := packEntries (primes ++ others) w
   let qsE := mkRawNatLit qs
   let wE := mkRawNatLit w
   let mE := mkRawNatLit n
@@ -244,7 +244,7 @@ private def emitPowerChecks (n len : Nat) : MetaM PowerData := do
     #[litE, mE, wE, eE, seedE, mkRawNatLit seed, mkRawNatLit 1, mkRawNatLit hpFuel,
       mkRawNatLit hpSt, mkConst `PrimeCert.Polya.hpSeed, hpProof]
   addThm `PrimeCert.Polya.hpData (mkNatEqual (mkHp seedE 1 hpFuel) (mkRawNatLit hpSt)) full
-  if hpSt >>> 128 != packFields others w || hpSt &&& ((1 <<< 64) - 1) != others.size then
+  if hpSt >>> 128 != packEntries others w || hpSt &&& ((1 <<< 64) - 1) != others.size then
     throwError "run_lam: the collected powers differ from the packed ones"
   return { qs, np := primes.size, st, hpSt, chunks, e, fuel := hpFuel, litName, isSieveName }
 
@@ -272,7 +272,7 @@ structure TableData where
   w : Nat
   /-- Doubling rounds in a stride mask. -/
   rounds : Nat
-  /-- Fields in the packed prime powers. -/
+  /-- Entries in the packed prime powers. -/
   cnt : Nat
   /-- Blocks of 32 positions the counts cover. -/
   chunks : Nat
@@ -306,7 +306,7 @@ def buildTables (n len : Nat) : MetaM TableData := do
   let lhs := mkAppN (mkConst ``lamK)
     #[mkRawNatLit qs, mkRawNatLit w, mkRawNatLit n, mkRawNatLit rounds, mkRawNatLit fuel]
   addThm dataName (mkNatEqual lhs (mkConst litName)) proof
-  -- the running counts of set bits, one field per 32 positions
+  -- the running counts of set bits, one entry per 32 positions
   let chunks := n / 32 + 1
   let (ones, onesProof) ← emitOnesChain n chunks len w lit
   addDecl <| Declaration.defnDecl
@@ -331,7 +331,7 @@ def runLam (n : Nat) (K? : Option Nat := none) : MetaM Unit := do
 elab "run_lam" nStx:num kStx:(num)? : command =>
   liftTermElabM <| runLam nStx.getNat (kStx.map (·.getNat))
 
-/-- Width of a field of the certificate, and the offset that keeps each field positive. -/
+/-- Width of a entry of the certificate, and the offset that keeps each entry positive. -/
 def bigWidth : Nat := 21
 def bigOffset : Nat := 1 <<< 20
 
@@ -519,8 +519,8 @@ def runPolya (x cutoff : Nat) (K? : Option Nat := none) : MetaM Unit := do
         (mkRawNatLit low) (mkRawNatLit hi) (mkRawNatLit 2) fuel) (mkRawNatLit st)) proof
     -- L v is the whole part of the square root of v, minus the two halves of the sum
     let s := Nat.sqrt v
-    let A := stField st 1
-    let B := stField st 2
+    let A := stEntry st 1
+    let B := stEntry st 2
     last := (s : Int) - A + B
     if j == 1 then
       let p := if last ≥ 0 then last.toNat else 0

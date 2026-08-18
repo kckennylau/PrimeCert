@@ -16,8 +16,8 @@ import Mathlib.Tactic.Ring
 /-!
 # The set-bit count of a 32-bit word
 
-`popc32K` sums bit counts within fields of 2, 4 and 8 bits and then adds the four bytes through one
-multiplication. Each of the three field stages acts byte by byte (`stageA_succ`, `stageB_succ`,
+`popc32K` sums bit counts within groups of 2, 4 and 8 bits and then adds the four bytes through one
+multiplication. Each of the three stages acts byte by byte (`stageA_succ`, `stageB_succ`,
 `stageC_succ`), the byte case is a finite check (`byte_pipeline`), and the multiplication collects
 the four byte counts, giving `popc32K v = bitSum v 32` (`popc32K_eq_bitSum`).
 -/
@@ -70,7 +70,7 @@ theorem land_15 (x : ℕ) : x &&& 15 = x % 16 := Nat.and_two_pow_sub_one_eq_mod 
 
 theorem land_255 (x : ℕ) : x &&& 255 = x % 256 := Nat.and_two_pow_sub_one_eq_mod x 8
 
-/-! ## The three field stages
+/-! ## The three stages
 
 `rep b k` is the `k`-byte constant repeating the byte `b`, so the masks of `popc32K` are `rep 85 4`,
 `rep 51 4` and `rep 15 4`, and its multiplier is `rep 1 4`. -/
@@ -80,14 +80,14 @@ public def rep (b : ℕ) : ℕ → ℕ
   | 0 => 0
   | k + 1 => b + 256 * rep b k
 
-/-- Counts within 2-bit fields. -/
+/-- Counts within 2-bit groups. -/
 public def stageA (k v : ℕ) : ℕ := v - ((v >>> 1) &&& rep 85 k)
 
-/-- Counts within 4-bit fields. -/
+/-- Counts within 4-bit groups. -/
 public def stageB (k v : ℕ) : ℕ :=
   (stageA k v &&& rep 51 k) + ((stageA k v >>> 2) &&& rep 51 k)
 
-/-- Counts within 8-bit fields. -/
+/-- Counts within 8-bit groups. -/
 public def stageC (k v : ℕ) : ℕ := (stageB k v + (stageB k v >>> 4)) &&& rep 15 k
 
 theorem rep_succ (b k : ℕ) : rep b (k + 1) = b + 256 * rep b k := rfl

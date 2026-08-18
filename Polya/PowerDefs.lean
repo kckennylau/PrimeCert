@@ -12,7 +12,7 @@ public import PrimeCert.Sieve
 # The loops checking the packed prime powers against the sieve
 
 Kernel definitions for the three loops the run drives, each with its peel, additivity and chain
-lemmas and a compiled twin: `bitCheckLoopK` tests a field's residue, its rising sieve index and its
+lemmas and a compiled twin: `bitCheckLoopK` tests a entry's residue, its rising sieve index and its
 sieve bit, `popcLoopK` adds up the sieve's set bits, and `hpLoopK` collects the powers with exponent
 at least two through `powLoopK`. What surviving these forces is `Polya.Correct.TableSpec`.
 -/
@@ -25,7 +25,7 @@ open PrimeCert.Sieve (num numK)
 
 Every prime power `q ≤ M` with exponent at least two has base at most `√M`, so the bases come from
 the sieve positions below `(√M - 1) / 3`. The state holds a count of collected values in its low 64
-bits, the base's running power in the next 64, and the values in `w`-bit fields above bit 128. -/
+bits, the base's running power in the next 64, and the values in `w`-bit entries above bit 128. -/
 
 /-- Multiply the running power by `q` and, while the result is at most `M`, append it. -/
 @[expose] public noncomputable def powStepK (M w q st : Nat) : Nat :=
