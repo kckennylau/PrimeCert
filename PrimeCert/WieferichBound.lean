@@ -32,4 +32,20 @@ public theorem num_wheelIndex {n : ℕ} (h : n % 6 = 1 ∨ n % 6 = 5) : num (whe
   · rw [wheelIndex_one h]; grind [num]
   · rw [wheelIndex_five h]; grind [num]
 
+/-- Along the class of `r`, successive members sit at indices in steps of `m / 3`. -/
+public theorem wheelIndex_add {r m k : ℕ} (hr : r % 6 = 1 ∨ r % 6 = 5) (hm : m % 6 = 0)
+    (h1 : 1 ≤ r) : wheelIndex (r + m * k) = wheelIndex r + (m / 3) * k := by
+  obtain ⟨j, rfl⟩ : ∃ j, m = 6 * j := ⟨m / 6, by omega⟩
+  obtain ⟨c, hc⟩ : ∃ c, j * k = c := ⟨_, rfl⟩
+  have e1 : 6 * j * k = 6 * c := by rw [mul_assoc, hc]
+  have e2 : 6 * j / 3 * k = 2 * c := by rw [show 6 * j / 3 = 2 * j by omega, mul_assoc, hc]
+  rw [e1, e2]
+  rcases hr with h | h
+  · obtain ⟨i, rfl⟩ : ∃ i, r = 6 * i + 1 := ⟨r / 6, by omega⟩
+    rw [wheelIndex_one (by omega), wheelIndex_one h]
+    omega
+  · obtain ⟨i, rfl⟩ : ∃ i, r = 6 * i + 5 := ⟨r / 6, by omega⟩
+    rw [wheelIndex_five (by omega), wheelIndex_five h]
+    omega
+
 end PrimeCert.Wieferich
