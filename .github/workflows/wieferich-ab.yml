@@ -22,7 +22,7 @@ jobs:
         run: lake exe cache get
 
       - name: Build the shared definitions
-        run: lake build PrimeCertTest.WieferichBenchDefs PrimeCert.Meta.QuickRfl
+        run: lake build PrimeCertTest.WieferichBenchDefs PrimeCert.Meta.QuickRfl PrimeCert.SieveBase
 
       - name: Time each variant in its own process, five rounds
         run: |
