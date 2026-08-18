@@ -57,8 +57,8 @@ theorem blockLoopK_spec {x v rootx low hi wb off st k₀ A₀ B₀ : ℕ} (hv : 
   | zero => exact ⟨k₀, A₀, B₀, hst, hk₀v, hA₀, Or.inl ⟨hk₀, hB₀, hsum₀⟩⟩
   | succ f ih =>
     obtain ⟨k, A, B, hstate, hkv, hA2B, hcase⟩ := ih
-    rw [blockLoopK_succ, hstate, blockStepK_eq]
-    rw [(by omega : (k + 2 ^ 64 * A + 2 ^ 128 * B) % 2 ^ 64 = k),
+    rw [blockLoopK_succ, hstate, blockStepK_eq,
+      (by omega : (k + 2 ^ 64 * A + 2 ^ 128 * B) % 2 ^ 64 = k),
       (by omega : k + 2 ^ 64 * A + 2 ^ 128 * B - k = 2 ^ 64 * A + 2 ^ 128 * B)]
     have hvallt : (if v / k ≤ rootx then fieldK low wb (v / k)
         else fieldK hi wb (x / (v / k))) < 2 ^ wb := by split <;> exact fieldK_lt _ _ _
