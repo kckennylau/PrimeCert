@@ -28,7 +28,7 @@ jobs:
         run: |
           set -u
           export LEAN_PATH=$(lake env printenv LEAN_PATH)
-          names="Width32 Width32TwoStage Width64 Width64TwoStage WidthBig WidthBigTwoStage"
+          names="Base Filter5 Trial57 Trial30 Trial50 Trial100"
           for round in $(seq 1 5); do
             # Rotate the order each round so no variant keeps the same process slot.
             order=$(echo $names | awk -v r="$round" '{n=split($0,a," "); for(i=0;i<n;i++) printf "%s ", a[((i+r-1)%n)+1]}')

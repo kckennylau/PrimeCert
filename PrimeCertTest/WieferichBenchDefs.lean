@@ -28,4 +28,9 @@ so this agrees with `wieferichB` everywhere. -/
 @[expose] public noncomputable def wieferichTwoStage (p : Nat) : Bool :=
   ((powModK 2 (p.sub 1) p).beq 1).and' ((powModK 2 (p.sub 1) (Nat.pow p 2)).beq 1)
 
+/-- `passes x L` is true when no member of `L` below `x` divides `x`. Taken from the `trialdiv`
+branch. -/
+@[expose] public noncomputable def passes (x : Nat) : List Nat → Bool :=
+  List.rec true (fun i _ r ↦ ((Nat.ble 1 (x.mod i)).or' (x.ble i)).and' r)
+
 end PrimeCert.Bench
