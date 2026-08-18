@@ -41,7 +41,7 @@ cleared by `markStrideK`. -/
 /-- One step: flip the parity bit of every multiple of `q` up to `M`, and clear everything above
 `M`, so the table stays `M + 1` bits wide. -/
 @[expose] public noncomputable def markStrideK (lam q M rounds : Nat) : Nat :=
-  (lam.xor (strideMaskK q M rounds)).land ((Nat.shiftLeft (nat_lit 1) (Nat.succ M)).sub (nat_lit 1))
+  (lam.xor (strideMaskK q M rounds)).land ((Nat.shiftLeft (nat_lit 1) M.succ).sub (nat_lit 1))
 
 /-- Perform `fuel` steps on the table `lam`, taking the strides from fields `start, start+1, …` of
 `qs` and flipping the parity bit of each stride's multiples. `lamK` runs this from an empty
@@ -66,9 +66,8 @@ each read off the parity table and the running counts. -/
 @[expose] public noncomputable def lowLoopK (lam ones wc off wb tbl start fuel : Nat) : Nat :=
   fuel.rec tbl fun i t =>
     t.lor
-      (Nat.shiftLeft
-        (((start.add i).add off).sub
-          ((onesBelowK lam ones wc (start.add i).succ).mul (nat_lit 2)))
+      ((((start.add i).add off).sub
+          ((onesBelowK lam ones wc (start.add i).succ).mul (nat_lit 2))).shiftLeft
         (wb.mul (start.add i)))
 
 /-- Perform `fuel` steps, appending to `tbl` the value `L (x / i) + off` for `i = start, start+1,
@@ -76,26 +75,24 @@ each read off the parity table and the running counts. -/
 @[expose] public noncomputable def hiLoopK (x lam ones wc off wb tbl start fuel : Nat) : Nat :=
   fuel.rec tbl fun i t =>
     t.lor
-      (Nat.shiftLeft
-        (((x.div (start.add i)).add off).sub
-          ((onesBelowK lam ones wc (x.div (start.add i)).succ).mul (nat_lit 2)))
+      ((((x.div (start.add i)).add off).sub
+          ((onesBelowK lam ones wc (x.div (start.add i)).succ).mul (nat_lit 2))).shiftLeft
         (wb.mul (start.add i)))
 
 /-- Loop recurrence for the low table: peel the top step. -/
 public theorem lowLoopK_succ (lam ones wc off wb tbl start fuel : Nat) :
     lowLoopK lam ones wc off wb tbl start (fuel + 1)
       = (lowLoopK lam ones wc off wb tbl start fuel).lor
-          (Nat.shiftLeft
-            (((start + fuel) + off).sub ((onesBelowK lam ones wc (start + fuel).succ).mul 2))
+          ((((start + fuel) + off).sub
+              ((onesBelowK lam ones wc (start + fuel).succ).mul 2)).shiftLeft
             (wb * (start + fuel))) := rfl
 
 /-- Loop recurrence for the high table: peel the top step. -/
 public theorem hiLoopK_succ (x lam ones wc off wb tbl start fuel : Nat) :
     hiLoopK x lam ones wc off wb tbl start (fuel + 1)
       = (hiLoopK x lam ones wc off wb tbl start fuel).lor
-          (Nat.shiftLeft
-            (((x / (start + fuel)) + off).sub
-              ((onesBelowK lam ones wc (x / (start + fuel)).succ).mul 2))
+          ((((x / (start + fuel)) + off).sub
+              ((onesBelowK lam ones wc (x / (start + fuel)).succ).mul 2)).shiftLeft
             (wb * (start + fuel))) := rfl
 
 /-- One block of the recurrence for `L v`. The index `k` in field 0 gives the quotient `q = v / k`,
@@ -108,7 +105,7 @@ The step count is exact, so the index stays at or below `v` throughout. -/
   let k := st.land ((Nat.shiftLeft (nat_lit 1) (nat_lit 64)).sub (nat_lit 1))
   let q := v.div k
   let run := ((v.div q).sub k).succ
-  let val := (Nat.ble q rootx).rec (fieldK hi wb (x.div q)) (fieldK low wb q)
+  let val := (q.ble rootx).rec (fieldK hi wb (x.div q)) (fieldK low wb q)
   ((st.sub k).add (v.div q).succ).add
     (((run.mul val).shiftLeft (nat_lit 64)).add ((run.mul off).shiftLeft (nat_lit 128)))
 

@@ -40,11 +40,10 @@ holding the single field `0`. -/
 @[expose] public noncomputable def onesLoopK (lam w tbl start fuel : Nat) : Nat :=
   fuel.rec tbl fun i t =>
     t.lor
-      (Nat.shiftLeft
-        ((fieldK t w (start.add i)).add
+      (((fieldK t w (start.add i)).add
           (popc32K ((lam.shiftRight (Nat.mul (nat_lit 32) (start.add i))).land
-            ((Nat.shiftLeft (nat_lit 1) (nat_lit 32)).sub (nat_lit 1)))))
-        (w.mul (Nat.succ (start.add i))))
+            ((Nat.shiftLeft (nat_lit 1) (nat_lit 32)).sub (nat_lit 1))))).shiftLeft
+        (w.mul (start.add i).succ))
 
 /-- Running counts of the set bits of `lam` at every multiple of 32, covering positions below
 `32 * cnt` (`fieldK_onesK` in `PrimeCert.Ones`). -/
@@ -54,15 +53,14 @@ holding the single field `0`. -/
 /-- Set bits of `lam` below position `p`, from the recorded count at the nearest lower multiple of
 32 plus the bits of the partial chunk. -/
 @[expose] public noncomputable def onesBelowK (lam ones wc p : Nat) : Nat :=
-  (Nat.shiftRight
-      (ones.land
-        ((((nat_lit 1).shiftLeft wc).sub (nat_lit 1)).shiftLeft (wc.mul (p.div (nat_lit 32)))))
+  ((ones.land
+        ((((nat_lit 1).shiftLeft wc).sub (nat_lit 1)).shiftLeft
+          (wc.mul (p.div (nat_lit 32))))).shiftRight
       (wc.mul (p.div (nat_lit 32)))).add
     (popc32K
-      (Nat.shiftRight
-        (lam.land
+      ((lam.land
           ((((nat_lit 1).shiftLeft (p.mod (nat_lit 32))).sub (nat_lit 1)).shiftLeft
-            ((p.div (nat_lit 32)).mul (nat_lit 32))))
+            ((p.div (nat_lit 32)).mul (nat_lit 32)))).shiftRight
         ((p.div (nat_lit 32)).mul (nat_lit 32))))
 
 /-- Add to `acc` the set bits of `b` in the 32-position blocks `start, start+1, …`. -/
@@ -81,8 +79,8 @@ sieve bit is set. -/
   let prev := st.shiftRight (nat_lit 1)
   let ok := st.land (nat_lit 1)
   let okMod :=
-    (Nat.beq ((q.mod (nat_lit 6)).mod (nat_lit 4)) (nat_lit 1)).rec (nat_lit 0) (nat_lit 1)
-  let okRise := (Nat.ble prev.succ t).rec (nat_lit 0) (nat_lit 1)
+    (((q.mod (nat_lit 6)).mod (nat_lit 4)).beq (nat_lit 1)).rec (nat_lit 0) (nat_lit 1)
+  let okRise := (prev.succ.ble t).rec (nat_lit 0) (nat_lit 1)
   let okSet := (lit.shiftRight t).land (nat_lit 1)
   (t.shiftLeft (nat_lit 1)).add (((ok.mul okMod).mul okRise).mul okSet)
 
@@ -96,10 +94,10 @@ sieve bit is set. -/
 public theorem onesLoopK_succ (lam w tbl start fuel : Nat) :
     onesLoopK lam w tbl start (fuel + 1)
       = (onesLoopK lam w tbl start fuel).lor
-          (Nat.shiftLeft
-            ((fieldK (onesLoopK lam w tbl start fuel) w (start + fuel)).add
-              (popc32K ((lam.shiftRight (32 * (start + fuel))).land ((Nat.shiftLeft 1 32).sub 1))))
-            (w * Nat.succ (start + fuel))) := rfl
+          (((fieldK (onesLoopK lam w tbl start fuel) w (start + fuel)).add
+              (popc32K ((lam.shiftRight (32 * (start + fuel))).land
+                ((Nat.shiftLeft 1 32).sub 1)))).shiftLeft
+            (w * (start + fuel).succ)) := rfl
 
 /-- Peel the top test, in the exact form the def uses. -/
 public theorem bitCheckLoopK_succ (qs w lit st start fuel : Nat) :
