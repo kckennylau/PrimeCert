@@ -25,12 +25,22 @@ meta def indexOf (n : Nat) : Nat := if n % 6 == 1 then (n - 1) / 3 else (n - 2) 
 /-- The `Bool` `forallB checkAt (wheelIndex r) len step`, with `r` an arbitrary expression. -/
 meta def mkFold (rE : Expr) (len step : Nat) : Expr :=
   mkAppN (mkConst ``PrimeCert.forallB)
-    #[mkConst ``checkAt, mkApp (mkConst ``wheelIndex) rE, mkRawNatLit len, mkRawNatLit step]
+    #[mkConst ``wieferichAt, mkApp (mkConst ``wheelIndex) rE, mkRawNatLit len, mkRawNatLit step]
 
 /-- The statement that the fold at `r` holds. -/
 meta def mkClaim (rE : Expr) (len step : Nat) : Expr :=
   mkApp3 (mkConst ``Eq [Level.succ Level.zero]) (mkConst ``Bool) (mkFold rE len step)
     (mkConst ``Bool.true)
+
+/-- The statement that the fold from a literal index holds. -/
+meta def mkClaimAt (start len step : Nat) : Expr :=
+  mkApp3 (mkConst ``Eq [Level.succ Level.zero]) (mkConst ``Bool)
+    (mkAppN (mkConst ``PrimeCert.forallB)
+      #[mkConst ``wieferichAt, mkRawNatLit start, mkRawNatLit len, mkRawNatLit step])
+    (mkConst ``Bool.true)
+
+/-- The sieve index of `r`, mirroring the library's `wheelIndex`. -/
+meta def wheelIndex (r : Nat) : Nat := if r % 6 == 1 then (r - 1) / 3 else (r - 2) / 3
 
 /-- The list literal `[r₁, …, rₖ] : List ℕ`. -/
 meta def mkNatList : List Nat → Expr
@@ -53,15 +63,29 @@ public meta def elabWieferichCheck : CommandElab := fun stx => do
     liftTermElabM do
       let len := n / m + 1
       let step := m / 3
+      -- The two known Wieferich primes below the bound are left out of the ranges.
+      let exceptions := [1093, 3511]
       let mut acc : List Nat := []
       for r in [1:m] do
-        if Nat.gcd r m == 1 && (r % 6 == 1 || r % 6 == 5) then
+        if Nat.gcd r m == 1 && (r % 6 == 1 || r % 6 == 5)
+            && exceptions.all (fun e => e % m != r) then
           acc := r :: acc
       let residues := acc.reverse
       -- One theorem per class, each its own kernel check.
       for r in residues do
         let name := `PrimeCert.Wieferich ++ Name.mkSimple s!"class_{m}_{r}"
         addThm name (mkClaim (mkRawNatLit r) len step) reflBoolTrue
+      -- Each class holding an exception splits into the runs either side of it.
+      for e in exceptions do
+        let r := e % m
+        let k := (e - r) / m
+        let base := wheelIndex r
+        if k > 0 then
+          addThm (`PrimeCert.Wieferich ++ Name.mkSimple s!"class_{m}_{r}_below_{e}")
+            (mkClaimAt base k step) reflBoolTrue
+        if k + 1 < len then
+          addThm (`PrimeCert.Wieferich ++ Name.mkSimple s!"class_{m}_{r}_above_{e}")
+            (mkClaimAt (base + (k + 1) * step) (len - k - 1) step) reflBoolTrue
       -- The list of classes, and the single statement quantified over it.
       let listName := `PrimeCert.Wieferich ++ Name.mkSimple s!"classes_{m}"
       addDecl <| Declaration.defnDecl
