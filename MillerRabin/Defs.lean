@@ -65,8 +65,8 @@ public theorem forall_mem_cons_of {α : Type*} {p : α → Prop} {a : α} {l : L
     (ha : p a) (hl : ∀ x ∈ l, p x) : ∀ x ∈ a :: l, p x := by
   grind
 
-/-- The Wieferich check at one sieve index: a clear bit skips the number, and any prime must
-fail the condition. The two known Wieferich primes are left out of the ranges checked. -/
+/-- The Wieferich check at one sieve index: true when the sieve bit at `t` is clear, or when the
+number at `t` fails `2 ^ (n - 1) ≡ 1 [MOD n ^ 2]`. -/
 @[expose] public noncomputable def wieferichAt (t : ℕ) : Bool :=
   (testBitK sieveBits_1000000 t).not'.or' (wieferichK (valueK t)).not'
 
