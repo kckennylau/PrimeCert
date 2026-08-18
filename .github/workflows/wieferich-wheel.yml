@@ -22,13 +22,13 @@ jobs:
         run: lake exe cache get
 
       - name: Build the shared definitions
-        run: lake build PrimeCertTest.WieferichBenchDefs PrimeCert.Meta.QuickRfl
+        run: lake build PrimeCertTest.WieferichBenchDefs PrimeCert.Meta.QuickRfl PrimeCert.SieveBase
 
       - name: Time one residue class of each modulus, five rounds
         run: |
           set -u
           export LEAN_PATH=$(lake env printenv LEAN_PATH)
-          names="Base Wheel210 Wheel2310"
+          names="Base SieveBit Wheel210 Wheel2310 Wheel210Sieve Wheel2310Sieve"
           for round in $(seq 1 5); do
             order=$(echo $names | awk -v r="$round" '{n=split($0,a," "); for(i=0;i<n;i++) printf "%s ", a[((i+r-1)%n)+1]}')
             for name in $order; do
