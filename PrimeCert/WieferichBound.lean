@@ -100,11 +100,13 @@ public theorem not_wieferich_of_fold {p m len : ℕ} (hp : p.Prime) (hb : p < 10
   have := check_of_class (k := p / m) hr hm h1 hk hfold
   rwa [Nat.mod_add_div] at this
 
-/-- Read the test at one member of a class from a fold starting at position `j` of that class. -/
-public theorem check_of_offset {r m j k len : ℕ} (hr : r % 6 = 1 ∨ r % 6 = 5) (hm : m % 6 = 0)
-    (h1 : 1 ≤ r) (hj : j ≤ k) (hk : k - j < len)
-    (hfold : forallB wieferichAt (wheelIndex r + m / 3 * j) len (m / 3)) :
+/-- Read the test at one member of a class from a range starting at position `j` of that class,
+with the step given as `s`. -/
+public theorem check_of_offset {r m s j k len : ℕ} (hr : r % 6 = 1 ∨ r % 6 = 5) (hm : m % 6 = 0)
+    (h1 : 1 ≤ r) (hs : m / 3 = s) (hj : j ≤ k) (hk : k - j < len)
+    (hfold : forallB wieferichAt (wheelIndex r + s * j) len s) :
     wieferichAt (wheelIndex (r + m * k)) := by
+  subst hs
   rw [wheelIndex_add hr hm h1]
   have := (forallB_iff wieferichAt (wheelIndex r + m / 3 * j) len (m / 3)).mp hfold (k - j) hk
   have hle : j * (m / 3) ≤ k * (m / 3) := Nat.mul_le_mul_right _ hj

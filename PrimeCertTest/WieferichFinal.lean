@@ -9,6 +9,7 @@ module
 public import PrimeCertTest.WieferichClasses
 public import PrimeCert.WieferichBound
 public import PrimeCert.ForallB
+public import PrimeCert.ForMathlib
 meta import PrimeCert.Meta.QuickRfl
 
 /-! # No prime below 1000000 is Wieferich, apart from 1093 and 3511 -/
@@ -47,5 +48,51 @@ public theorem gcd_2310_of_prime {p : ℕ} (hp : p.Prime) (h : 11 < p) : Nat.gcd
       · have := Nat.le_of_dvd (by norm_num) h
         omega
   exact hc
+
+/-- No prime below 1000000 satisfies `2 ^ (p - 1) ≡ 1 [MOD p ^ 2]`, apart from 1093 and 3511. -/
+public theorem not_wieferich {p : ℕ} (hp : p.Prime) (hb : p < 1000000)
+    (h1 : p ≠ 1093) (h2 : p ≠ 3511) : ¬ Wieferich p := by
+  rcases Nat.lt_or_ge p 12 with hs | hs
+  · have hsmall : ∀ q, q < 12 → q.Prime → ¬ Wieferich q := by
+      simp only [Wieferich, Nat.ModEq]
+      decide
+    exact hsmall p hs hp
+  have hc : p % 6 = 1 ∨ p % 6 = 5 := hp.mod_six_eq_one_or_five (by omega) (by omega)
+  have hg := gcd_2310_of_prime hp (by omega)
+  have hr : Nat.gcd (p % 2310) 2310 = 1 := by
+    rw [← Nat.gcd_rec, Nat.gcd_comm]; exact hg
+  have hlt : p % 2310 < 2310 := Nat.mod_lt _ (by norm_num)
+  have hk : p / 2310 < 433 := by omega
+  have h6 : p % 2310 % 6 = 1 ∨ p % 2310 % 6 = 5 := by omega
+  have h1' : 1 ≤ p % 2310 := by
+    rcases Nat.eq_zero_or_pos (p % 2310) with h | h
+    · rw [h] at hr; simp at hr
+    · exact h
+  rcases residue_cases hlt hr with hm | hm | hm
+  · exact not_wieferich_of_fold hp hb (by norm_num) hc h1' h6 hk (all_classes_2310 _ hm)
+  · -- remainder 1093, whose own position was cut out
+    refine not_wieferich_of_check hp hb hc ?_
+    have hkpos : 1 ≤ p / 2310 := by
+      rcases Nat.eq_zero_or_pos (p / 2310) with h | h
+      · exfalso; apply h1; omega
+      · exact h
+    have := check_of_offset (r := 1093) (m := 2310) (s := 770) (j := 1) (k := p / 2310)
+      (len := 432) (by norm_num) (by norm_num) (by norm_num) (by norm_num) hkpos (by omega)
+      class_2310_1093_above_1093
+    rwa [← hm, Nat.mod_add_div] at this
+  · -- remainder 1201, whose second position was cut out
+    refine not_wieferich_of_check hp hb hc ?_
+    rcases Nat.lt_or_ge (p / 2310) 1 with hlo | hlo
+    · have := check_of_class (r := 1201) (m := 2310) (k := p / 2310) (len := 1) (by norm_num)
+        (by norm_num) (by norm_num) hlo class_2310_1201_below_3511
+      rwa [← hm, Nat.mod_add_div] at this
+    · have hk2 : 2 ≤ p / 2310 := by
+        rcases Nat.lt_or_ge (p / 2310) 2 with h | h
+        · exfalso; apply h2; omega
+        · exact h
+      have := check_of_offset (r := 1201) (m := 2310) (s := 770) (j := 2) (k := p / 2310)
+        (len := 431) (by norm_num) (by norm_num) (by norm_num) (by norm_num) hk2 (by omega)
+        class_2310_1201_above_3511
+      rwa [← hm, Nat.mod_add_div] at this
 
 end PrimeCert.Wieferich
