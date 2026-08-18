@@ -1,7 +1,14 @@
+/-
+Copyright (c) 2026 Bhavik Mehta. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Bhavik Mehta
+-/
 import Polya.Meta
 
-/-! The computation at the smallest counterexample to Pólya's conjecture, with the prime powers
-checked against the certified sieve, and the three statements it settles. -/
+/-! # Pólya's conjecture at its smallest counterexample
+
+The computation at 906150257, with the prime powers checked against the certified sieve, and the
+three statements it settles. -/
 
 set_option maxRecDepth 4000000
 set_option Elab.async false
@@ -18,7 +25,7 @@ theorem polya_witness : L 906150257 = 1 := by
   norm_num
 
 /-- Pólya's conjecture has a counterexample. -/
-theorem polya_disproof : ∃ n, 2 ≤ n ∧ 0 < L n :=
+example : ∃ n, 2 ≤ n ∧ 0 < L n :=
   exists_pos_L 906150257 (by norm_num) (by rw [polya_witness]; norm_num)
 
 /-- Pólya's conjecture is false. -/
