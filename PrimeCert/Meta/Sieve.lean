@@ -71,9 +71,9 @@ meta def runSieve (n : Nat) (len? : Option Nat := none) : MetaM Unit := do
   let litName := `PrimeCert.Sieve ++ Name.mkSimple s!"sieveBits_{n}"
   let dataName := `PrimeCert.Sieve ++ Name.mkSimple s!"sieveK_eq_{n}"
   let sq := Nat.sqrt n + 1
-  let fuel := (sq - 1) / 3
+  let fuel := index sq
   let len := Nat.max 1 (len?.getD 16)
-  let (lit, proof) ← emitChain dataName ((n - 1) / 3) fuel len
+  let (lit, proof) ← emitChain dataName (index n) fuel len
   -- `forceExpose` keeps the literal readable from a module consumer, which `sieve_lookup` needs
   addDecl (forceExpose := true) <| Declaration.defnDecl
     { name := litName, levelParams := [], type := Nat.mkType,

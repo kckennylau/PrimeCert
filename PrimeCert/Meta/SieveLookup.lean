@@ -28,7 +28,7 @@ meta def mkSieveLookup (p : Nat) : MetaM Expr := do
   if p % 2 == 0 then throwError "sieve lookup: {p} is even, so it is not prime"
   if p % 3 == 0 then throwError "sieve lookup: {p} is a multiple of 3, so it is not prime"
   if p < 5 then throwError "sieve lookup: {p} is not prime"
-  let t := (p - 1) / 3
+  let t := index p
   let some cache ← findSieveCache p
     | throwError "sieve lookup: no sieve cache covers {p}; the caches in scope are {
         (← sieveCaches).map fun c => (c.lo, c.hi)}"
