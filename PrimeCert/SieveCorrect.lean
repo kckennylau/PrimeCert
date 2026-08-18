@@ -38,6 +38,8 @@ open Nat
 
 @[simp, grind =] public theorem valueK_eq_value : valueK = value := rfl
 
+@[simp, grind =] public theorem indexK_eq_index : indexK = index := rfl
+
 /-- The loop's bit test agrees with `Nat.testBit`. -/
 @[grind =]
 public theorem testBitK_eq_testBit {b i : ℕ} : testBitK b i = b.testBit i := by
@@ -56,19 +58,23 @@ theorem testBit_initK {M t : ℕ} :
 theorem value_add_two_mul {k m : ℕ} : value (k + 2 * m) = value k + 6 * m := by grind [value]
 
 @[grind =]
-theorem value_startA {p : ℕ} (hp : p % 6 = 1 ∨ p % 6 = 5) : value ((p * 5 - 1) / 3) = 5 * p := by
-  grind [value]
+theorem value_startA {p : ℕ} (hp : p % 6 = 1 ∨ p % 6 = 5) : value (index (p * 5)) = 5 * p := by
+  grind [value, index]
 
 @[grind =]
-theorem value_startB {p : ℕ} (hp : p % 6 = 1 ∨ p % 6 = 5) : value ((p * 7 - 1) / 3) = 7 * p := by
-  grind [value]
+theorem value_startB {p : ℕ} (hp : p % 6 = 1 ∨ p % 6 = 5) : value (index (p * 7)) = 7 * p := by
+  grind [value, index]
 
 @[grind .] theorem value_mod6 (k : ℕ) : value k % 6 = 1 ∨ value k % 6 = 5 := by grind [value]
 
 @[grind .] theorem five_le_value {k : ℕ} (hk : k ≠ 0) : 5 ≤ value k := by grind [value]
 
-@[grind .] theorem value_wheel {q : ℕ} (hq : q % 6 = 1 ∨ q % 6 = 5) : value ((q - 1) / 3) = q := by
-  grind [value]
+/-- The index inverts `value` on the numbers coprime to 6. -/
+@[grind .] theorem value_index {q : ℕ} (hq : q % 6 = 1 ∨ q % 6 = 5) : value (index q) = q := by
+  grind [value, index]
+
+/-- Every index is the index of its own number. -/
+@[simp, grind =] theorem index_value (k : ℕ) : index (value k) = k := by grind [value, index]
 
 theorem value_strictMono : StrictMono value := by grind [value, StrictMono]
 
@@ -133,26 +139,26 @@ theorem testBit_buildMaskK {p M A B n t : ℕ} (hp : p ≠ 0) (ht : t ≤ M) (hM
     exact Nat.le_mul_of_pos_left _ (by positivity)
   simp_rw [← prog_iff_dvd this, ← exists_or, testBit_buildMaskK_pow ht, and_or_left]
 
-/-- `buildMaskK` started at indices `(5*p-1)/3`, `(7*p-1)/3`, the form `markMaskK` uses, marks
+/-- `buildMaskK` started at the indices of `5*p` and `7*p`, the form `markMaskK` uses, marks
 index `t` iff `value t` is a coprime-to-6 multiple `p*k` with `k ≥ 5`. -/
 theorem mask_iff {p M t : ℕ} (hp6 : p % 6 = 1 ∨ p % 6 = 5)
     (hM : M < 2 ^ 32) (ht : t ≤ M) :
-    (buildMaskK p M ((p * 5 - 1) / 3) ((p * 7 - 1) / 3) 32).testBit t ↔
+    (buildMaskK p M (index (p * 5)) (index (p * 7)) 32).testBit t ↔
       ∃ k, 5 ≤ k ∧ (k % 6 = 1 ∨ k % 6 = 5) ∧ value t = p * k := by
   rw [testBit_buildMaskK (by lia) ht hM]
   constructor
   · rintro (⟨hle, c, hc⟩ | ⟨hle, c, hc⟩)
-    · exact ⟨5 + 6 * c, by grind [value]⟩
-    · exact ⟨7 + 6 * c, by grind [value]⟩
+    · exact ⟨5 + 6 * c, by grind [value, index]⟩
+    · exact ⟨7 + 6 * c, by grind [value, index]⟩
   · rintro ⟨k, hk5, hk6, hval⟩
     rcases hk6 with h1 | h5
     · right
       obtain ⟨j, rfl⟩ : ∃ j, k = 7 + 6 * j := ⟨(k - 7) / 6, by grind⟩
-      have ht2 : value t = value ((p * 7 - 1) / 3 + 2 * (p * j)) := by grind
+      have ht2 : value t = value (index (p * 7) + 2 * (p * j)) := by grind
       exact ⟨by grind, j, by grind⟩
     · left
       obtain ⟨j, rfl⟩ : ∃ j, k = 5 + 6 * j := ⟨(k - 5) / 6, by grind⟩
-      have ht2 : value t = value ((p * 5 - 1) / 3 + 2 * (p * j)) := by grind
+      have ht2 : value t = value (index (p * 5) + 2 * (p * j)) := by grind
       exact ⟨by grind, j, by grind⟩
 
 /-! ## Clearing: one pass, then the whole sieve
@@ -165,14 +171,14 @@ the primes and nothing else. -/
 /-- `markMaskK bits p M` is bitwise `ldiff` of `bits` against `buildMaskK` (subtracting a
 submask). -/
 theorem markMaskK_eq_ldiff {bits p M : ℕ} :
-    markMaskK bits p M = bits.ldiff (buildMaskK p M ((p * 5 - 1) / 3) ((p * 7 - 1) / 3) 32) := by
+    markMaskK bits p M = bits.ldiff (buildMaskK p M (index (p * 5)) (index (p * 7)) 32) := by
   rw [markMaskK]
-  simp [sub_and_eq_ldiff, Nat.div_eq_div]
+  simp [sub_and_eq_ldiff]
 
 /-- `markMaskK` clears exactly the bits set in `buildMaskK`, keeping the rest of `bits`. -/
 theorem testBit_markMaskK {bits p M t : ℕ} :
     (markMaskK bits p M).testBit t
-      = (bits.testBit t && !(buildMaskK p M ((p * 5 - 1) / 3) ((p * 7 - 1) / 3) 32).testBit t) := by
+      = (bits.testBit t && !(buildMaskK p M (index (p * 5)) (index (p * 7)) 32).testBit t) := by
   rw [markMaskK_eq_ldiff, Nat.testBit_ldiff]
 
 /-! ### From one pass to the whole sieve
@@ -194,7 +200,7 @@ theorem markMaskK_preserves_prime {b p M t : ℕ} (hp6 : p % 6 = 1 ∨ p % 6 = 5
     (hM : M < 2 ^ 32) (ht : t ≤ M) (hprime : (value t).Prime) :
     (markMaskK b p M).testBit t = b.testBit t := by
   rw [testBit_markMaskK]
-  suffices h : (buildMaskK p M ((p * 5 - 1) / 3) ((p * 7 - 1) / 3) 32).testBit t = false by simp [h]
+  suffices h : (buildMaskK p M (index (p * 5)) (index (p * 7)) 32).testBit t = false by simp [h]
   by_contra hc
   rw [Bool.not_eq_false, mask_iff hp6 hM ht] at hc
   obtain ⟨k, hk5, _, hval⟩ := hc
@@ -278,12 +284,12 @@ public theorem sieveK_testBit_iff {n sqrtN t : ℕ} (ht : t ≠ 0) (htM : t ≤ 
     rw [← coprime6_mod] at hq6 ⊢
     exact value_coprime6.coprime_dvd_left hmdvd
   have hqlt : q < value t := by nlinarith
-  have hjqt : (q - 1) / 3 ≤ t := by
-    rw [← value_strictMono.le_iff_le]
+  have hjqt : index q ≤ t := by
+    rw [← value_strictMono.le_iff_le, value_index hq6]
     grind
   have hqsqrt : q ≤ sqrtN := by nlinarith
   have hcleared : (sieveLoopK k (initK k) 1 ((sqrtN - 1) / 3)).testBit t = false := by
-    grind [sieveLoopK_clears, value_wheel hq6]
+    grind [sieveLoopK_clears, value_index hq6, index]
   simp only [sieveK, sub_eq, div_eq_div] at hset
   grind
 
