@@ -59,6 +59,16 @@ def Mirimanoff (p : ℕ) : Prop :=
 
 open PrimeCert PrimeCert.Sieve
 
+/-- Extend a statement holding on every member of `l` to one holding on every member of
+`a :: l`. The emitter threads the per-class proofs through this. -/
+public theorem forall_mem_cons_of {α : Type*} {p : α → Prop} {a : α} {l : List α}
+    (ha : p a) (hl : ∀ x ∈ l, p x) : ∀ x ∈ a :: l, p x := by
+  grind
+
+/-- The sieve index of `r`, for `r` coprime to 6. -/
+@[expose] public def wheelIndex (r : ℕ) : ℕ :=
+  ((r.mod 6).beq 1).rec ((r.sub 2).div 3) ((r.sub 1).div 3)
+
 /-- The check at one sieve index: a clear bit skips the number, a set bit checks both conditions
 on it. -/
 @[expose] public noncomputable def checkAt (t : ℕ) : Bool :=
