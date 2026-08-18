@@ -34,7 +34,7 @@ def Mirimanoff (p : ℕ) : Prop :=
 @[expose] public noncomputable def wieferichK (p : ℕ) : Bool :=
   powModK 2 (p.sub 1) (p.pow 2) |>.beq 1
 
-@[expose] public noncomputable def mirimanoffK (p : ℕ) : Bool :=
+noncomputable def mirimanoffK (p : ℕ) : Bool :=
   powModK 3 (p.sub 1) (p.pow 2) |>.beq 1
 
 @[simp] theorem wieferichK_eq_true_iff (p : ℕ) (hp : p ≠ 1) : wieferichK p ↔ Wieferich p := by
@@ -69,12 +69,6 @@ public theorem forall_mem_cons_of {α : Type*} {p : α → Prop} {a : α} {l : L
 fail the condition. The two known Wieferich primes are left out of the ranges checked. -/
 @[expose] public noncomputable def wieferichAt (t : ℕ) : Bool :=
   (testBitK sieveBits_1000000 t).not'.or' (wieferichK (valueK t)).not'
-
-/-- The check at one sieve index: a clear bit skips the number, a set bit checks both conditions
-on it. -/
-@[expose] public noncomputable def checkAt (t : ℕ) : Bool :=
-  (testBitK sieveBits_1000000 t).not'.or'
-    ((wieferichK (valueK t)).not'.or' (mirimanoffK (valueK t)).not')
 
 theorem wieferich_mirimanoff₁ : ∀ n < 6000, n % 6 = 1 →
     (wieferichK n).not'.or' (mirimanoffK n).not' :=
