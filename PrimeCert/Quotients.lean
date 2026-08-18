@@ -29,6 +29,10 @@ public theorem div_eq_div_of_le {v k k' : ℕ} (hk : k ≠ 0) (hkk' : k ≤ k')
 public theorem le_div_div {v k : ℕ} (hk : k ≠ 0) (hkv : k ≤ v) : k ≤ v / (v / k) := by
   grw [Nat.le_div_iff_mul_le (Nat.div_pos hkv (Nat.pos_of_ne_zero hk)), Nat.mul_div_le]
 
+/-- Dividing by a quotient twice returns to it. -/
+public theorem div_div_div {v k : ℕ} (hk : k ≠ 0) (hkv : k ≤ v) : v / (v / (v / k)) = v / k :=
+  div_eq_div_of_le hk (le_div_div hk hkv) le_rfl
+
 open Finset
 
 /-- A sum of `f (v / k')` over `Icc k (v / (v / k))` is its length times `f (v / k)`. -/
