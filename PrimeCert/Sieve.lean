@@ -18,6 +18,19 @@ namespace PrimeCert.Sieve
 /-- Whether bit `i` of `b` is set (`testBitK_eq_testBit` in `SieveCorrect`). -/
 @[expose] public def testBitK (b i : Nat) : Bool := Nat.ble 1 (b.land (Nat.shiftLeft 1 i))
 
+/-- The number sitting at coprime-to-6 index `k`: `0↦1, 1↦5, 2↦7, 3↦11, 4↦13, …`. -/
+@[expose] public def value (k : Nat) : Nat := (k * 3 + 1) + k % 2
+
+/-- `value` in the raw `Nat` operations the kernel-side defs use. -/
+@[expose] public def valueK (k : Nat) : Nat := (k.mul 3).succ.add (k.mod 2)
+
+/-- The coprime-to-6 index holding the number `q`, inverse to `value` on `1, 5, 7, 11, 13, …`
+(`value_index` and `index_value` in `SieveCorrect`). -/
+@[expose] public def index (q : Nat) : Nat := (q - 1) / 3
+
+/-- `index` in the raw `Nat` operations the kernel-side defs use. -/
+@[expose] public def indexK (q : Nat) : Nat := (q.sub 1).div 3
+
 /-- The natural number whose binary digits below position `M` are set at the first `2^n` positions
 of each of `A, A + 2*p, A + 4*p, …` and `B, B + 2*p, B + 4*p, …`; `n` counts doubling rounds. -/
 @[expose] public noncomputable def buildMaskK (p M A B n : Nat) : Nat :=
@@ -31,13 +44,7 @@ of each of `A, A + 2*p, A + 4*p, …` and `B, B + 2*p, B + 4*p, …`; `n` counts
 /-- One sieving step: clear from `bits` the bits at indices of coprime-to-6 multiples of `p`
 (the multiples `5*p, 7*p, 11*p, …`). -/
 @[expose] public noncomputable def markMaskK (bits p M : Nat) : Nat :=
-  bits.sub (bits.land (buildMaskK p M (((p.mul 5).sub 1).div 3) (((p.mul 7).sub 1).div 3) 32))
-
-/-- The number sitting at coprime-to-6 index `k`: `0↦1, 1↦5, 2↦7, 3↦11, 4↦13, …`. -/
-@[expose] public def value (k : Nat) : Nat := (k * 3 + 1) + k % 2
-
-/-- `value` in the raw `Nat` operations the kernel-side defs use. -/
-@[expose] public def valueK (k : Nat) : Nat := (k.mul 3).succ.add (k.mod 2)
+  bits.sub (bits.land (buildMaskK p M (indexK (p.mul 5)) (indexK (p.mul 7)) 32))
 
 /-- Perform `fuel` sieving steps on the bitset `bits`, scanning indices `start, start+1, …`: at
 each index whose bit is still set, clear the bits of that number's coprime-to-6 multiples.
