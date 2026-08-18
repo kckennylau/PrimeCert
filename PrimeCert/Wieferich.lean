@@ -69,6 +69,11 @@ public theorem forall_mem_cons_of {α : Type*} {p : α → Prop} {a : α} {l : L
 @[expose] public def wheelIndex (r : ℕ) : ℕ :=
   ((r.mod 6).beq 1).rec ((r.sub 2).div 3) ((r.sub 1).div 3)
 
+/-- The Wieferich check at one sieve index: a clear bit skips the number, and any prime must
+fail the condition. The two known Wieferich primes are left out of the ranges checked. -/
+@[expose] public noncomputable def wieferichAt (t : ℕ) : Bool :=
+  (testBitK sieveBits_1000000 t).not'.or' (wieferichK (numK t)).not'
+
 /-- The check at one sieve index: a clear bit skips the number, a set bit checks both conditions
 on it. -/
 @[expose] public noncomputable def checkAt (t : ℕ) : Bool :=
