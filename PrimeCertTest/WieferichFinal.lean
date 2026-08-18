@@ -31,7 +31,8 @@ public theorem residue_cases {r : ℕ} (hr : r < 2310) (hg : Nat.gcd r 2310 = 1)
     r ∈ classes_2310 ∨ r = 1093 ∨ r = 1201 := by
   have h := (forallB_iff coverAt 0 2310 1).mp cover r (by omega)
   rw [coverAt] at h
-  simp [Nat.mul_one, Nat.add_zero, hg, Bool.not'_eq_not, Bool.or'_eq_or, Nat.beq_eq] at h
+  simp only [Nat.mul_one, Nat.add_zero, hg, Bool.not'_eq_not, Bool.or'_eq_or, Nat.beq_eq,
+    Nat.beq_refl, Bool.not_true, Bool.false_or, Bool.or_eq_true] at h
   rcases h with h | h | h
   · exact Or.inl (memB_iff.mp h)
   · exact Or.inr (Or.inl h)
