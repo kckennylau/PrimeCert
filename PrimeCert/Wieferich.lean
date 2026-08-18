@@ -8,8 +8,9 @@ module
 
 public import Mathlib.Data.Nat.Squarefree
 public import Mathlib.Data.Nat.Totient
-import PrimeCert.ForallB
+public import PrimeCert.ForallB
 import PrimeCert.ForMathlib
+public import PrimeCert.SieveBase
 meta import PrimeCert.Meta.QuickRfl
 public import PrimeCert.PowMod
 
@@ -30,10 +31,10 @@ def Wieferich (p : ℕ) : Prop :=
 def Mirimanoff (p : ℕ) : Prop :=
   3 ^ (p - 1) ≡ 1 [MOD p^2]
 
-noncomputable def wieferichK (p : ℕ) : Bool :=
+@[expose] public noncomputable def wieferichK (p : ℕ) : Bool :=
   powModK 2 p.pred (p.pow 2) |>.beq 1
 
-noncomputable def mirimanoffK (p : ℕ) : Bool :=
+@[expose] public noncomputable def mirimanoffK (p : ℕ) : Bool :=
   powModK 3 p.pred (p.pow 2) |>.beq 1
 
 @[simp] theorem wieferichK_eq_true_iff (p : ℕ) (hp : p ≠ 1) : wieferichK p ↔ Wieferich p := by
@@ -56,7 +57,13 @@ noncomputable def mirimanoffK (p : ℕ) : Bool :=
 
 /-! # We check odd numbers up to 6000 in the classes 1%6 and 5%6 -/
 
-open PrimeCert
+open PrimeCert PrimeCert.Sieve
+
+/-- The check at one sieve index: a clear bit skips the number, a set bit checks both conditions
+on it. -/
+@[expose] public noncomputable def checkAt (t : ℕ) : Bool :=
+  (testBitK sieveBits_1000000 t).not'.or'
+    ((wieferichK (numK t)).not'.or' (mirimanoffK (numK t)).not')
 
 theorem wieferich_mirimanoff₁ : ∀ n < 6000, n % 6 = 1 →
     (wieferichK n).not'.or' (mirimanoffK n).not' :=
