@@ -18,11 +18,6 @@ namespace PrimeCert.Wieferich
 
 open PrimeCert PrimeCert.Sieve
 
-/-- At a number that is `5 mod 6`, the index also reads as `(n - 2) / 3`. -/
-public theorem index_five {n : ℕ} (h : n % 6 = 5) : index n = (n - 2) / 3 := by
-  unfold index
-  omega
-
 /-- The sieve index of a number coprime to 6 names that number back. -/
 public theorem value_index {n : ℕ} (h : n % 6 = 1 ∨ n % 6 = 5) : value (index n) = n := by
   unfold index
