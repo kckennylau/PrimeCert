@@ -10,7 +10,7 @@ module
 
 A Sieve of Eratosthenes over the numbers coprime to 6, in a form the Lean kernel evaluates by
 reduction. The state is one natural number used as a bitset, `M` is its top index, and a bound of
-`n` gives `M = (n - 1) / 3`. `markMaskK` runs 32 doubling rounds, covering `M < 2^32`.
+`n` gives `M = index n`. `markMaskK` runs 32 doubling rounds, covering `M < 2^32`.
 -/
 
 namespace PrimeCert.Sieve
@@ -60,7 +60,7 @@ each index whose bit is still set, clear the bits of that number's coprime-to-6 
 /-- The full sieve bitset for numbers up to `n`: bit `t` is set iff `value t` is prime, given
 `n ≤ sqrtN * sqrtN` (`sieveK_testBit_iff` in `SieveCorrect`). -/
 @[expose] public noncomputable def sieveK (n sqrtN : Nat) : Nat :=
-  sieveLoopK ((n.sub 1).div 3) (initK ((n.sub 1).div 3)) 1 ((sqrtN.sub 1).div 3)
+  sieveLoopK (indexK n) (initK (indexK n)) 1 (indexK sqrtN)
 
 /-- Loop recurrence: peel the top index `start+fuel`, in the exact `Bool.rec` form the def uses. -/
 public theorem sieveLoopK_succ {M bits start fuel : Nat} :
@@ -84,7 +84,7 @@ public def buildMask (p M A B n : Nat) : Nat := Id.run do
   return mask
 
 public def markMask (bits p M : Nat) : Nat :=
-  bits - (bits &&& buildMask p M ((p * 5 - 1) / 3) ((p * 7 - 1) / 3) 32)
+  bits - (bits &&& buildMask p M (index (p * 5)) (index (p * 7)) 32)
 
 public def sieveLoop (M bits start fuel : Nat) : Nat := Id.run do
   let mut b := bits

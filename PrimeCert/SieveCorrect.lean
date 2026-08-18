@@ -222,10 +222,10 @@ theorem sieveLoopK_preserves {M bits start fuel t : ℕ} (hstart : start ≠ 0)
     · exact ih
 
 /-- Completeness: every prime bit in range survives the sieve. -/
-theorem sieve_prime_set {n sqrtN t : ℕ} (ht1 : t ≠ 0) (htM : t ≤ (n - 1) / 3)
-    (hM : (n - 1) / 3 < 2 ^ 32) (hprime : (value t).Prime) :
+theorem sieve_prime_set {n sqrtN t : ℕ} (ht1 : t ≠ 0) (htM : t ≤ index n)
+    (hM : index n < 2 ^ 32) (hprime : (value t).Prime) :
     (sieveK n sqrtN).testBit t = true := by
-  grind [sieveK, div_eq_div, sieveLoopK_preserves, testBit_initK]
+  grind [sieveK, index, div_eq_div, sieveLoopK_preserves, testBit_initK]
 
 /-- If a prime index `j` in the processed range witnesses `value t = value j * m` (`m ≥ 5` coprime
 to 6), the sieve clears bit `t`. The bit at `j` still stands when the loop reaches it, so its
@@ -260,12 +260,12 @@ theorem coprime6_mod {m : ℕ} : m.Coprime 6 ↔ m % 6 = 1 ∨ m % 6 = 5 := by
   have : ∀ t < 6, t.gcd 6 = 1 ↔ t % 6 = 1 ∨ t % 6 = 5 := by decide
   simpa using this (m % 6) (Nat.mod_lt _ (by simp))
 
-/-- For `1 ≤ t ≤ (n-1)/3` with `value t ≤ n ≤ sqrtN*sqrtN`, bit `t` of the sieve is set iff
+/-- For `1 ≤ t ≤ index n` with `value t ≤ n ≤ sqrtN*sqrtN`, bit `t` of the sieve is set iff
 `value t` is prime. -/
-public theorem sieveK_testBit_iff {n sqrtN t : ℕ} (ht : t ≠ 0) (htM : t ≤ (n - 1) / 3)
-    (hM : (n - 1) / 3 < 2 ^ 32) (hbound : value t ≤ n) (hsqrt : n ≤ sqrtN * sqrtN) :
+public theorem sieveK_testBit_iff {n sqrtN t : ℕ} (ht : t ≠ 0) (htM : t ≤ index n)
+    (hM : index n < 2 ^ 32) (hbound : value t ≤ n) (hsqrt : n ≤ sqrtN * sqrtN) :
     (sieveK n sqrtN).testBit t ↔ (value t).Prime := by
-  set k := (n - 1) / 3
+  set k := index n
   refine ⟨fun hset => ?_, sieve_prime_set ht htM hM⟩
   by_contra hnp
   have h5 : 5 ≤ value t := five_le_value (by lia)
@@ -288,9 +288,9 @@ public theorem sieveK_testBit_iff {n sqrtN t : ℕ} (ht : t ≠ 0) (htM : t ≤ 
     rw [← value_strictMono.le_iff_le, value_index hq6]
     grind
   have hqsqrt : q ≤ sqrtN := by nlinarith
-  have hcleared : (sieveLoopK k (initK k) 1 ((sqrtN - 1) / 3)).testBit t = false := by
+  have hcleared : (sieveLoopK k (initK k) 1 (index sqrtN)).testBit t = false := by
     grind [sieveLoopK_clears, value_index hq6, index]
-  simp only [sieveK, sub_eq, div_eq_div] at hset
+  simp only [sieveK] at hset
   grind
 
 /-! ### Reading a prime off a cached sieve -/
@@ -308,16 +308,16 @@ theorem sieveLoopK_le {M bits start fuel : ℕ} : sieveLoopK M bits start fuel �
 grind_pattern sieveLoopK_le => sieveLoopK M bits start fuel
 
 /-- The sieve leaves every bit above its top index clear. -/
-public theorem sieveK_lt {n sqrtN : ℕ} : sieveK n sqrtN < 2 ^ ((n - 1) / 3 + 1) := by
-  have h : sieveK n sqrtN ≤ initK ((n - 1) / 3) := by grind [sieveK, Nat.div_eq_div]
-  have hp : 0 < 2 ^ ((n - 1) / 3) := by positivity
-  have hi : initK ((n - 1) / 3) < 2 ^ ((n - 1) / 3 + 1) := by
+public theorem sieveK_lt {n sqrtN : ℕ} : sieveK n sqrtN < 2 ^ (index n + 1) := by
+  have h : sieveK n sqrtN ≤ initK (index n) := by grind [sieveK, index, Nat.div_eq_div]
+  have hp : 0 < 2 ^ index n := by positivity
+  have hi : initK (index n) < 2 ^ (index n + 1) := by
     rw [initK_eq, Nat.shiftLeft_eq, pow_one, Nat.pow_succ]
     lia
   lia
 
-/-- The number at an index bounds the index: `value t ≤ n` forces `t ≤ (n-1)/3`. -/
-theorem le_div_of_value_le {n t : ℕ} (h : value t ≤ n) : t ≤ (n - 1) / 3 := by grind [value]
+/-- The number at an index bounds the index: `value t ≤ n` forces `t ≤ index n`. -/
+theorem le_index_of_value_le {n t : ℕ} (h : value t ≤ n) : t ≤ index n := by grind [value, index]
 
 /-- `lit` decides primality for the numbers up to `n`: bit `t` is set exactly when `value t`, the
 number at that index, is prime. `IsSieve.prime` reads it in the kernel-checked form. -/
@@ -329,7 +329,7 @@ number at that index, is prime. `IsSieve.prime` reads it in the kernel-checked f
 public theorem isSieve_of_sieveK_eq {n sqrtN lit : ℕ} (hEq : sieveK n sqrtN = lit)
     (h3 : n.ble 12884901888) (h5 : n.ble (sqrtN.mul sqrtN)) :
     IsSieve n lit := by
-  grind [IsSieve, sieveK_testBit_iff, le_div_of_value_le, Nat.ble_eq, Nat.div_eq_div]
+  grind [IsSieve, sieveK_testBit_iff, le_index_of_value_le, index, Nat.ble_eq, Nat.div_eq_div]
 
 /-- Read a prime off a sieve: a set bit at index `t` with `valueK t = p` makes `p` prime. -/
 public theorem IsSieve.prime {n lit t p : ℕ} (h : IsSieve n lit) (h1 : Nat.ble 1 t)
