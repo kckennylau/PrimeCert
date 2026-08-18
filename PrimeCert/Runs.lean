@@ -15,10 +15,10 @@ Fix `v`. As `k` runs over `1, 2, …, v`, the quotient `v / k` repeats: every in
 `v / (v / k)` inclusive gives the same quotient (`div_eq_of_run`), and that range does start at `k`
 (`le_div_div`). Call such a range the run at `k`.
 
-So a sum of `f (v / k')` over the run at `k` is the run's length times `f (v / k)` (`sum_run`). A
-consumer sums over every `k ≤ v` by taking one such term and jumping from `k` to `v / (v / k) + 1`;
-that the runs so visited cover `1, …, v` is the consumer's own invariant, and this file supplies
-only the value of each one.
+So a sum of `f (v / k')` over the run at `k` is the run's length times `f (v / k)` (`sum_run`), and
+that run splits off the front of a sum over `Icc k v`, leaving the sum from `v / (v / k) + 1`
+(`sum_Icc_peel_run`). Iterating the split from `k = 1` writes `∑_{k ≤ v} f (v / k)` as one term per
+distinct quotient, which is the form a certificate for such a sum is emitted in.
 -/
 
 namespace PrimeCert
@@ -45,5 +45,18 @@ public theorem sum_run {α : Type*} [AddCommMonoid α] {v k : ℕ} (hk : k ≠ 0
     grind
   · simp only [Finset.mem_Icc] at hk'
     rw [div_eq_of_run hk hk'.1 hk'.2]
+
+/-- Peel the run at `k` off a sum over `Icc k v`, leaving the sum from the next run's first
+index. -/
+public theorem sum_Icc_peel_run {α : Type*} [AddCommMonoid α] {v k : ℕ} (hk : k ≠ 0) (hkv : k ≤ v)
+    (f : ℕ → α) :
+    ∑ k' ∈ Icc k v, f (v / k')
+      = (v / (v / k) - k + 1) • f (v / k) + ∑ k' ∈ Icc (v / (v / k) + 1) v, f (v / k') := by
+  have hle : k ≤ v / (v / k) := le_div_div hk hkv
+  have hub : v / (v / k) ≤ v := Nat.div_le_self _ _
+  rw [← sum_run hk hkv f, ← Finset.Ico_add_one_right_eq_Icc, ← Finset.Ico_add_one_right_eq_Icc,
+    ← Finset.Ico_add_one_right_eq_Icc,
+    ← Finset.Ico_union_Ico_eq_Ico (by omega : k ≤ v / (v / k) + 1) (by omega),
+    Finset.sum_union (Finset.Ico_disjoint_Ico_consecutive _ _ _)]
 
 end PrimeCert
