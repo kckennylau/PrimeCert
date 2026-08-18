@@ -62,4 +62,24 @@ public theorem memB_iff {n : ℕ} {l : List ℕ} : memB n l ↔ n ∈ l := by
   | nil => simp [memB]
   | cons a t ih => simp [memB_cons, Bool.or'_eq_or, ih]
 
+/-- A prime below the cached range sets its own sieve bit. -/
+public theorem testBit_of_prime {p : ℕ} (hp : p.Prime) (hb : p < 1000000)
+    (hc : p % 6 = 1 ∨ p % 6 = 5) : testBitK sieveBits_1000000 (wheelIndex p) := by
+  have h2 := hp.two_le
+  have hnum : num (wheelIndex p) = p := num_wheelIndex hc
+  rw [testBitK_eq_testBit]
+  have := isSieve_1000000 (wheelIndex p) (by grind [wheelIndex_one, wheelIndex_five])
+    (by grind)
+  grind
+
+/-- At a prime whose check holds, the Wieferich condition fails. -/
+public theorem not_wieferich_of_check {p : ℕ} (hp : p.Prime) (hb : p < 1000000)
+    (hc : p % 6 = 1 ∨ p % 6 = 5) (h : wieferichAt (wheelIndex p)) : ¬ Wieferich p := by
+  have hbit := testBit_of_prime hp hb hc
+  have hnum : numK (wheelIndex p) = p := by rw [numK_eq_num]; exact num_wheelIndex hc
+  rw [wieferichAt, hnum] at h
+  simp only [hbit, Bool.not'_eq_not, Bool.or'_eq_or, Bool.not_true, Bool.false_or,
+    Bool.not_eq_true'] at h
+  exact (wieferichK_eq_false_iff p hp.ne_one).mp h
+
 end PrimeCert.Wieferich
