@@ -47,6 +47,7 @@ meta def mkNatList : List Nat → Expr
   | [] => mkApp (mkConst ``List.nil [Level.zero]) Nat.mkType
   | r :: rs => mkApp3 (mkConst ``List.cons [Level.zero]) Nat.mkType (mkRawNatLit r) (mkNatList rs)
 
+/-- Add `name : type := value` to the environment as a theorem. -/
 meta def addThm (name : Name) (type value : Expr) : MetaM Unit :=
   addDecl <| Declaration.thmDecl { name, levelParams := [], type, value }
 
@@ -63,7 +64,7 @@ public meta def elabWieferichCheck : CommandElab := fun stx => do
     liftTermElabM do
       let len := n / m + 1
       let step := m / 3
-      -- The two known Wieferich primes below the bound are left out of the ranges.
+      -- Each range stops short of the two known Wieferich primes below the bound.
       let exceptions := [1093, 3511]
       let mut acc : List Nat := []
       for r in [1:m] do

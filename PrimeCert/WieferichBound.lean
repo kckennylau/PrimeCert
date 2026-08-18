@@ -42,6 +42,7 @@ public theorem index_add {r m k : ℕ} (hr : r % 6 = 1 ∨ r % 6 = 5) (hm : m % 
 @[expose] public noncomputable def memB (n : ℕ) : List ℕ → Bool :=
   List.rec false (fun a _ ih ↦ (n.beq a).or' ih)
 
+/-- One step of the walk: `n` matches the head, or lies in the tail. -/
 public theorem memB_cons (n a : ℕ) (l : List ℕ) :
     memB n (a :: l) = (n.beq a).or' (memB n l) :=
   rfl
