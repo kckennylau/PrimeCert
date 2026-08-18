@@ -19,13 +19,11 @@ namespace PrimeCert.Wieferich
 
 open Lean Elab Command Meta PrimeCert
 
-/-- The sieve index of `n`, where `num t = 3 * t + 1 + t % 2`. -/
-meta def indexOf (n : Nat) : Nat := if n % 6 == 1 then (n - 1) / 3 else (n - 2) / 3
-
-/-- The `Bool` `forallB checkAt (wheelIndex r) len step`, with `r` an arbitrary expression. -/
+/-- The `Bool` `forallB wieferichAt (index r) len step`, with `r` an arbitrary expression. -/
 meta def mkFold (rE : Expr) (len step : Nat) : Expr :=
   mkAppN (mkConst ``PrimeCert.forallB)
-    #[mkConst ``wieferichAt, mkApp (mkConst ``wheelIndex) rE, mkRawNatLit len, mkRawNatLit step]
+    #[mkConst ``wieferichAt, mkApp (mkConst ``PrimeCert.Sieve.index) rE,
+      mkRawNatLit len, mkRawNatLit step]
 
 /-- The statement that the fold at `r` holds. -/
 meta def mkClaim (rE : Expr) (len step : Nat) : Expr :=
@@ -34,7 +32,7 @@ meta def mkClaim (rE : Expr) (len step : Nat) : Expr :=
 
 /-- The statement for a range starting at position `j` of the class of `r`. -/
 meta def mkClaimAt (r j len step : Nat) : Expr :=
-  let base := mkApp (mkConst ``wheelIndex) (mkRawNatLit r)
+  let base := mkApp (mkConst ``PrimeCert.Sieve.index) (mkRawNatLit r)
   let start := mkApp2 (mkConst ``Nat.add) base
     (mkApp2 (mkConst ``Nat.mul) (mkRawNatLit step) (mkRawNatLit j))
   mkApp3 (mkConst ``Eq [Level.succ Level.zero]) (mkConst ``Bool)
@@ -42,8 +40,6 @@ meta def mkClaimAt (r j len step : Nat) : Expr :=
       #[mkConst ``wieferichAt, start, mkRawNatLit len, mkRawNatLit step])
     (mkConst ``Bool.true)
 
-/-- The sieve index of `r`, mirroring the library's `wheelIndex`. -/
-meta def wheelIndex (r : Nat) : Nat := if r % 6 == 1 then (r - 1) / 3 else (r - 2) / 3
 
 /-- The list literal `[r₁, …, rₖ] : List ℕ`. -/
 meta def mkNatList : List Nat → Expr
