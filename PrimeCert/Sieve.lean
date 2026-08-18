@@ -34,10 +34,10 @@ of each of `A, A + 2*p, A + 4*p, …` and `B, B + 2*p, B + 4*p, …`; `n` counts
   bits.sub (bits.land (buildMaskK p M (((p.mul 5).sub 1).div 3) (((p.mul 7).sub 1).div 3) 32))
 
 /-- The number sitting at coprime-to-6 index `k`: `0↦1, 1↦5, 2↦7, 3↦11, 4↦13, …`. -/
-@[expose] public def num (k : Nat) : Nat := (k * 3 + 1) + k % 2
+@[expose] public def value (k : Nat) : Nat := (k * 3 + 1) + k % 2
 
-/-- `num` in the raw `Nat` operations the kernel-side defs use. -/
-@[expose] public def numK (k : Nat) : Nat := (k.mul 3).succ.add (k.mod 2)
+/-- `value` in the raw `Nat` operations the kernel-side defs use. -/
+@[expose] public def valueK (k : Nat) : Nat := (k.mul 3).succ.add (k.mod 2)
 
 /-- Perform `fuel` sieving steps on the bitset `bits`, scanning indices `start, start+1, …`: at
 each index whose bit is still set, clear the bits of that number's coprime-to-6 multiples.
@@ -45,12 +45,12 @@ each index whose bit is still set, clear the bits of that number's coprime-to-6 
 @[expose] public noncomputable def sieveLoopK (M bits start fuel : Nat) : Nat :=
   fuel.rec bits fun i b =>
       (testBitK b (start.add i)).rec b
-        (markMaskK b (numK (start.add i)) M)
+        (markMaskK b (valueK (start.add i)) M)
 
 /-- Coprime-to-6 candidates `0..M`, all set except bit 0 (number 1, not prime). `= 2^(M+1) - 2`. -/
 @[expose] public def initK (M : Nat) : Nat := Nat.sub (Nat.shiftLeft 1 (Nat.succ M)) 2
 
-/-- The full sieve bitset for numbers up to `n`: bit `t` is set iff `num t` is prime, given
+/-- The full sieve bitset for numbers up to `n`: bit `t` is set iff `value t` is prime, given
 `n ≤ sqrtN * sqrtN` (`sieveK_testBit_iff` in `SieveCorrect`). -/
 @[expose] public noncomputable def sieveK (n sqrtN : Nat) : Nat :=
   sieveLoopK ((n.sub 1).div 3) (initK ((n.sub 1).div 3)) 1 ((sqrtN.sub 1).div 3)
@@ -59,7 +59,7 @@ each index whose bit is still set, clear the bits of that number's coprime-to-6 
 public theorem sieveLoopK_succ {M bits start fuel : Nat} :
     sieveLoopK M bits start (fuel + 1)
       = Bool.rec (sieveLoopK M bits start fuel)
-          (markMaskK (sieveLoopK M bits start fuel) (numK (start + fuel)) M)
+          (markMaskK (sieveLoopK M bits start fuel) (valueK (start + fuel)) M)
           (testBitK (sieveLoopK M bits start fuel) (start + fuel)) := rfl
 
 /-! ### Compiled twins
@@ -84,7 +84,7 @@ public def sieveLoop (M bits start fuel : Nat) : Nat := Id.run do
   for i in [0:fuel] do
     let j := start + i
     if b &&& (1 <<< j) ≠ 0 then
-      b := markMask b (num j) M
+      b := markMask b (value j) M
   return b
 
 /-- Fuel additivity: running `a + b` steps is running `a` steps, then `b` steps from where the

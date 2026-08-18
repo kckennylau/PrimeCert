@@ -22,7 +22,7 @@ import PrimeCert.ForMathlib
 Bit `t` of `PrimeCert.Sieve.sieveK n sqrtN` is set exactly when the number at index `t` is prime
 (`sieveK_testBit_iff`). The argument runs in three steps:
 
-1. the loop's bit test agrees with `Nat.testBit`, `initK` has bits `1 … M` set, and `num`
+1. the loop's bit test agrees with `Nat.testBit`, `initK` has bits `1 … M` set, and `value`
    sends an index to the number it stands for;
 2. `buildMaskK` marks the positions `A, A + 2*p, A + 4*p, …` and the same from `B`, which hold
    the multiples `p*k` with `k ≥ 5` coprime to 6;
@@ -36,7 +36,7 @@ open Nat
 
 /-! ## Bit reading and the index-to-number map -/
 
-@[simp, grind =] public theorem numK_eq_num : numK = num := rfl
+@[simp, grind =] public theorem valueK_eq_value : valueK = value := rfl
 
 /-- The loop's bit test agrees with `Nat.testBit`. -/
 @[grind =]
@@ -53,30 +53,30 @@ theorem testBit_initK {M t : ℕ} :
 
 /-- Adding an even amount `2*m` to the index adds `6*m` to the number. -/
 @[grind =]
-theorem num_add_two_mul {k m : ℕ} : num (k + 2 * m) = num k + 6 * m := by grind [num]
+theorem value_add_two_mul {k m : ℕ} : value (k + 2 * m) = value k + 6 * m := by grind [value]
 
 @[grind =]
-theorem num_startA {p : ℕ} (hp : p % 6 = 1 ∨ p % 6 = 5) : num ((p * 5 - 1) / 3) = 5 * p := by
-  grind [num]
+theorem value_startA {p : ℕ} (hp : p % 6 = 1 ∨ p % 6 = 5) : value ((p * 5 - 1) / 3) = 5 * p := by
+  grind [value]
 
 @[grind =]
-theorem num_startB {p : ℕ} (hp : p % 6 = 1 ∨ p % 6 = 5) : num ((p * 7 - 1) / 3) = 7 * p := by
-  grind [num]
+theorem value_startB {p : ℕ} (hp : p % 6 = 1 ∨ p % 6 = 5) : value ((p * 7 - 1) / 3) = 7 * p := by
+  grind [value]
 
-@[grind .] theorem num_mod6 (k : ℕ) : num k % 6 = 1 ∨ num k % 6 = 5 := by grind [num]
+@[grind .] theorem value_mod6 (k : ℕ) : value k % 6 = 1 ∨ value k % 6 = 5 := by grind [value]
 
-@[grind .] theorem five_le_num {k : ℕ} (hk : k ≠ 0) : 5 ≤ num k := by grind [num]
+@[grind .] theorem five_le_value {k : ℕ} (hk : k ≠ 0) : 5 ≤ value k := by grind [value]
 
-@[grind .] theorem num_wheel {q : ℕ} (hq : q % 6 = 1 ∨ q % 6 = 5) : num ((q - 1) / 3) = q := by
-  grind [num]
+@[grind .] theorem value_wheel {q : ℕ} (hq : q % 6 = 1 ∨ q % 6 = 5) : value ((q - 1) / 3) = q := by
+  grind [value]
 
-theorem num_strictMono : StrictMono num := by grind [num, StrictMono]
+theorem value_strictMono : StrictMono value := by grind [value, StrictMono]
 
-@[grind inj] theorem num_inj : Function.Injective num := num_strictMono.injective
+@[grind inj] theorem value_inj : Function.Injective value := value_strictMono.injective
 
 /-! ## What the mask marks
 
-`buildMaskK` sets the two progressions stepping by `2*p`, and `num` carries those positions to the
+`buildMaskK` sets the two progressions stepping by `2*p`, and `value` carries those positions to the
 coprime-to-6 multiples `p*k` with `k ≥ 5`, which is `mask_iff` at the end of the section. -/
 
 @[simp, grind =] theorem buildMaskK_zero {p M A B : ℕ} :
@@ -134,25 +134,25 @@ theorem testBit_buildMaskK {p M A B n t : ℕ} (hp : p ≠ 0) (ht : t ≤ M) (hM
   simp_rw [← prog_iff_dvd this, ← exists_or, testBit_buildMaskK_pow ht, and_or_left]
 
 /-- `buildMaskK` started at indices `(5*p-1)/3`, `(7*p-1)/3`, the form `markMaskK` uses, marks
-index `t` iff `num t` is a coprime-to-6 multiple `p*k` with `k ≥ 5`. -/
+index `t` iff `value t` is a coprime-to-6 multiple `p*k` with `k ≥ 5`. -/
 theorem mask_iff {p M t : ℕ} (hp6 : p % 6 = 1 ∨ p % 6 = 5)
     (hM : M < 2 ^ 32) (ht : t ≤ M) :
     (buildMaskK p M ((p * 5 - 1) / 3) ((p * 7 - 1) / 3) 32).testBit t ↔
-      ∃ k, 5 ≤ k ∧ (k % 6 = 1 ∨ k % 6 = 5) ∧ num t = p * k := by
+      ∃ k, 5 ≤ k ∧ (k % 6 = 1 ∨ k % 6 = 5) ∧ value t = p * k := by
   rw [testBit_buildMaskK (by lia) ht hM]
   constructor
   · rintro (⟨hle, c, hc⟩ | ⟨hle, c, hc⟩)
-    · exact ⟨5 + 6 * c, by grind [num]⟩
-    · exact ⟨7 + 6 * c, by grind [num]⟩
-  · rintro ⟨k, hk5, hk6, hnum⟩
+    · exact ⟨5 + 6 * c, by grind [value]⟩
+    · exact ⟨7 + 6 * c, by grind [value]⟩
+  · rintro ⟨k, hk5, hk6, hval⟩
     rcases hk6 with h1 | h5
     · right
       obtain ⟨j, rfl⟩ : ∃ j, k = 7 + 6 * j := ⟨(k - 7) / 6, by grind⟩
-      have ht2 : num t = num ((p * 7 - 1) / 3 + 2 * (p * j)) := by grind
+      have ht2 : value t = value ((p * 7 - 1) / 3 + 2 * (p * j)) := by grind
       exact ⟨by grind, j, by grind⟩
     · left
       obtain ⟨j, rfl⟩ : ∃ j, k = 5 + 6 * j := ⟨(k - 5) / 6, by grind⟩
-      have ht2 : num t = num ((p * 5 - 1) / 3 + 2 * (p * j)) := by grind
+      have ht2 : value t = value ((p * 5 - 1) / 3 + 2 * (p * j)) := by grind
       exact ⟨by grind, j, by grind⟩
 
 /-! ## Clearing: one pass, then the whole sieve
@@ -178,55 +178,55 @@ theorem testBit_markMaskK {bits p M t : ℕ} :
 /-! ### From one pass to the whole sieve
 
 `markMaskK` clears composite bits alone, so prime bits survive (completeness). For soundness, a
-composite `num t` has a smallest prime factor `q ≤ √(num t) ≤ sqrtN`; the loop reaches `q` while its
-own bit still stands, so its `markMaskK` fires and clears `t`. -/
+composite `value t` has a smallest prime factor `q ≤ √(value t) ≤ sqrtN`; the loop reaches `q`
+while its own bit still stands, so its `markMaskK` fires and clears `t`. -/
 
 theorem sieveLoopK_succ_eq_ite {M bits start fuel : ℕ} :
     sieveLoopK M bits start (fuel + 1)
       = if (sieveLoopK M bits start fuel).testBit (start + fuel)
-        then markMaskK (sieveLoopK M bits start fuel) (num (start + fuel)) M
+        then markMaskK (sieveLoopK M bits start fuel) (value (start + fuel)) M
         else sieveLoopK M bits start fuel := by
   grind [sieveLoopK_succ, Bool.rec_eq]
 
 /-- `markMaskK` (sieving by a wheel candidate `p ≥ 5`) preserves every bit whose number is prime:
-the mask marks composite `num t = p * k` with `p, k ≥ 5`. -/
+the mask marks composite `value t = p * k` with `p, k ≥ 5`. -/
 theorem markMaskK_preserves_prime {b p M t : ℕ} (hp6 : p % 6 = 1 ∨ p % 6 = 5) (hp5 : 5 ≤ p)
-    (hM : M < 2 ^ 32) (ht : t ≤ M) (hprime : (num t).Prime) :
+    (hM : M < 2 ^ 32) (ht : t ≤ M) (hprime : (value t).Prime) :
     (markMaskK b p M).testBit t = b.testBit t := by
   rw [testBit_markMaskK]
   suffices h : (buildMaskK p M ((p * 5 - 1) / 3) ((p * 7 - 1) / 3) 32).testBit t = false by simp [h]
   by_contra hc
   rw [Bool.not_eq_false, mask_iff hp6 hM ht] at hc
-  obtain ⟨k, hk5, _, hnum⟩ := hc
-  rcases hprime.eq_one_or_self_of_dvd p ⟨k, hnum⟩ with rfl | hself
+  obtain ⟨k, hk5, _, hval⟩ := hc
+  rcases hprime.eq_one_or_self_of_dvd p ⟨k, hval⟩ with rfl | hself
   · lia
   · have : 1 = k := Nat.eq_of_mul_eq_mul_left (n := p) (by lia) (by lia)
     lia
 
 /-- The loop preserves any prime bit: it stays at its initial value. -/
 theorem sieveLoopK_preserves {M bits start fuel t : ℕ} (hstart : start ≠ 0)
-    (hM : M < 2 ^ 32) (ht : t ≤ M) (hprime : (num t).Prime) :
+    (hM : M < 2 ^ 32) (ht : t ≤ M) (hprime : (value t).Prime) :
     (sieveLoopK M bits start fuel).testBit t = bits.testBit t := by
   induction fuel with
   | zero => rfl
   | succ f ih =>
     rw [sieveLoopK_succ_eq_ite]
     split
-    · rw [markMaskK_preserves_prime (by grind) (five_le_num (by grind)) hM ht hprime, ih]
+    · rw [markMaskK_preserves_prime (by grind) (five_le_value (by grind)) hM ht hprime, ih]
     · exact ih
 
 /-- Completeness: every prime bit in range survives the sieve. -/
 theorem sieve_prime_set {n sqrtN t : ℕ} (ht1 : t ≠ 0) (htM : t ≤ (n - 1) / 3)
-    (hM : (n - 1) / 3 < 2 ^ 32) (hprime : (num t).Prime) :
+    (hM : (n - 1) / 3 < 2 ^ 32) (hprime : (value t).Prime) :
     (sieveK n sqrtN).testBit t = true := by
   grind [sieveK, div_eq_div, sieveLoopK_preserves, testBit_initK]
 
-/-- If a prime index `j` in the processed range witnesses `num t = num j * m` (`m ≥ 5` coprime to
-6), the sieve clears bit `t`. The bit at `j` still stands when the loop reaches it, so its
+/-- If a prime index `j` in the processed range witnesses `value t = value j * m` (`m ≥ 5` coprime
+to 6), the sieve clears bit `t`. The bit at `j` still stands when the loop reaches it, so its
 `markMaskK` fires, and every later step preserves the clear. -/
 theorem sieveLoopK_clears {M start t j m : ℕ} (hstart : start ≠ 0)
-    (hM : M < 2 ^ 32) (ht : t ≤ M) (hjprime : (num j).Prime) (hjt : j ≤ t)
-    (hm5 : 5 ≤ m) (hm6 : m % 6 = 1 ∨ m % 6 = 5) (hnum : num t = num j * m) (hj_lo : start ≤ j)
+    (hM : M < 2 ^ 32) (ht : t ≤ M) (hjprime : (value j).Prime) (hjt : j ≤ t)
+    (hm5 : 5 ≤ m) (hm6 : m % 6 = 1 ∨ m % 6 = 5) (hval : value t = value j * m) (hj_lo : start ≤ j)
     (fuel : ℕ) (hfuel : j < start + fuel) :
     (sieveLoopK M (initK M) start fuel).testBit t = false := by
   induction fuel with
@@ -240,13 +240,13 @@ theorem sieveLoopK_clears {M start t j m : ℕ} (hstart : start ≠ 0)
         grind [testBit_initK]
       simp_rw [if_pos hset, testBit_markMaskK, Bool.and_eq_false_iff, Bool.not_eq_eq_eq_not,
         Bool.not_false]
-      rw [mask_iff (num_mod6 _) hM ht]
+      rw [mask_iff (value_mod6 _) hM ht]
       exact Or.inr ⟨m, by grind⟩
 
 /-! ### Soundness number theory -/
 
-theorem num_coprime6 {t : ℕ} : Nat.Coprime (num t) 6 := by
-  have h := num_mod6 (k := t)
+theorem value_coprime6 {t : ℕ} : Nat.Coprime (value t) 6 := by
+  have h := value_mod6 (k := t)
   rw [Nat.Coprime, Nat.gcd_comm, Nat.gcd_rec]
   rcases h with h | h <;> simp [h]
 
@@ -254,36 +254,36 @@ theorem coprime6_mod {m : ℕ} : m.Coprime 6 ↔ m % 6 = 1 ∨ m % 6 = 5 := by
   have : ∀ t < 6, t.gcd 6 = 1 ↔ t % 6 = 1 ∨ t % 6 = 5 := by decide
   simpa using this (m % 6) (Nat.mod_lt _ (by simp))
 
-/-- For `1 ≤ t ≤ (n-1)/3` with `num t ≤ n ≤ sqrtN*sqrtN`, bit `t` of the sieve is set iff `num t`
-is prime. -/
+/-- For `1 ≤ t ≤ (n-1)/3` with `value t ≤ n ≤ sqrtN*sqrtN`, bit `t` of the sieve is set iff
+`value t` is prime. -/
 public theorem sieveK_testBit_iff {n sqrtN t : ℕ} (ht : t ≠ 0) (htM : t ≤ (n - 1) / 3)
-    (hM : (n - 1) / 3 < 2 ^ 32) (hbound : num t ≤ n) (hsqrt : n ≤ sqrtN * sqrtN) :
-    (sieveK n sqrtN).testBit t ↔ (num t).Prime := by
+    (hM : (n - 1) / 3 < 2 ^ 32) (hbound : value t ≤ n) (hsqrt : n ≤ sqrtN * sqrtN) :
+    (sieveK n sqrtN).testBit t ↔ (value t).Prime := by
   set k := (n - 1) / 3
   refine ⟨fun hset => ?_, sieve_prime_set ht htM hM⟩
   by_contra hnp
-  have h5 : 5 ≤ num t := five_le_num (by lia)
-  have hnt2 : num t % 2 = 1 := by have := num_mod6 (k := t); omega
-  have hnt3 : num t % 3 ≠ 0 := by have := num_mod6 (k := t); omega
-  obtain ⟨q, hqprime, hqdvd, hqsq⟩ : ∃ q, q.Prime ∧ q ∣ num t ∧ q ^ 2 ≤ num t :=
-    ⟨(num t).minFac, minFac_prime (by omega), minFac_dvd _, minFac_sq_le_self (by omega) hnp⟩
+  have h5 : 5 ≤ value t := five_le_value (by lia)
+  have hnt2 : value t % 2 = 1 := by have := value_mod6 (k := t); omega
+  have hnt3 : value t % 3 ≠ 0 := by have := value_mod6 (k := t); omega
+  obtain ⟨q, hqprime, hqdvd, hqsq⟩ : ∃ q, q.Prime ∧ q ∣ value t ∧ q ^ 2 ≤ value t :=
+    ⟨(value t).minFac, minFac_prime (by omega), minFac_dvd _, minFac_sq_le_self (by omega) hnp⟩
   have hq2le : 2 ≤ q := hqprime.two_le
   have hq6 : q % 6 = 1 ∨ q % 6 = 5 :=
     hqprime.mod_six_eq_one_or_five (by rintro rfl; lia) (by rintro rfl; lia)
   obtain ⟨m, hm⟩ := hqdvd
   have hqm : q ≤ m := Nat.le_of_mul_le_mul_left (by rw [← pow_two]; omega) (by lia)
   have hm5 : 5 ≤ m := by lia
-  have hmdvd : m ∣ num t := ⟨q, by grind⟩
+  have hmdvd : m ∣ value t := ⟨q, by grind⟩
   have hm6 : m % 6 = 1 ∨ m % 6 = 5 := by
     rw [← coprime6_mod] at hq6 ⊢
-    exact num_coprime6.coprime_dvd_left hmdvd
-  have hqlt : q < num t := by nlinarith
+    exact value_coprime6.coprime_dvd_left hmdvd
+  have hqlt : q < value t := by nlinarith
   have hjqt : (q - 1) / 3 ≤ t := by
-    rw [← num_strictMono.le_iff_le]
+    rw [← value_strictMono.le_iff_le]
     grind
   have hqsqrt : q ≤ sqrtN := by nlinarith
   have hcleared : (sieveLoopK k (initK k) 1 ((sqrtN - 1) / 3)).testBit t = false := by
-    grind [sieveLoopK_clears, num_wheel hq6]
+    grind [sieveLoopK_clears, value_wheel hq6]
   simp only [sieveK, sub_eq, div_eq_div] at hset
   grind
 
@@ -310,24 +310,24 @@ public theorem sieveK_lt {n sqrtN : ℕ} : sieveK n sqrtN < 2 ^ ((n - 1) / 3 + 1
     lia
   lia
 
-/-- The number at an index bounds the index: `num t ≤ n` forces `t ≤ (n-1)/3`. -/
-theorem le_div_of_num_le {n t : ℕ} (h : num t ≤ n) : t ≤ (n - 1) / 3 := by grind [num]
+/-- The number at an index bounds the index: `value t ≤ n` forces `t ≤ (n-1)/3`. -/
+theorem le_div_of_value_le {n t : ℕ} (h : value t ≤ n) : t ≤ (n - 1) / 3 := by grind [value]
 
-/-- `lit` decides primality for the numbers up to `n`: bit `t` is set exactly when `num t`, the
+/-- `lit` decides primality for the numbers up to `n`: bit `t` is set exactly when `value t`, the
 number at that index, is prime. `IsSieve.prime` reads it in the kernel-checked form. -/
 @[expose] public def IsSieve (n lit : ℕ) : Prop :=
-  ∀ t ≠ 0, num t ≤ n → (lit.testBit t ↔ (num t).Prime)
+  ∀ t ≠ 0, value t ≤ n → (lit.testBit t ↔ (value t).Prime)
 
 /-- A cached sieve satisfies `IsSieve`. `run_sieve` applies this once, so a consumer works from
 `IsSieve` alone and never mentions `sieveK` or its square root. -/
 public theorem isSieve_of_sieveK_eq {n sqrtN lit : ℕ} (hEq : sieveK n sqrtN = lit)
     (h3 : n.ble 12884901888) (h5 : n.ble (sqrtN.mul sqrtN)) :
     IsSieve n lit := by
-  grind [IsSieve, sieveK_testBit_iff, le_div_of_num_le, Nat.ble_eq, Nat.div_eq_div]
+  grind [IsSieve, sieveK_testBit_iff, le_div_of_value_le, Nat.ble_eq, Nat.div_eq_div]
 
-/-- Read a prime off a sieve: a set bit at index `t` with `numK t = p` makes `p` prime. -/
+/-- Read a prime off a sieve: a set bit at index `t` with `valueK t = p` makes `p` prime. -/
 public theorem IsSieve.prime {n lit t p : ℕ} (h : IsSieve n lit) (h1 : Nat.ble 1 t)
-    (h4 : p.ble n) (hbit : testBitK lit t) (hp : (numK t).beq p) :
+    (h4 : p.ble n) (hbit : testBitK lit t) (hp : (valueK t).beq p) :
     Nat.Prime p := by
   grind [IsSieve, Nat.beq_eq, Nat.ble_eq]
 
