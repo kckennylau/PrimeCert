@@ -32,11 +32,14 @@ meta def mkClaim (rE : Expr) (len step : Nat) : Expr :=
   mkApp3 (mkConst ``Eq [Level.succ Level.zero]) (mkConst ``Bool) (mkFold rE len step)
     (mkConst ``Bool.true)
 
-/-- The statement that the fold from a literal index holds. -/
-meta def mkClaimAt (start len step : Nat) : Expr :=
+/-- The statement for a range starting at position `j` of the class of `r`. -/
+meta def mkClaimAt (r j len step : Nat) : Expr :=
+  let base := mkApp (mkConst ``wheelIndex) (mkRawNatLit r)
+  let start := mkApp2 (mkConst ``Nat.add) base
+    (mkApp2 (mkConst ``Nat.mul) (mkRawNatLit step) (mkRawNatLit j))
   mkApp3 (mkConst ``Eq [Level.succ Level.zero]) (mkConst ``Bool)
     (mkAppN (mkConst ``PrimeCert.forallB)
-      #[mkConst ``wieferichAt, mkRawNatLit start, mkRawNatLit len, mkRawNatLit step])
+      #[mkConst ``wieferichAt, start, mkRawNatLit len, mkRawNatLit step])
     (mkConst ``Bool.true)
 
 /-- The sieve index of `r`, mirroring the library's `wheelIndex`. -/
@@ -79,13 +82,12 @@ public meta def elabWieferichCheck : CommandElab := fun stx => do
       for e in exceptions do
         let r := e % m
         let k := (e - r) / m
-        let base := wheelIndex r
         if k > 0 then
           addThm (`PrimeCert.Wieferich ++ Name.mkSimple s!"class_{m}_{r}_below_{e}")
-            (mkClaimAt base k step) reflBoolTrue
+            (mkClaim (mkRawNatLit r) k step) reflBoolTrue
         if k + 1 < len then
           addThm (`PrimeCert.Wieferich ++ Name.mkSimple s!"class_{m}_{r}_above_{e}")
-            (mkClaimAt (base + (k + 1) * step) (len - k - 1) step) reflBoolTrue
+            (mkClaimAt r (k + 1) (len - k - 1) step) reflBoolTrue
       -- The list of classes, and the single statement quantified over it.
       let listName := `PrimeCert.Wieferich ++ Name.mkSimple s!"classes_{m}"
       -- `forceExpose` keeps the list readable from a module consumer, which `memB` needs.
