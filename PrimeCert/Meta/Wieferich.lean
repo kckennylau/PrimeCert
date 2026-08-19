@@ -6,7 +6,7 @@ Authors: Bhavik Mehta
 module
 
 import Lean.Elab.Command
-public meta import PrimeCert.Wieferich
+public meta import PrimeCert.WieferichBound
 public meta import PrimeCert.ForallB
 
 /-! # The `wieferich_check` command

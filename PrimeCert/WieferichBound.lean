@@ -38,6 +38,12 @@ public theorem index_add {r m k : ℕ} (hr : r % 6 = 1 ∨ r % 6 = 5) (hm : m % 
   · obtain ⟨i, rfl⟩ : ∃ i, r = 6 * i + 5 := ⟨r / 6, by omega⟩
     omega
 
+/-- The reverse direction of `List.forall_mem_cons`, as a single constant the emitted proofs
+apply. -/
+public theorem forall_mem_cons_of {α : Type*} {p : α → Prop} {a : α} {l : List α}
+    (ha : p a) (hl : ∀ x ∈ l, p x) : ∀ x ∈ a :: l, p x :=
+  List.forall_mem_cons.mpr ⟨ha, hl⟩
+
 /-- Membership in a list of naturals, as a `Bool` the kernel decides by walking the list. -/
 @[expose] public noncomputable def memB (n : ℕ) : List ℕ → Bool :=
   List.rec false (fun a _ ih ↦ (n.beq a).or' ih)

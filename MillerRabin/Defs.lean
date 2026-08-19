@@ -20,9 +20,10 @@ A Wieferich prime satisfies `2^(p-1) ≡ 1 [MOD p²]`; a Mirimanoff prime satisf
 `3^(p-1) ≡ 1 [MOD p²]`. As of 2025, the only known Wieferich primes are 1093 and 3511;
 the only known Mirimanoff primes are 11 and 1006003.
 
-The main result `wieferich_mirimanoff` shows that no prime below 6000 is simultaneously
-Wieferich and Mirimanoff. `miller_rabin_squarefree` applies it to prove that a number below
-36 million passing the Fermat test to bases 2 and 3 is squarefree.
+`wieferich_mirimanoff` shows that no prime below 6000 is simultaneously Wieferich and Mirimanoff,
+and `miller_rabin_squarefree` applies it to prove that a number below 36 million passing the
+Fermat test to bases 2 and 3 is squarefree. `wieferichAt` carries the condition to the cached
+sieve, one position at a time, for the range results in `WieferichBound`.
 -/
 
 @[expose] public def Wieferich (p : ℕ) : Prop :=
@@ -55,20 +56,9 @@ noncomputable def mirimanoffK (p : ℕ) : Bool :=
     mirimanoffK p = false ↔ ¬Mirimanoff p := by
   rw [← Bool.not_eq_true, mirimanoffK_eq_true_iff p hp]
 
-/-! # We check odd numbers up to 6000 in the classes 1%6 and 5%6 -/
-
 open PrimeCert PrimeCert.Sieve
 
-/-- Extend a statement holding on every member of `l` to one holding on every member of
-`a :: l`. The emitter threads the per-class proofs through this. -/
-public theorem forall_mem_cons_of {α : Type*} {p : α → Prop} {a : α} {l : List α}
-    (ha : p a) (hl : ∀ x ∈ l, p x) : ∀ x ∈ a :: l, p x := by
-  grind
-
-/-- The Wieferich check at one sieve index: true when the sieve bit at `t` is clear, or when the
-number at `t` fails `2 ^ (n - 1) ≡ 1 [MOD n ^ 2]`. -/
-@[expose] public noncomputable def wieferichAt (t : ℕ) : Bool :=
-  (testBitK sieveBits_1000000 t).not'.or' (wieferichK (valueK t)).not'
+/-! ## Primes below 6000, in the classes 1 and 5 modulo 6 -/
 
 theorem wieferich_mirimanoff₁ : ∀ n < 6000, n % 6 = 1 →
     (wieferichK n).not'.or' (mirimanoffK n).not' :=
@@ -124,3 +114,10 @@ public theorem miller_rabin_squarefree {n : ℕ} (hn₀ : n ≠ 0) (hn : n < 360
     simpa [a'] using congr(($ha₂ : ZMod (p ^ 2)))
   have := wieferich_mirimanoff hp h₁
   tauto
+
+/-! ## The condition at one position of the cached sieve -/
+
+/-- The Wieferich check at one sieve index: true when the sieve bit at `t` is clear, or when the
+number at `t` fails `2 ^ (n - 1) ≡ 1 [MOD n ^ 2]`. -/
+@[expose] public noncomputable def wieferichAt (t : ℕ) : Bool :=
+  (testBitK sieveBits_1000000 t).not'.or' (wieferichK (valueK t)).not'
