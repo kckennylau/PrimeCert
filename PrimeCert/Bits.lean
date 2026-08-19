@@ -14,6 +14,11 @@ natively to compute the literals it emits.
 
 namespace PrimeCert
 
+/-- Entry `i` of `qs`, the `w` bits at position `w * i` (`entryK_eq_div_mod` in
+`PrimeCert.Entry`). -/
+@[expose] public def entryK (qs w i : Nat) : Nat :=
+  (qs.shiftRight (w.mul i)).land ((Nat.shiftLeft (nat_lit 1) w).sub (nat_lit 1))
+
 /-- The number of set bits of `v`, for `v < 2 ^ 64` (`popc64K_eq_bitSum` in
 `PrimeCert.PopCount`). -/
 @[expose] public def popc64K (v : Nat) : Nat :=
@@ -28,11 +33,14 @@ namespace PrimeCert
 Executable copies of the definitions above, run by a command to compute the literals it emits. The
 kernel check on each emitted equation holds a copy to its kernel definition. -/
 
-/-- The number of set bits of `v`, for `v < 2 ^ 32`. -/
-public def popc32 (v : Nat) : Nat :=
-  let a := v - ((v >>> 1) &&& 0x55555555)
-  let b := (a &&& 0x33333333) + ((a >>> 2) &&& 0x33333333)
-  let c := (b + (b >>> 4)) &&& 0x0f0f0f0f
-  ((c * 0x01010101) >>> 24) &&& 0xff
+/-- Entry `i` of `qs`, the `w` bits at position `w * i`. -/
+public def entry (qs w i : Nat) : Nat := (qs >>> (w * i)) &&& ((1 <<< w) - 1)
+
+/-- The number of set bits of `v`, for `v < 2 ^ 64`. -/
+public def popc64 (v : Nat) : Nat :=
+  let a := v - ((v >>> 1) &&& 0x5555555555555555)
+  let b := (a &&& 0x3333333333333333) + ((a >>> 2) &&& 0x3333333333333333)
+  let c := (b + (b >>> 4)) &&& 0x0f0f0f0f0f0f0f0f
+  ((c * 0x0101010101010101) >>> 56) &&& 0xff
 
 end PrimeCert
