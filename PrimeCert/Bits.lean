@@ -20,10 +20,10 @@ and then 32 bits (`popc32K_eq_bitSum` in `PrimeCert.PopCount`). The constants ar
 masks `0101…`, `00110011…` and `00001111…`, and `0x01010101`, whose product with a byte-per-group
 value places the sum of the four bytes in the top byte. -/
 @[expose] public def popc32K (v : Nat) : Nat :=
-  let a := v.sub ((v.shiftRight (nat_lit 1)).land (nat_lit 1431655765))
-  let b := (a.land (nat_lit 858993459)).add ((a.shiftRight (nat_lit 2)).land (nat_lit 858993459))
-  let c := (b.add (b.shiftRight (nat_lit 4))).land (nat_lit 252645135)
-  ((c.mul (nat_lit 16843009)).shiftRight (nat_lit 24)).land (nat_lit 255)
+  let a := v.sub ((v.shiftRight (nat_lit 1)).land (nat_lit 0x55555555))
+  let b := (a.land (nat_lit 0x33333333)).add ((a.shiftRight (nat_lit 2)).land (nat_lit 0x33333333))
+  let c := (b.add (b.shiftRight (nat_lit 4))).land (nat_lit 0x0f0f0f0f)
+  ((c.mul (nat_lit 0x01010101)).shiftRight (nat_lit 24)).land (nat_lit 0xff)
 
 /-! ### Compiled twins
 
@@ -32,9 +32,9 @@ appear in no proof: a twin that disagreed with its kernel definition would produ
 fails its kernel check. -/
 
 public def popc32 (v : Nat) : Nat :=
-  let a := v - ((v >>> 1) &&& 1431655765)
-  let b := (a &&& 858993459) + ((a >>> 2) &&& 858993459)
-  let c := (b + (b >>> 4)) &&& 252645135
-  ((c * 16843009) >>> 24) &&& 255
+  let a := v - ((v >>> 1) &&& 0x55555555)
+  let b := (a &&& 0x33333333) + ((a >>> 2) &&& 0x33333333)
+  let c := (b + (b >>> 4)) &&& 0x0f0f0f0f
+  ((c * 0x01010101) >>> 24) &&& 0xff
 
 end PrimeCert
