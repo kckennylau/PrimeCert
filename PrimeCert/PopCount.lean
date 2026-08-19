@@ -15,10 +15,8 @@ import Mathlib.Tactic.Ring
 /-!
 # The set-bit count of a 32-bit word
 
-`popc32K` sums bit counts within groups of 2, 4 and 8 bits and then adds the four bytes through one
-multiplication. Each of the three stages acts byte by byte (`stageA_succ`, `stageB_succ`,
-`stageC_succ`), the byte case is a finite check (`byte_pipeline`), and the multiplication collects
-the four byte counts, giving `popc32K v = bitSum v 32` (`popc32K_eq_bitSum`).
+`popc32K v = bitSum v 32` (`popc32K_eq_bitSum`), proved by a finite check on one byte
+(`byte_pipeline`) carried across byte boundaries by the three stages.
 -/
 
 namespace PrimeCert
@@ -65,8 +63,7 @@ theorem land_255 (x : ℕ) : x &&& 255 = x % 256 := Nat.and_two_pow_sub_one_eq_m
 
 /-! ## The three stages
 
-`rep b k` is the `k`-byte constant repeating the byte `b`, so the masks of `popc32K` are `rep 85 4`,
-`rep 51 4` and `rep 15 4`, and its multiplier is `rep 1 4`. -/
+The masks of `popc32K` are `rep 85 4`, `rep 51 4` and `rep 15 4`, its multiplier `rep 1 4`. -/
 
 /-- The `k`-byte constant repeating the byte `b`. -/
 public def rep (b : ℕ) : ℕ → ℕ
@@ -261,7 +258,7 @@ theorem byte_merge {c0 c1 c2 c3 : ℕ} (h0 : c0 ≤ 8) (h1 : c1 ≤ 8) (h2 : c2 
 
 /-- `popc32K` counts the set bits of a 32-bit word. -/
 public theorem popc32K_eq_bitSum (v : ℕ) : popc32K v = bitSum v 32 := by
-  have hdef : popc32K v = ((stageC 4 v * 16843009) >>> 24) &&& 255 := by
+  have hdef : popc32K v = ((stageC 4 v * 0x01010101) >>> 24) &&& 0xff := by
     simp only [popc32K, stageC, stageB, stageA, rep_85, rep_51, rep_15, Nat.land_eq, Nat.sub_eq,
       Nat.add_eq, Nat.mul_eq, Nat.shiftRight_eq']
   have hbytes : stageC 4 v = stageC 1 (v % 256) + 256 * (stageC 1 (v / 256 % 256) +
