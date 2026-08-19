@@ -20,27 +20,27 @@ namespace PrimeCert.Wieferich
 open Lean Elab Command Meta PrimeCert
 
 /-- The proposition `b = true`, for `b : Bool`. -/
-meta def mkEqTrue (b : Expr) : Expr :=
+public meta def mkEqTrue (b : Expr) : Expr :=
   mkApp3 (mkConst ``Eq [Level.succ Level.zero]) (mkConst ``Bool) b (mkConst ``Bool.true)
 
-/-- The `Bool` `forallB wieferichAt start len step`, with `start` an arbitrary expression. -/
-meta def mkFold (startE : Expr) (len step : Nat) : Expr :=
+/-- The `Bool` `forallB f start len step`, with `start` an arbitrary expression. -/
+public meta def mkFold (f : Name) (startE : Expr) (len step : Nat) : Expr :=
   mkAppN (mkConst ``PrimeCert.forallB)
-    #[mkConst ``wieferichAt, startE, mkRawNatLit len, mkRawNatLit step]
+    #[mkConst f, startE, mkRawNatLit len, mkRawNatLit step]
 
 /-- The sieve index of `n`, as an expression, in the raw `Nat` operations the kernel reduces. -/
-meta def mkIndex (nE : Expr) : Expr :=
+public meta def mkIndex (nE : Expr) : Expr :=
   mkApp (mkConst ``PrimeCert.Sieve.indexK) nE
 
-/-- The statement that the fold over the class of `r` holds. -/
-meta def mkClaim (rE : Expr) (len step : Nat) : Expr :=
-  mkEqTrue (mkFold (mkIndex rE) len step)
+/-- The statement that the fold of `f` over the class of `r` holds. -/
+public meta def mkClaim (f : Name) (rE : Expr) (len step : Nat) : Expr :=
+  mkEqTrue (mkFold f (mkIndex rE) len step)
 
 /-- The statement for a range starting at position `j` of the class of `r`. -/
-meta def mkClaimAt (r j len step : Nat) : Expr :=
+meta def mkClaimAt (f : Name) (r j len step : Nat) : Expr :=
   let start := mkApp2 (mkConst ``Nat.add) (mkIndex (mkRawNatLit r))
     (mkApp2 (mkConst ``Nat.mul) (mkRawNatLit step) (mkRawNatLit j))
-  mkEqTrue (mkFold start len step)
+  mkEqTrue (mkFold f start len step)
 
 /-- The list literal `[r₁, …, rₖ] : List ℕ`. -/
 meta def mkNatList : List Nat → Expr
@@ -48,7 +48,7 @@ meta def mkNatList : List Nat → Expr
   | r :: rs => mkApp3 (mkConst ``List.cons [Level.zero]) Nat.mkType (mkRawNatLit r) (mkNatList rs)
 
 /-- Add `name : type := value` to the environment as a theorem. -/
-meta def addThm (name : Name) (type value : Expr) : MetaM Unit :=
+public meta def addThm (name : Name) (type value : Expr) : MetaM Unit :=
   addDecl <| Declaration.thmDecl { name, levelParams := [], type, value }
 
 /-- `wieferich_check m n` emits one theorem per residue class coprime to `m`, covering the
@@ -75,17 +75,17 @@ public meta def elabWieferichCheck : CommandElab := fun stx => do
       -- One theorem per class, each its own kernel check.
       for r in residues do
         let name := `PrimeCert.Wieferich ++ Name.mkSimple s!"class_{m}_{r}"
-        addThm name (mkClaim (mkRawNatLit r) len step) reflBoolTrue
+        addThm name (mkClaim ``wieferichAt (mkRawNatLit r) len step) reflBoolTrue
       -- Each class holding an exception splits into the runs either side of it.
       for e in exceptions do
         let r := e % m
         let k := (e - r) / m
         if k > 0 then
           addThm (`PrimeCert.Wieferich ++ Name.mkSimple s!"class_{m}_{r}_below_{e}")
-            (mkClaim (mkRawNatLit r) k step) reflBoolTrue
+            (mkClaim ``wieferichAt (mkRawNatLit r) k step) reflBoolTrue
         if k + 1 < len then
           addThm (`PrimeCert.Wieferich ++ Name.mkSimple s!"class_{m}_{r}_above_{e}")
-            (mkClaimAt r (k + 1) (len - k - 1) step) reflBoolTrue
+            (mkClaimAt ``wieferichAt r (k + 1) (len - k - 1) step) reflBoolTrue
       -- The list of classes, and the single statement quantified over it.
       let listName := `PrimeCert.Wieferich ++ Name.mkSimple s!"classes_{m}"
       -- `forceExpose` keeps the list readable from a module consumer, which `memB` needs.
@@ -94,7 +94,7 @@ public meta def elabWieferichCheck : CommandElab := fun stx => do
           type := mkApp (mkConst ``List [Level.zero]) Nat.mkType,
           value := mkNatList residues, hints := .regular 0, safety := .safe }
       let motive ← withLocalDeclD `r Nat.mkType fun r =>
-        mkLambdaFVars #[r] (mkClaim r len step)
+        mkLambdaFVars #[r] (mkClaim ``wieferichAt r len step)
       let mut proof := mkApp2 (mkConst ``List.forall_mem_nil [Level.zero]) Nat.mkType motive
       let mut tail : List Nat := []
       for r in residues.reverse do
@@ -108,7 +108,7 @@ public meta def elabWieferichCheck : CommandElab := fun stx => do
           #[Nat.mkType, mkApp (mkConst ``List [Level.zero]) Nat.mkType,
             mkAppN (mkConst ``List.instMembership [Level.zero]) #[Nat.mkType],
             mkConst listName, r]
-        mkForallFVars #[r] (← mkArrow mem (mkClaim r len step))
+        mkForallFVars #[r] (← mkArrow mem (mkClaim ``wieferichAt r len step))
       addThm allName allType proof
       logInfo s!"emitted {residues.length} class lemmas for modulus {m} below {n}"
   | _ => throwUnsupportedSyntax
