@@ -28,9 +28,9 @@ meta def mkFold (startE : Expr) (len step : Nat) : Expr :=
   mkAppN (mkConst ``PrimeCert.forallB)
     #[mkConst ``wieferichAt, startE, mkRawNatLit len, mkRawNatLit step]
 
-/-- The sieve index of `n`, as an expression. -/
+/-- The sieve index of `n`, as an expression, in the raw `Nat` operations the kernel reduces. -/
 meta def mkIndex (nE : Expr) : Expr :=
-  mkApp (mkConst ``PrimeCert.Sieve.index) nE
+  mkApp (mkConst ``PrimeCert.Sieve.indexK) nE
 
 /-- The statement that the fold over the class of `r` holds. -/
 meta def mkClaim (rE : Expr) (len step : Nat) : Expr :=
