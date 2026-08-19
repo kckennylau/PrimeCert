@@ -9,7 +9,6 @@ public import PrimeCert.Bits
 public import Mathlib.Data.Nat.Bitwise
 public import Mathlib.Algebra.BigOperators.Intervals
 
-import Mathlib.Algebra.Order.BigOperators.Group.Finset
 import Mathlib.Tactic.NormNum
 import Mathlib.Tactic.Ring
 
