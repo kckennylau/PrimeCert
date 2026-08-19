@@ -22,6 +22,14 @@ open Lean Elab Command Meta PrimeCert PrimeCert.Sieve
 @[expose] public noncomputable def bitOnlyAt (t : ℕ) : Bool :=
   (testBitK sieveBits_1000000 t).not'.or' true
 
+/-- `wieferichK` with the exponent written as a subtraction. -/
+@[expose] public noncomputable def wieferichKSub (p : ℕ) : Bool :=
+  powModK 2 (p.sub 1) (p.pow 2) |>.beq 1
+
+/-- `wieferichAt` with the exponent written as a subtraction. -/
+@[expose] public noncomputable def wieferichAtSub (t : ℕ) : Bool :=
+  (testBitK sieveBits_1000000 t).not'.or' (wieferichKSub (valueK t)).not'
+
 /-- `bench_check f m n` emits one fold of `f` per residue class coprime to `m`, covering the
 numbers of that class below `n`. -/
 syntax (name := benchCheck) "bench_check " ident num num : command
