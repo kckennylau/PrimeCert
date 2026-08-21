@@ -40,9 +40,7 @@ theorem land_div_two_pow (x m t : ℕ) : (x &&& m) / 2 ^ t = (x / 2 ^ t) &&& (m 
 /-- A bitwise and splits at any bit boundary. -/
 theorem land_split (x m t : ℕ) :
     x &&& m = ((x % 2 ^ t) &&& (m % 2 ^ t)) + 2 ^ t * ((x / 2 ^ t) &&& (m / 2 ^ t)) := by
-  conv_lhs => rw [← Nat.div_add_mod (x &&& m) (2 ^ t)]
-  rw [land_mod_two_pow, land_div_two_pow]
-  lia
+  grind [land_mod_two_pow, land_div_two_pow, Nat.div_add_mod]
 
 /-- The byte-wide split, the form the stages use. -/
 theorem land_split_byte (x m : ℕ) :
@@ -83,13 +81,9 @@ def stageC (k v : ℕ) : ℕ := (stageB k v + (stageB k v >>> 4)) &&& rep 15 k
 
 @[simp] theorem rep_one (b : ℕ) : rep b 1 = b := rfl
 
-theorem rep_mod_byte {b k : ℕ} (hb : b < 256) : rep b (k + 1) % 256 = b := by
-  rw [rep_succ]
-  lia
+theorem rep_mod_byte {b k : ℕ} (hb : b < 256) : rep b (k + 1) % 256 = b := by grind
 
-theorem rep_div_byte {b k : ℕ} (hb : b < 256) : rep b (k + 1) / 256 = rep b k := by
-  rw [rep_succ]
-  lia
+theorem rep_div_byte {b k : ℕ} (hb : b < 256) : rep b (k + 1) / 256 = rep b k := by grind
 
 @[simp] theorem stageB_zero (v : ℕ) : stageB 0 v = 0 := by simp [stageB]
 
@@ -106,10 +100,10 @@ theorem byte_pipeline : ∀ e < 256,
 /-- A repeated-byte mask splits at the byte boundary. -/
 theorem land_rep_succ {v m k : ℕ} (hm : m < 256) :
     v &&& rep m (k + 1) = ((v % 256) &&& m) + 256 * ((v / 256) &&& rep m k) := by
-  rw [land_split_byte, rep_mod_byte hm, rep_div_byte hm]
+  grind [land_split_byte, rep_mod_byte, rep_div_byte]
 
 theorem shiftRight_div_byte (v s : ℕ) : (v >>> s) / 256 = (v / 256) >>> s := by
-  simp only [Nat.shiftRight_eq_div_pow, Nat.div_div_eq_div_mul, Nat.mul_comm]
+  grind [Nat.shiftRight_eq_div_pow, Nat.div_div_eq_div_mul]
 
 /-- A mask that stops below `2 ^ (8 - s)` reads the same byte before and after the shift. -/
 theorem land_shiftRight_byte {v m s : ℕ} (hs : s ≤ 8) (hm : m < 2 ^ (8 - s)) :
@@ -216,8 +210,7 @@ public theorem bitSum_of_lt {y m n : ℕ} (hy : y < 2 ^ m) (hmn : m ≤ n) :
 
 /-- Each position contributes at most one. -/
 public theorem bitSum_le (v n : ℕ) : bitSum v n ≤ n := by
-  rw [bitSum_eq_card]
-  exact le_trans (Finset.card_filter_le _ _) (by simp)
+  grind [bitSum_eq_card, Finset.card_filter_le, Finset.card_range]
 
 /-- A count over any range is bounded by the width of the value. -/
 public theorem bitSum_le_of_lt {v m : ℕ} (hv : v < 2 ^ m) (n : ℕ) : bitSum v n ≤ m := by
