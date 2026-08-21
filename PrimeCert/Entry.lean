@@ -12,36 +12,17 @@ public import Mathlib.Data.Nat.Bitwise
 # Reading a packed entry
 
 A table is one natural number holding `w`-bit entries, lowest first, and `entryK qs w i` reads entry
-`i` (`entryK_eq_div_mod`). The loops build such a table one entry at a time, so the lemmas here
-cover writing entry `i`: a clear entry reads the value back (`entryK_lor_shiftLeft_of_zero`), the
-other entries keep their values (`entryK_lor_shiftLeft_ne`), and the result stops below position
-`w * (i + 1)` (`lor_shiftLeft_lt`). A table that stops below `w * i` has entry `i` clear
-(`entryK_eq_zero_of_lt`), which is how the loops meet the first of these.
+`i` (`entryK_eq_div_mod`). A loop writing one entry per step reads its entries back from
+`entryK_of_lor_chain`.
 -/
 
 namespace PrimeCert
-
-/-- A comparison of naturals scrutinised by `Bool.rec`, in `if` form. -/
-public theorem bool_rec_beq_eq {α : Sort*} (a b : ℕ) (x y : α) :
-    (a.beq b).rec x y = if a = b then y else x := by
-  cases h : a.beq b
-  · rw [if_neg (Nat.ne_of_beq_eq_false h)]
-  · rw [if_pos (Nat.eq_of_beq_eq_true h)]
-
-/-- An order test of naturals scrutinised by `Bool.rec`, in `if` form. -/
-public theorem bool_rec_ble_eq {α : Sort*} (a b : ℕ) (x y : α) :
-    (a.ble b).rec x y = if a ≤ b then y else x := by
-  cases h : a.ble b
-  · refine (if_neg fun hle => ?_).symm
-    rw [Nat.ble_eq_true_of_le hle] at h
-    exact Bool.noConfusion h
-  · rw [if_pos (Nat.le_of_ble_eq_true h)]
 
 /-- `entryK qs w i` is `w` bits of `qs` read at position `w * i`. -/
 public theorem entryK_eq_div_mod (qs w i : ℕ) : entryK qs w i = qs / 2 ^ (w * i) % 2 ^ w := by
   simp [entryK, Nat.shiftRight_eq_div_pow, Nat.one_shiftLeft, Nat.and_two_pow_sub_one_eq_mod]
 
-/-- A entry holds `w` bits. -/
+/-- An entry holds `w` bits. -/
 public theorem entryK_lt (qs w i : ℕ) : entryK qs w i < 2 ^ w := by
   rw [entryK_eq_div_mod]
   exact Nat.mod_lt _ (Nat.two_pow_pos w)
@@ -60,7 +41,7 @@ theorem mul_succ_le_mul {w a b : ℕ} (h : a < b) : w * a + w ≤ w * b := by
   rw [← Nat.mul_succ]
   exact Nat.mul_le_mul_left w h
 
-/-- Reading a entry distributes over a bitwise or. -/
+/-- Reading an entry distributes over a bitwise or. -/
 theorem entryK_lor (a b w j : ℕ) : entryK (a ||| b) w j = entryK a w j ||| entryK b w j := by
   refine Nat.eq_of_testBit_eq fun i => ?_
   simp [Bool.and_or_distrib_left]
