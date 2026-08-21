@@ -15,8 +15,8 @@ import Mathlib.Tactic.Ring
 /-!
 # The set-bit count of a 32-bit word
 
-`popc32K v = bitSum v 32` (`popc32K_eq_bitSum`), proved by a finite check on one byte
-(`byte_pipeline`) carried across byte boundaries by the three stages.
+`popc32K v = bitSum v 32` (`popc32K_eq_bitSum`), where `bitSum v n` counts the set bits of `v`
+below position `n`.
 -/
 
 namespace PrimeCert
