@@ -6,9 +6,9 @@ Authors: Bhavik Mehta
 module
 
 public import PrimeCert.Bits
-public import Mathlib.Data.Nat.Bitwise
 public import Mathlib.Algebra.BigOperators.Intervals
 
+import Mathlib.Data.Nat.Bitwise
 import Mathlib.Tactic.NormNum
 import Mathlib.Tactic.Ring
 
