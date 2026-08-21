@@ -1,0 +1,49 @@
+name: The Wieferich assembly cost
+
+on:
+  push:
+    branches:
+      - 'ci/wieferich-assembly'
+
+jobs:
+  assembly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install elan
+        run: |
+          curl -sSfL https://github.com/leanprover/elan/releases/download/v4.1.2/elan-x86_64-unknown-linux-gnu.tar.gz | tar xz
+          ./elan-init -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+
+      - name: Fetch the mathlib build cache
+        run: lake exe cache get
+
+      - name: Build everything the two files depend on
+        run: lake build MillerRabin.Meta MillerRabin.Bound
+
+      - name: Time every declaration, three rounds
+        run: |
+          set -u
+          export LEAN_PATH=$(lake env printenv LEAN_PATH)
+          for round in $(seq 1 3); do
+            for f in Classes Main; do
+              /usr/bin/time -v lean -Dtrace.profiler=true -Dtrace.profiler.threshold=1 \
+                "MillerRabin/$f.lean" > "out-$f-$round.txt" 2> "time-$f-$round.txt" \
+                || echo "RUN FAILED $f round $round"
+              total=$(grep -o '\[Kernel\] \[[0-9.]*\]' "out-$f-$round.txt" \
+                | grep -o '[0-9]\+\.[0-9]\+' | awk '{s+=$1} END {printf "%.3f", s}')
+              wall=$(grep 'Elapsed (wall clock)' "time-$f-$round.txt" | awk '{print $8}')
+              peak=$(grep 'Maximum resident set size' "time-$f-$round.txt" | awk '{print $6}')
+              echo "round $round | $f | kernel total ${total}s | wall $wall | peak ${peak} KB"
+              echo "--- ten slowest declarations in $f, round $round ---"
+              grep -o '\[Kernel\] \[[0-9.]*\] typechecking declarations \[[^]]*\]' "out-$f-$round.txt" \
+                | sed 's/\[Kernel\] \[\([0-9.]*\)\] typechecking declarations \[\(.*\)\]/\1 \2/' \
+                | sort -rn | head -10
+              echo "--- named declarations of interest in $f, round $round ---"
+              grep -o '\[Kernel\] \[[0-9.]*\] typechecking declarations \[[^]]*\]' "out-$f-$round.txt" \
+                | grep -E 'all_classes|classes_2310|cover|residue_cases|not_wieferich' || echo "none matched"
+            done
+          done

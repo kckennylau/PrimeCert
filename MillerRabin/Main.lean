@@ -14,6 +14,8 @@ meta import PrimeCert.Meta.QuickRfl
 
 /-! # No prime below 1000000 is Wieferich, apart from 1093 and 3511 -/
 
+set_option Elab.async false
+
 namespace MillerRabin
 
 open PrimeCert
