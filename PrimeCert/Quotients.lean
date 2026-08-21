@@ -40,10 +40,10 @@ public theorem sum_Icc_div_div {α : Type*} [AddCommMonoid α] {v k : ℕ} (hk :
     (f : ℕ → α) :
     ∑ k' ∈ Icc k (v / (v / k)), f (v / k') = (v / (v / k) - k + 1) • f (v / k) := by
   have hle : k ≤ v / (v / k) := le_div_div hk hkv
-  rw [Finset.sum_congr rfl fun k' hk' => ?_, Finset.sum_const, Nat.card_Icc]
+  rw [sum_congr rfl fun k' hk' => ?_, sum_const, Nat.card_Icc]
   · congr 1
     grind
-  · simp only [Finset.mem_Icc] at hk'
+  · simp only [mem_Icc] at hk'
     rw [div_eq_div_of_le hk hk'.1 hk'.2]
 
 /-- Extend a sum over `Ico a k` by the whole interval starting at `k`, which adds one term. -/
@@ -52,8 +52,8 @@ public theorem sum_Ico_extend {α : Type*} [AddCommMonoid α] {v a k : ℕ} (hk 
     (∑ k' ∈ Ico a k, f (v / k')) + (v / (v / k) - k + 1) • f (v / k)
       = ∑ k' ∈ Ico a (v / (v / k) + 1), f (v / k') := by
   have hle : k ≤ v / (v / k) := le_div_div hk hkv
-  rw [← sum_Icc_div_div hk hkv f, ← Finset.Ico_add_one_right_eq_Icc,
-    ← Finset.sum_union (Finset.Ico_disjoint_Ico_consecutive a k (v / (v / k) + 1)),
-    Finset.Ico_union_Ico_eq_Ico hak (by omega)]
+  rw [← sum_Icc_div_div hk hkv f, ← Ico_add_one_right_eq_Icc,
+    ← sum_union (Ico_disjoint_Ico_consecutive a k (v / (v / k) + 1)),
+    Ico_union_Ico_eq_Ico hak (by lia)]
 
 end PrimeCert
