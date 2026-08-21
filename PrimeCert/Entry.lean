@@ -43,7 +43,7 @@ theorem mul_succ_le_mul {w a b : ℕ} (h : a < b) : w * a + w ≤ w * b := by
 
 /-- Reading an entry distributes over a bitwise or. -/
 theorem entryK_lor (a b w j : ℕ) : entryK (a ||| b) w j = entryK a w j ||| entryK b w j := by
-  refine Nat.eq_of_testBit_eq fun i => ?_
+  refine Nat.eq_of_testBit_eq fun i ↦ ?_
   simp [Bool.and_or_distrib_left]
 
 /-- A value written at entry `i` reads back there. -/
@@ -55,14 +55,14 @@ theorem entryK_shiftLeft_self {val w i : ℕ} (hv : val < 2 ^ w) :
 /-- Every entry other than `i` of a value written at entry `i` is zero. -/
 theorem entryK_shiftLeft_ne {val w i j : ℕ} (hv : val < 2 ^ w) (hij : j ≠ i) :
     entryK (val <<< (w * i)) w j = 0 := by
-  refine Nat.eq_of_testBit_eq fun b => ?_
+  refine Nat.eq_of_testBit_eq fun b ↦ ?_
   rcases Nat.lt_or_ge b w with hb | hb
   · rcases Nat.lt_or_ge j i with h | h
     · have := mul_succ_le_mul (w := w) h
-      simp [hb, Nat.testBit_shiftLeft, Nat.not_le.2 (by omega : b + w * j < w * i)]
-    · have := mul_succ_le_mul (w := w) (by omega : i < j)
+      simp [hb, Nat.testBit_shiftLeft, Nat.not_le.2 (by lia : b + w * j < w * i)]
+    · have := mul_succ_le_mul (w := w) (by lia : i < j)
       have hzero : val.testBit (b + w * j - w * i) = false :=
-        Nat.testBit_lt_two_pow (lt_of_lt_of_le hv (Nat.pow_le_pow_right (by omega) (by omega)))
+        Nat.testBit_lt_two_pow (lt_of_lt_of_le hv (Nat.pow_le_pow_right (by lia) (by lia)))
       simp [hb, Nat.testBit_shiftLeft, hzero]
   · simp [Nat.not_lt.2 hb]
 
@@ -90,28 +90,28 @@ public theorem entryK_of_lor_chain {wb start : ℕ} {F t : ℕ → ℕ} (h0 : t 
       ∀ j, (j < start ∨ start + fuel ≤ j) → entryK (t fuel) wb j = 0 := by
   induction fuel with
   | zero =>
-    refine ⟨by omega, fun j _ => ?_⟩
+    refine ⟨by lia, fun j _ ↦ ?_⟩
     rw [h0]
     exact entryK_eq_zero_of_lt (Nat.two_pow_pos _)
   | succ f ih =>
-    obtain ⟨ihentry, ihzero⟩ := ih fun j hj1 hj2 => hval j hj1 (by omega)
-    have hlast : F (start + f) < 2 ^ wb := hval _ (by omega) (by omega)
+    obtain ⟨ihentry, ihzero⟩ := ih fun j hj1 hj2 ↦ hval j hj1 (by lia)
+    have hlast : F (start + f) < 2 ^ wb := hval _ (by lia) (by lia)
     rw [hsucc f]
-    refine ⟨fun j hj1 hj2 => ?_, fun j hj => ?_⟩
+    refine ⟨fun j hj1 hj2 ↦ ?_, fun j hj ↦ ?_⟩
     · rcases Nat.lt_or_ge j (start + f) with h | h
-      · rw [entryK_lor_shiftLeft_ne hlast (by omega)]
+      · rw [entryK_lor_shiftLeft_ne hlast (by lia)]
         exact ihentry j hj1 h
-      · have hjf : j = start + f := by omega
+      · have hjf : j = start + f := by lia
         subst hjf
-        exact entryK_lor_shiftLeft_of_zero (ihzero (start + f) (by omega)) hlast
-    · rw [entryK_lor_shiftLeft_ne hlast (by omega)]
-      exact ihzero j (by omega)
+        exact entryK_lor_shiftLeft_of_zero (ihzero (start + f) (by lia)) hlast
+    · rw [entryK_lor_shiftLeft_ne hlast (by lia)]
+      exact ihzero j (by lia)
 
 /-- The table with entry `i` written stops below position `w * (i + 1)`. -/
 public theorem lor_shiftLeft_lt {t val w i : ℕ} (ht : t < 2 ^ (w * i)) (hv : val < 2 ^ w) :
     (t ||| val <<< (w * i)) < 2 ^ (w * (i + 1)) := by
-  have hle : w * i ≤ w * (i + 1) := Nat.mul_le_mul_left w (by omega)
-  refine Nat.or_lt_two_pow (lt_of_lt_of_le ht (Nat.pow_le_pow_right (by omega) hle)) ?_
+  have hle : w * i ≤ w * (i + 1) := Nat.mul_le_mul_left w (by lia)
+  refine Nat.or_lt_two_pow (lt_of_lt_of_le ht (Nat.pow_le_pow_right (by lia) hle)) ?_
   rw [Nat.shiftLeft_eq, Nat.mul_add, Nat.mul_one, Nat.pow_add,
     Nat.mul_comm (2 ^ (w * i)) (2 ^ w)]
   exact (Nat.mul_lt_mul_right (Nat.two_pow_pos _)).2 hv
