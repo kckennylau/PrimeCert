@@ -6,7 +6,7 @@ Authors: Bhavik Mehta
 module
 
 public import PrimeCert.Bits
-public import Mathlib.Data.Nat.Bitwise
+import Mathlib.Data.Nat.Bitwise
 
 /-!
 # Reading a packed entry
