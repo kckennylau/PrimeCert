@@ -39,7 +39,7 @@ public theorem sum_Icc_div_div {α : Type*} [AddCommMonoid α] {v k : ℕ} (hk :
     (f : ℕ → α) :
     ∑ k' ∈ Icc k (v / (v / k)), f (v / k') = (v / (v / k) - k + 1) • f (v / k) := by
   have hle : k ≤ v / (v / k) := le_div_div hk hkv
-  rw [sum_congr rfl fun k' hk' => ?_, sum_const, Nat.card_Icc]
+  rw [sum_congr rfl fun k' hk' ↦ ?_, sum_const, Nat.card_Icc]
   · congr 1
     grind
   · simp only [mem_Icc] at hk'
