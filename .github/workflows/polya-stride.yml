@@ -32,11 +32,13 @@ jobs:
               PrimeCertTest/PolyaFull.lean > out.$round.txt 2>&1 || true
             end=$(date +%s%N)
             wall=$(( (end - start) / 1000000 ))
+            echo "SAMPLE round $round"
+            grep '\[Kernel\]' out.$round.txt | head -3 | cat -A | cut -c1-160
             kernel=$(grep '\[Kernel\]' out.$round.txt \
-              | grep -oE '[0-9]+(\.[0-9]+)?m?s$' \
-              | awk '{ if (index($0, "ms") > 0) { sub("ms", "", $0); s += $0 / 1000 } \
-                       else { sub("s", "", $0); s += $0 } } END { printf "%.3f", s }')
+              | sed -E 's/.*[^0-9.]([0-9]+(\.[0-9]+)?)(ms|s)\b.*/\1 \3/' \
+              | awk 'NF == 2 { if ($2 == "ms") s += $1 / 1000; else s += $1 }
+                     END { printf "%.3f", s }')
             echo "ROUND $round wall_ms=$wall kernel_s=$kernel"
             grep -c '\[Kernel\]' out.$round.txt | sed 's/^/kernel_lines=/'
-            grep -E 'L\(906150257\)|error' out.$round.txt | head -5
+            grep -E 'L\(906150257\)' out.$round.txt | head -2
           done
