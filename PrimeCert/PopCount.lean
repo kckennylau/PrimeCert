@@ -31,14 +31,14 @@ public def pop8 (e : ℕ) : ℕ :=
 /-! ## Splitting bitwise operations at a bit boundary -/
 
 theorem land_mod_two_pow (x m t : ℕ) : (x &&& m) % 2 ^ t = (x % 2 ^ t) &&& (m % 2 ^ t) := by
-  refine Nat.eq_of_testBit_eq fun i => ?_
+  refine Nat.eq_of_testBit_eq fun i ↦ ?_
   simp only [Nat.testBit_mod_two_pow, Nat.testBit_and]
   cases Nat.decLt i t with
   | isTrue h => simp [h]
   | isFalse h => simp [h]
 
 theorem land_div_two_pow (x m t : ℕ) : (x &&& m) / 2 ^ t = (x / 2 ^ t) &&& (m / 2 ^ t) := by
-  refine Nat.eq_of_testBit_eq fun i => ?_
+  refine Nat.eq_of_testBit_eq fun i ↦ ?_
   simp [Nat.testBit_div_two_pow, Nat.testBit_and]
 
 /-- A bitwise and splits at any bit boundary. -/
@@ -120,7 +120,7 @@ theorem land_shiftRight_byte {v m s : ℕ} (hs : s ≤ 8) (hm : m < 2 ^ (8 - s))
     ((v >>> s) % 256) &&& m = ((v % 256) >>> s) &&& m := by
   have h8 : (256 : ℕ) = 2 ^ 8 := rfl
   rw [h8]
-  refine Nat.eq_of_testBit_eq fun i => ?_
+  refine Nat.eq_of_testBit_eq fun i ↦ ?_
   rcases Nat.lt_or_ge i (8 - s) with h | h
   · have hi8 : i < 8 := by omega
     have hsi8 : s + i < 8 := by omega
@@ -194,11 +194,11 @@ theorem shiftRight_mod_two (x i : ℕ) : (x >>> i) % 2 = if x.testBit i then 1 e
 public theorem bitSum_eq_card (v n : ℕ) :
     bitSum v n = ({i ∈ Finset.range n | v.testBit i}).card := by
   rw [bitSum, Finset.card_filter]
-  exact Finset.sum_congr rfl fun i _ => shiftRight_mod_two v i
+  exact Finset.sum_congr rfl fun i _ ↦ shiftRight_mod_two v i
 
 /-- A count over `s` positions reads only the value modulo `2 ^ s`. -/
 public theorem bitSum_mod (v s : ℕ) : bitSum (v % 2 ^ s) s = bitSum v s := by
-  refine Finset.sum_congr rfl fun i hi => ?_
+  refine Finset.sum_congr rfl fun i hi ↦ ?_
   simp only [Finset.mem_range] at hi
   rw [shiftRight_mod_two, shiftRight_mod_two, Nat.testBit_mod_two_pow]
   simp [hi]
@@ -207,7 +207,7 @@ public theorem bitSum_mod (v s : ℕ) : bitSum (v % 2 ^ s) s = bitSum v s := by
 public theorem bitSum_add (v s t : ℕ) : bitSum v (s + t) = bitSum v s + bitSum (v / 2 ^ s) t := by
   rw [bitSum, bitSum, bitSum, Finset.sum_range_add]
   congr 1
-  refine Finset.sum_congr rfl fun i _ => ?_
+  refine Finset.sum_congr rfl fun i _ ↦ ?_
   simp only [Nat.shiftRight_eq_div_pow, Nat.pow_add, Nat.div_div_eq_div_mul]
 
 /-- Zero has no set bits. -/
@@ -266,7 +266,7 @@ public theorem popc32K_eq_bitSum (v : ℕ) : popc32K v = bitSum v 32 := by
     rw [stageC_succ 3 v, stageC_succ 2 (v / 256), stageC_succ 1 (v / 256 / 256),
       stageC_succ 0 (v / 256 / 256 / 256)]
     simp
-  have hb : ∀ y : ℕ, stageC 1 (y % 256) ≤ 8 := fun y =>
+  have hb : ∀ y : ℕ, stageC 1 (y % 256) ≤ 8 := fun y ↦
     (byte_pipeline _ (Nat.mod_lt _ (by omega))).2.2.2.1
   have hcount : bitSum v 32 = stageC 1 (v % 256) + stageC 1 (v / 256 % 256) +
       stageC 1 (v / 256 / 256 % 256) + stageC 1 (v / 256 / 256 / 256 % 256) := by
