@@ -24,10 +24,6 @@ namespace PrimeCert
 /-- Set bits of `v` below position `n`. -/
 @[expose] public def bitSum (v n : ℕ) : ℕ := ∑ i ∈ Finset.range n, (v >>> i) % 2
 
-/-- Set bits of a byte. -/
-public def pop8 (e : ℕ) : ℕ :=
-  e % 2 + e / 2 % 2 + e / 4 % 2 + e / 8 % 2 + e / 16 % 2 + e / 32 % 2 + e / 64 % 2 + e / 128 % 2
-
 /-! ## Splitting bitwise operations at a bit boundary -/
 
 theorem land_mod_two_pow (x m t : ℕ) : (x &&& m) % 2 ^ t = (x % 2 ^ t) &&& (m % 2 ^ t) := by
@@ -99,11 +95,10 @@ theorem rep_div_byte {b k : ℕ} (hb : b < 256) : rep b (k + 1) / 256 = rep b k 
 @[simp] theorem stageC_zero (v : ℕ) : stageC 0 v = 0 := by simp [stageC]
 
 set_option maxRecDepth 100000 in
-/-- The byte case, by finite check: the stages stay inside the byte and the last holds its set-bit
-count. -/
+/-- On a byte the stages stay inside the byte, and the last one holds its set-bit count. -/
 theorem byte_pipeline : ∀ e < 256,
     stageA 1 e < 256 ∧ stageB 1 e ≤ 68 ∧ stageB 1 e % 16 ≤ 4 ∧ stageC 1 e ≤ 8 ∧
-      stageC 1 e = pop8 e := by decide
+      stageC 1 e = bitSum e 8 := by decide
 
 /-! ## Peeling one byte -/
 
@@ -230,9 +225,6 @@ public theorem bitSum_le_of_lt {v m : ℕ} (hv : v < 2 ^ m) (n : ℕ) : bitSum v
     exact bitSum_le v m
   · exact le_trans (bitSum_le v n) h
 
-theorem bitSum_byte (e : ℕ) : bitSum e 8 = pop8 e := by
-  simp [bitSum, pop8, Finset.sum_range_succ, Nat.shiftRight_eq_div_pow]
-
 /-- Splitting a count at a byte boundary. -/
 theorem bitSum_byte_split (v n : ℕ) : bitSum v (8 + n) = bitSum v 8 + bitSum (v / 256) n :=
   bitSum_add v 8 n
@@ -278,7 +270,7 @@ public theorem popc32K_eq_bitSum (v : ℕ) : popc32K v = bitSum v 32 := by
     have byte : ∀ x : ℕ, bitSum x 8 = stageC 1 (x % 256) := by
       intro x
       have h : (2 : ℕ) ^ 8 = 256 := rfl
-      rw [← bitSum_mod x 8, h, bitSum_byte, (byte_pipeline _ (Nat.mod_lt _ (by lia))).2.2.2.2]
+      rw [← bitSum_mod x 8, h, (byte_pipeline _ (Nat.mod_lt _ (by lia))).2.2.2.2]
     rw [e0, e1, e2, byte v, byte (v / 256), byte (v / 256 / 256), byte (v / 256 / 256 / 256)]
     lia
   have hp24 : (2 : ℕ) ^ 24 = 16777216 := rfl
