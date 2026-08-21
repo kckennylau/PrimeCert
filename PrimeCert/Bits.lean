@@ -24,9 +24,10 @@ namespace PrimeCert
 
 /-! ### Compiled twins
 
-Executable copies of the definitions above, used to compute the literals a command emits. They
-appear in no proof: a copy disagreeing with its kernel definition fails the kernel check. -/
+Executable copies of the definitions above, run by a command to compute the literals it emits. The
+kernel check on each emitted equation holds a copy to its kernel definition. -/
 
+/-- The number of set bits of `v`, for `v < 2 ^ 32`. -/
 public def popc32 (v : Nat) : Nat :=
   let a := v - ((v >>> 1) &&& 0x55555555)
   let b := (a &&& 0x33333333) + ((a >>> 2) &&& 0x33333333)
