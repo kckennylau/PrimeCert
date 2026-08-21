@@ -13,4 +13,3 @@ public import PrimeCert.Pocklington3
 public import PrimeCert.PowMod
 public import PrimeCert.PredMod
 public import PrimeCert.SmallPrimes
-public import PrimeCert.Wieferich
