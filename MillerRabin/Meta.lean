@@ -6,7 +6,7 @@ Authors: Bhavik Mehta
 module
 
 import Lean.Elab.Command
-public meta import PrimeCert.WieferichBound
+public meta import MillerRabin.Bound
 public meta import PrimeCert.ForallB
 
 /-! # The `wieferich_check` command
@@ -15,7 +15,7 @@ Emits one fold per residue class of a wheel modulus, each covering the numbers o
 below the bound and reading the cached sieve bit to skip the composites.
 -/
 
-namespace PrimeCert.Wieferich
+namespace MillerRabin
 
 open Lean Elab Command Meta PrimeCert
 
@@ -74,20 +74,20 @@ public meta def elabWieferichCheck : CommandElab := fun stx ↦ do
       let residues := acc.reverse
       -- One theorem per class, each its own kernel check.
       for r in residues do
-        let name := `PrimeCert.Wieferich ++ Name.mkSimple s!"class_{m}_{r}"
+        let name := `MillerRabin ++ Name.mkSimple s!"class_{m}_{r}"
         addThm name (mkClaim (mkRawNatLit r) len step) reflBoolTrue
       -- Each class holding an exception splits into the runs either side of it.
       for e in exceptions do
         let r := e % m
         let k := (e - r) / m
         if k > 0 then
-          addThm (`PrimeCert.Wieferich ++ Name.mkSimple s!"class_{m}_{r}_below_{e}")
+          addThm (`MillerRabin ++ Name.mkSimple s!"class_{m}_{r}_below_{e}")
             (mkClaim (mkRawNatLit r) k step) reflBoolTrue
         if k + 1 < len then
-          addThm (`PrimeCert.Wieferich ++ Name.mkSimple s!"class_{m}_{r}_above_{e}")
+          addThm (`MillerRabin ++ Name.mkSimple s!"class_{m}_{r}_above_{e}")
             (mkClaimAt r (k + 1) (len - k - 1) step) reflBoolTrue
       -- The list of classes, and the single statement quantified over it.
-      let listName := `PrimeCert.Wieferich ++ Name.mkSimple s!"classes_{m}"
+      let listName := `MillerRabin ++ Name.mkSimple s!"classes_{m}"
       -- `forceExpose` keeps the list readable from a module consumer, which `memB` needs.
       addDecl (forceExpose := true) <| Declaration.defnDecl
         { name := listName, levelParams := [],
@@ -98,11 +98,11 @@ public meta def elabWieferichCheck : CommandElab := fun stx ↦ do
       let mut proof := mkApp2 (mkConst ``List.forall_mem_nil [Level.zero]) Nat.mkType motive
       let mut tail : List Nat := []
       for r in residues.reverse do
-        let name := `PrimeCert.Wieferich ++ Name.mkSimple s!"class_{m}_{r}"
+        let name := `MillerRabin ++ Name.mkSimple s!"class_{m}_{r}"
         proof := mkAppN (mkConst ``forall_mem_cons_of [Level.zero])
           #[Nat.mkType, motive, mkRawNatLit r, mkNatList tail, mkConst name, proof]
         tail := r :: tail
-      let allName := `PrimeCert.Wieferich ++ Name.mkSimple s!"all_classes_{m}"
+      let allName := `MillerRabin ++ Name.mkSimple s!"all_classes_{m}"
       let allType ← withLocalDeclD `r Nat.mkType fun r ↦ do
         let mem := mkAppN (mkConst ``Membership.mem [Level.zero, Level.zero])
           #[Nat.mkType, mkApp (mkConst ``List [Level.zero]) Nat.mkType,
@@ -113,4 +113,4 @@ public meta def elabWieferichCheck : CommandElab := fun stx ↦ do
       logInfo s!"emitted {residues.length} class lemmas for modulus {m} below {n}"
   | _ => throwUnsupportedSyntax
 
-end PrimeCert.Wieferich
+end MillerRabin

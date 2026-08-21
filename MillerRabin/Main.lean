@@ -6,15 +6,15 @@ Authors: Bhavik Mehta
 
 module
 
-public import PrimeCertTest.WieferichClasses
-public import PrimeCert.WieferichBound
+public import MillerRabin.Classes
+public import MillerRabin.Bound
 public import PrimeCert.ForallB
 public import PrimeCert.ForMathlib
 meta import PrimeCert.Meta.QuickRfl
 
 /-! # No prime below 1000000 is Wieferich, apart from 1093 and 3511 -/
 
-namespace PrimeCert.Wieferich
+namespace MillerRabin
 
 open PrimeCert
 
@@ -132,4 +132,4 @@ public theorem miller_rabin_squarefree {n : ℕ} (hn₀ : n ≠ 0) (hn : n < 100
     simpa [a'] using congr(($ha₂ : ZMod (p ^ 2)))
   exact not_wieferich hp h₁ he₁ he₂ (h₄ 2 h₂)
 
-end PrimeCert.Wieferich
+end MillerRabin

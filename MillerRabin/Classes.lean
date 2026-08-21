@@ -6,7 +6,7 @@ Authors: Bhavik Mehta
 
 module
 
-import PrimeCert.Meta.Wieferich
+import MillerRabin.Meta
 
 /-! Emits the class theorems for the mod-2310 wheel over the cached sieve range, and the single
 statement quantified over the list of classes. -/

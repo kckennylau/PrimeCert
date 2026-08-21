@@ -6,7 +6,7 @@ Authors: Bhavik Mehta
 
 module
 
-public import PrimeCert.Wieferich
+public import MillerRabin.Defs
 
 /-! # From the classwise folds to a statement about a prime
 
@@ -14,7 +14,7 @@ The sieve holds one bit per number coprime to 6; `index n` is the position of `n
 lemmas read that position back and track it along a residue class.
 -/
 
-namespace PrimeCert.Wieferich
+namespace MillerRabin
 
 open PrimeCert PrimeCert.Sieve
 
@@ -111,4 +111,4 @@ public theorem check_of_offset {r m s j k len : ℕ} (hr : r % 6 = 1 ∨ r % 6 =
     omega
   rwa [he] at this
 
-end PrimeCert.Wieferich
+end MillerRabin
