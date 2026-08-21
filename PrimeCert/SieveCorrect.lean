@@ -65,20 +65,25 @@ theorem value_startA {p : ℕ} (hp : p % 6 = 1 ∨ p % 6 = 5) : value (index (p 
 theorem value_startB {p : ℕ} (hp : p % 6 = 1 ∨ p % 6 = 5) : value (index (p * 7)) = 7 * p := by
   grind [value, index]
 
-@[grind .] theorem value_mod6 (k : ℕ) : value k % 6 = 1 ∨ value k % 6 = 5 := by grind [value]
+/-- Every number in the sieve is 1 or 5 modulo 6. -/
+@[grind .] public theorem value_mod6 (k : ℕ) : value k % 6 = 1 ∨ value k % 6 = 5 := by grind [value]
 
-@[grind .] theorem five_le_value {k : ℕ} (hk : k ≠ 0) : 5 ≤ value k := by grind [value]
+/-- Every number above index 0 is at least 5. -/
+@[grind .] public theorem five_le_value {k : ℕ} (hk : k ≠ 0) : 5 ≤ value k := by grind [value]
 
 /-- The index inverts `value` on the numbers coprime to 6. -/
-@[grind .] theorem value_index {q : ℕ} (hq : q % 6 = 1 ∨ q % 6 = 5) : value (index q) = q := by
+@[grind .] public theorem value_index {q : ℕ} (hq : q % 6 = 1 ∨ q % 6 = 5) :
+    value (index q) = q := by
   grind [value, index]
 
 /-- Every index is the index of its own number. -/
-@[simp, grind =] theorem index_value (k : ℕ) : index (value k) = k := by grind [value, index]
+@[simp, grind =] public theorem index_value (k : ℕ) : index (value k) = k := by grind [value, index]
 
-theorem value_strictMono : StrictMono value := by grind [value, StrictMono]
+/-- The number at an index rises with the index. -/
+public theorem value_strictMono : StrictMono value := by grind [value, StrictMono]
 
-@[grind inj] theorem value_inj : Function.Injective value := value_strictMono.injective
+/-- Distinct indices carry distinct numbers. -/
+@[grind inj] public theorem value_inj : Function.Injective value := value_strictMono.injective
 
 /-! ## What the mask marks
 
