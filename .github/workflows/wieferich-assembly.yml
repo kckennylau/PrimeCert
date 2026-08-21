@@ -22,7 +22,7 @@ jobs:
         run: lake exe cache get
 
       - name: Build everything the two files depend on
-        run: lake build MillerRabin.Meta MillerRabin.Bound
+        run: lake build MillerRabin.Meta MillerRabin.Bound MillerRabin.Classes
 
       - name: Time every declaration, three rounds
         run: |
@@ -38,12 +38,12 @@ jobs:
               wall=$(grep 'Elapsed (wall clock)' "time-$f-$round.txt" | awk '{print $8}')
               peak=$(grep 'Maximum resident set size' "time-$f-$round.txt" | awk '{print $6}')
               echo "round $round | $f | kernel total ${total}s | wall $wall | peak ${peak} KB"
-              echo "--- ten slowest declarations in $f, round $round ---"
-              grep -o '\[Kernel\] \[[0-9.]*\] typechecking declarations \[[^]]*\]' "out-$f-$round.txt" \
-                | sed 's/\[Kernel\] \[\([0-9.]*\)\] typechecking declarations \[\(.*\)\]/\1 \2/' \
-                | sort -rn | head -10
-              echo "--- named declarations of interest in $f, round $round ---"
-              grep -o '\[Kernel\] \[[0-9.]*\] typechecking declarations \[[^]]*\]' "out-$f-$round.txt" \
+              echo "--- twelve slowest kernel entries in $f, round $round ---"
+              grep -o '\[Kernel\] \[[0-9.]*\].*' "out-$f-$round.txt" \
+                | sed 's/\[Kernel\] \[\([0-9.]*\)\] */\1 /' | cut -c1-160 \
+                | sort -rn | head -12
+              echo "--- entries naming the assembly in $f, round $round ---"
+              grep -o '\[Kernel\] \[[0-9.]*\].*' "out-$f-$round.txt" | cut -c1-160 \
                 | grep -E 'all_classes|classes_2310|cover|residue_cases|not_wieferich' || echo "none matched"
             done
           done
