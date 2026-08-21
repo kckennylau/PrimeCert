@@ -237,18 +237,18 @@ theorem bitSum_byte (e : ℕ) : bitSum e 8 = pop8 e := by
 theorem bitSum_byte_split (v n : ℕ) : bitSum v (8 + n) = bitSum v 8 + bitSum (v / 256) n :=
   bitSum_add v 8 n
 
-/-- The four masks and the multiplier of `popc32K` repeat one byte across the word. -/
-theorem rep_85 : rep 85 4 = 1431655765 := rfl
+/-- The masks of `popc32K` as repeated bytes. -/
+theorem rep_85 : rep 85 4 = 0x55555555 := rfl
 
-theorem rep_51 : rep 51 4 = 858993459 := rfl
+theorem rep_51 : rep 51 4 = 0x33333333 := rfl
 
-theorem rep_15 : rep 15 4 = 252645135 := rfl
+theorem rep_15 : rep 15 4 = 0x0f0f0f0f := rfl
 
 /-- The multiplication by `rep 1 4` places the sum of the four byte counts in the top byte. -/
 theorem byte_merge {c0 c1 c2 c3 : ℕ} (h0 : c0 ≤ 8) (h1 : c1 ≤ 8) (h2 : c2 ≤ 8) (h3 : c3 ≤ 8) :
-    ((c0 + 256 * (c1 + 256 * (c2 + 256 * c3))) * 16843009) / 16777216 % 256
+    ((c0 + 256 * (c1 + 256 * (c2 + 256 * c3))) * 0x01010101) / 16777216 % 256
       = c0 + c1 + c2 + c3 := by
-  have hexp : (c0 + 256 * (c1 + 256 * (c2 + 256 * c3))) * 16843009
+  have hexp : (c0 + 256 * (c1 + 256 * (c2 + 256 * c3))) * 0x01010101
       = (c0 + 256 * (c0 + c1) + 65536 * (c0 + c1 + c2)) +
         16777216 * ((c0 + c1 + c2 + c3) +
           256 * ((c1 + c2 + c3) + 256 * ((c2 + c3) + 256 * c3))) := by ring
