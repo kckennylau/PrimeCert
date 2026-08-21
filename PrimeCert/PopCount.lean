@@ -62,19 +62,19 @@ theorem land_255 (x : ℕ) : x &&& 255 = x % 256 := Nat.and_two_pow_sub_one_eq_m
 The masks of `popc32K` are `rep 85 4`, `rep 51 4` and `rep 15 4`, its multiplier `rep 1 4`. -/
 
 /-- The `k`-byte constant repeating the byte `b`. -/
-public def rep (b : ℕ) : ℕ → ℕ
+def rep (b : ℕ) : ℕ → ℕ
   | 0 => 0
   | k + 1 => b + 256 * rep b k
 
 /-- Counts within 2-bit groups. -/
-public def stageA (k v : ℕ) : ℕ := v - ((v >>> 1) &&& rep 85 k)
+def stageA (k v : ℕ) : ℕ := v - ((v >>> 1) &&& rep 85 k)
 
 /-- Counts within 4-bit groups. -/
-public def stageB (k v : ℕ) : ℕ :=
+def stageB (k v : ℕ) : ℕ :=
   (stageA k v &&& rep 51 k) + ((stageA k v >>> 2) &&& rep 51 k)
 
 /-- Counts within 8-bit groups. -/
-public def stageC (k v : ℕ) : ℕ := (stageB k v + (stageB k v >>> 4)) &&& rep 15 k
+def stageC (k v : ℕ) : ℕ := (stageB k v + (stageB k v >>> 4)) &&& rep 15 k
 
 @[simp, grind =] theorem rep_succ (b k : ℕ) : rep b (k + 1) = b + 256 * rep b k := rfl
 
