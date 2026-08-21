@@ -22,14 +22,14 @@ jobs:
         run: lake exe cache get
 
       - name: Build everything the two files depend on
-        run: lake build MillerRabin.Meta MillerRabin.Bound MillerRabin.Classes
+        run: lake build MillerRabin.Meta MillerRabin.Bound MillerRabin.Classes MillerRabin.Main
 
       - name: Time every declaration, three rounds
         run: |
           set -u
           export LEAN_PATH=$(lake env printenv LEAN_PATH)
           for round in $(seq 1 3); do
-            for f in Classes Main; do
+            for f in Classes Main CoverBench; do
               /usr/bin/time -v lean -Dtrace.profiler=true -Dtrace.profiler.threshold=1 \
                 "MillerRabin/$f.lean" > "out-$f-$round.txt" 2> "time-$f-$round.txt" \
                 || echo "RUN FAILED $f round $round"
