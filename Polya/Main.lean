@@ -20,7 +20,7 @@ The literals: `x` is the target and `M` the cutoff, the bound of both the sieve 
 table; `rootx` is `⌊√x⌋` and `top` is `x / M`; `w`, `wc`, `e` and `wb` are the widths of a packed
 prime power, a count, a collected power and a table value, with `off` the offset added to each
 table value; `r` is the doubling rounds of a stride mask; `chunks` and `chunks2` count the
-32-position blocks of the counts table and of the sieve; `qs` holds the packed prime powers, `np`
+64-position blocks of the counts table and of the sieve; `qs` holds the packed prime powers, `np`
 of them prime and `cnt` in total; `fuel` is `(√M - 1) / 3`, the sieve positions walked for the
 powers with exponent at least two; and `st` and `hpSt` are the final states of the entry test and
 of that walk.
@@ -36,10 +36,10 @@ open PrimeCert.Sieve (IsSieve num)
 the width of a count and of a table entry, and the range the high table covers. -/
 public abbrev SetupOK (x M rootx top w r wc chunks off wb qs np cnt chunks2 e fuel st
     hpSt : ℕ) : Prop :=
-  st % 2 = 1 ∧ num (st / 2) ≤ M ∧ (M - 1) / 3 < 32 * chunks2 ∧
+  st % 2 = 1 ∧ num (st / 2) ≤ M ∧ (M - 1) / 3 < 64 * chunks2 ∧
     M < (3 * fuel + 4) * (3 * fuel + 4) ∧ 3 * fuel + 2 ≤ M ∧ M < 2 ^ w ∧ M < 2 ^ 64 ∧
     M < 2 ^ e ∧ e + e + e * fuel + e + 1 < 2 ^ 64 ∧ qs >>> (w * np) = hpSt >>> 128 ∧
-    np + hpSt % 2 ^ 64 = cnt ∧ M < 2 ^ r ∧ M + 1 < 2 ^ wc ∧ (M + 1) / 32 ≤ chunks ∧
+    np + hpSt % 2 ^ 64 = cnt ∧ M < 2 ^ r ∧ M + 1 < 2 ^ wc ∧ (M + 1) / 64 ≤ chunks ∧
     rootx ≤ M ∧ M ≤ off ∧ M + off < 2 ^ wb ∧ top ≤ rootx ∧ x / (top + 1) ≤ M
 
 /-- The decision procedure for `SetupOK`, applied to the emitted literals. -/

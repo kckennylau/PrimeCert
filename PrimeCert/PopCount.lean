@@ -289,4 +289,95 @@ public theorem popc32K_eq_bitSum (v : ℕ) : popc32K v = bitSum v 32 := by
   rw [hdef, hbytes, Nat.shiftRight_eq_div_pow, hp24, land_255, hcount]
   exact byte_merge (hb v) (hb (v / 256)) (hb (v / 256 / 256)) (hb (v / 256 / 256 / 256))
 
+/-! ## The same at eight bytes -/
+
+theorem rep_85_eight : rep 85 8 = 6148914691236517205 := rfl
+
+theorem rep_51_eight : rep 51 8 = 3689348814741910323 := rfl
+
+theorem rep_15_eight : rep 15 8 = 1085102592571150095 := rfl
+
+/-- The multiplication by `rep 1 8` places the sum of the eight byte counts in the top byte. -/
+theorem byte_merge_eight {c0 c1 c2 c3 c4 c5 c6 c7 : ℕ} (h0 : c0 ≤ 8) (h1 : c1 ≤ 8) (h2 : c2 ≤ 8)
+    (h3 : c3 ≤ 8) (h4 : c4 ≤ 8) (h5 : c5 ≤ 8) (h6 : c6 ≤ 8) (h7 : c7 ≤ 8) :
+    ((c0 + 256 * (c1 + 256 * (c2 + 256 * (c3 + 256 * (c4 + 256 * (c5 + 256 * (c6 + 256 * c7)))))))
+        * 72340172838076673) / 72057594037927936 % 256
+      = c0 + c1 + c2 + c3 + c4 + c5 + c6 + c7 := by
+  have hexp : (c0 + 256 * (c1 + 256 * (c2 + 256 * (c3 + 256 * (c4 + 256 * (c5 + 256 *
+        (c6 + 256 * c7))))))) * 72340172838076673
+      = (c0 + 256 * (c0 + c1) + 65536 * (c0 + c1 + c2) + 16777216 * (c0 + c1 + c2 + c3)
+          + 4294967296 * (c0 + c1 + c2 + c3 + c4)
+          + 1099511627776 * (c0 + c1 + c2 + c3 + c4 + c5)
+          + 281474976710656 * (c0 + c1 + c2 + c3 + c4 + c5 + c6))
+        + 72057594037927936 * ((c0 + c1 + c2 + c3 + c4 + c5 + c6 + c7)
+          + 256 * ((c1 + c2 + c3 + c4 + c5 + c6 + c7)
+          + 256 * ((c2 + c3 + c4 + c5 + c6 + c7)
+          + 256 * ((c3 + c4 + c5 + c6 + c7)
+          + 256 * ((c4 + c5 + c6 + c7)
+          + 256 * ((c5 + c6 + c7) + 256 * ((c6 + c7) + 256 * c7))))))) := by ring
+  have hlow : c0 + 256 * (c0 + c1) + 65536 * (c0 + c1 + c2) + 16777216 * (c0 + c1 + c2 + c3)
+      + 4294967296 * (c0 + c1 + c2 + c3 + c4)
+      + 1099511627776 * (c0 + c1 + c2 + c3 + c4 + c5)
+      + 281474976710656 * (c0 + c1 + c2 + c3 + c4 + c5 + c6) < 72057594037927936 := by omega
+  rw [hexp, Nat.add_mul_div_left _ _ (by omega : 0 < 72057594037927936), Nat.div_eq_of_lt hlow]
+  omega
+
+/-- `popc64K` counts the set bits of a 64-bit word. -/
+public theorem popc64K_eq_bitSum (v : ℕ) : popc64K v = bitSum v 64 := by
+  have hdef : popc64K v = ((stageC 8 v * 72340172838076673) >>> 56) &&& 255 := by
+    simp only [popc64K, stageC, stageB, stageA, rep_85_eight, rep_51_eight, rep_15_eight,
+      Nat.land_eq, Nat.sub_eq, Nat.add_eq, Nat.mul_eq, Nat.shiftRight_eq']
+  have hb : ∀ y : ℕ, stageC 1 (y % 256) ≤ 8 := fun y =>
+    (byte_pipeline _ (Nat.mod_lt _ (by omega))).2.2.2.1
+  have byte : ∀ x : ℕ, bitSum x 8 = stageC 1 (x % 256) := by
+    intro x
+    have h : (2 : ℕ) ^ 8 = 256 := rfl
+    rw [← bitSum_mod x 8, h, bitSum_byte, (byte_pipeline _ (Nat.mod_lt _ (by omega))).2.2.2.2]
+  have hbytes : stageC 8 v = stageC 1 (v % 256) + 256 * (stageC 1 (v / 256 % 256) +
+      256 * (stageC 1 (v / 256 / 256 % 256) + 256 * (stageC 1 (v / 256 / 256 / 256 % 256) +
+      256 * (stageC 1 (v / 256 / 256 / 256 / 256 % 256) +
+      256 * (stageC 1 (v / 256 / 256 / 256 / 256 / 256 % 256) +
+      256 * (stageC 1 (v / 256 / 256 / 256 / 256 / 256 / 256 % 256) +
+      256 * stageC 1 (v / 256 / 256 / 256 / 256 / 256 / 256 / 256 % 256))))))) := by
+    rw [stageC_succ 7 v, stageC_succ 6 (v / 256), stageC_succ 5 (v / 256 / 256),
+      stageC_succ 4 (v / 256 / 256 / 256), stageC_succ 3 (v / 256 / 256 / 256 / 256),
+      stageC_succ 2 (v / 256 / 256 / 256 / 256 / 256),
+      stageC_succ 1 (v / 256 / 256 / 256 / 256 / 256 / 256),
+      stageC_succ 0 (v / 256 / 256 / 256 / 256 / 256 / 256 / 256)]
+    simp
+  have hcount : bitSum v 64 = stageC 1 (v % 256) + stageC 1 (v / 256 % 256) +
+      stageC 1 (v / 256 / 256 % 256) + stageC 1 (v / 256 / 256 / 256 % 256) +
+      stageC 1 (v / 256 / 256 / 256 / 256 % 256) +
+      stageC 1 (v / 256 / 256 / 256 / 256 / 256 % 256) +
+      stageC 1 (v / 256 / 256 / 256 / 256 / 256 / 256 % 256) +
+      stageC 1 (v / 256 / 256 / 256 / 256 / 256 / 256 / 256 % 256) := by
+    have e0 : bitSum v 64 = bitSum v 8 + bitSum (v / 256) 56 := bitSum_byte_split v 56
+    have e1 : bitSum (v / 256) 56 = bitSum (v / 256) 8 + bitSum (v / 256 / 256) 48 :=
+      bitSum_byte_split _ 48
+    have e2 : bitSum (v / 256 / 256) 48
+        = bitSum (v / 256 / 256) 8 + bitSum (v / 256 / 256 / 256) 40 := bitSum_byte_split _ 40
+    have e3 : bitSum (v / 256 / 256 / 256) 40
+        = bitSum (v / 256 / 256 / 256) 8 + bitSum (v / 256 / 256 / 256 / 256) 32 :=
+      bitSum_byte_split _ 32
+    have e4 : bitSum (v / 256 / 256 / 256 / 256) 32
+        = bitSum (v / 256 / 256 / 256 / 256) 8 + bitSum (v / 256 / 256 / 256 / 256 / 256) 24 :=
+      bitSum_byte_split _ 24
+    have e5 : bitSum (v / 256 / 256 / 256 / 256 / 256) 24
+        = bitSum (v / 256 / 256 / 256 / 256 / 256) 8
+          + bitSum (v / 256 / 256 / 256 / 256 / 256 / 256) 16 := bitSum_byte_split _ 16
+    have e6 : bitSum (v / 256 / 256 / 256 / 256 / 256 / 256) 16
+        = bitSum (v / 256 / 256 / 256 / 256 / 256 / 256) 8
+          + bitSum (v / 256 / 256 / 256 / 256 / 256 / 256 / 256) 8 := bitSum_byte_split _ 8
+    rw [e0, e1, e2, e3, e4, e5, e6, byte v, byte (v / 256), byte (v / 256 / 256),
+      byte (v / 256 / 256 / 256), byte (v / 256 / 256 / 256 / 256),
+      byte (v / 256 / 256 / 256 / 256 / 256), byte (v / 256 / 256 / 256 / 256 / 256 / 256),
+      byte (v / 256 / 256 / 256 / 256 / 256 / 256 / 256)]
+    omega
+  have hp56 : (2 : ℕ) ^ 56 = 72057594037927936 := rfl
+  rw [hdef, hbytes, Nat.shiftRight_eq_div_pow, hp56, land_255, hcount]
+  exact byte_merge_eight (hb v) (hb (v / 256)) (hb (v / 256 / 256)) (hb (v / 256 / 256 / 256))
+    (hb (v / 256 / 256 / 256 / 256)) (hb (v / 256 / 256 / 256 / 256 / 256))
+    (hb (v / 256 / 256 / 256 / 256 / 256 / 256))
+    (hb (v / 256 / 256 / 256 / 256 / 256 / 256 / 256))
+
 end PrimeCert

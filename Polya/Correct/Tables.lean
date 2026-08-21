@@ -55,7 +55,7 @@ public theorem hiLoopK_spec_start {x lam ones wc off wb start : ℕ} (fuel : ℕ
 
 /-- The counts table reads back the count below any position it covers. -/
 public theorem onesBelowK_onesK {lam wc chunks p : ℕ} (hw : ∀ n, bitSum lam n < 2 ^ wc)
-    (hp : p / 32 ≤ chunks) : onesBelowK lam (onesK lam wc chunks) wc p = bitSum lam p :=
+    (hp : p / 64 ≤ chunks) : onesBelowK lam (onesK lam wc chunks) wc p = bitSum lam p :=
   onesBelowK_eq (entryK_onesK hw hp)
 
 /-- A low-table entry against `L`: the set bits below `n + 1` count the numbers up to `n` with an

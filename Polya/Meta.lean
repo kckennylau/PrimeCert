@@ -176,7 +176,7 @@ structure PowerData where
   st : Nat
   /-- Final state of the power collection: its count, its running power and its entries. -/
   hpSt : Nat
-  /-- Blocks of 32 sieve positions counted. -/
+  /-- Blocks of 64 sieve positions counted. -/
   chunks : Nat
   /-- Entries the collection may append at one sieve position. -/
   e : Nat
@@ -214,7 +214,7 @@ private def emitPowerChecks (n len : Nat) : MetaM PowerData := do
     (mkNatEqual (mkBit (mkRawNatLit 1) 0 primes.size) (mkRawNatLit st)) bitProof
   if st % 2 != 1 then throwError "run_lam: a packed prime failed its sieve test"
   -- the sieve holds as many set bits as there are packed primes, so none is missing
-  let chunks := (n - 1) / 3 / 32 + 1
+  let chunks := (n - 1) / 3 / 64 + 1
   let mkPopc := fun accE start len =>
     mkAppN (mkConst ``popcLoopK) #[litE, accE, mkRawNatLit start, mkRawNatLit len]
   let (cnt, cntProof) ← emitLoopChain "popc" chunks len 0 0 mkPopc
@@ -274,7 +274,7 @@ structure TableData where
   rounds : Nat
   /-- Entries in the packed prime powers. -/
   cnt : Nat
-  /-- Blocks of 32 positions the counts cover. -/
+  /-- Blocks of 64 positions the counts cover. -/
   chunks : Nat
   /-- What the checks against the sieve left. -/
   powers : PowerData
@@ -306,8 +306,8 @@ def buildTables (n len : Nat) : MetaM TableData := do
   let lhs := mkAppN (mkConst ``lamK)
     #[mkRawNatLit qs, mkRawNatLit w, mkRawNatLit n, mkRawNatLit rounds, mkRawNatLit fuel]
   addThm dataName (mkNatEqual lhs (mkConst litName)) proof
-  -- the running counts of set bits, one entry per 32 positions
-  let chunks := n / 32 + 1
+  -- the running counts of set bits, one entry per 64 positions
+  let chunks := n / 64 + 1
   let (ones, onesProof) ← emitOnesChain n chunks len w lit
   addDecl <| Declaration.defnDecl
     { name := `PrimeCert.Polya.onesLit, levelParams := [], type := mkConst ``Nat,

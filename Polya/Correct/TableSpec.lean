@@ -42,7 +42,7 @@ public theorem isPrimePowerTable_of_checks {qs w lit M np cnt chunks e fuel st h
     (hsieve : IsSieve M lit)
     (hbitData : bitCheckLoopK qs w lit 1 0 np = st) (hflag : st % 2 = 1)
     (hnumtop : 0 < np → num (st / 2) ≤ M)
-    (hpop : popcLoopK lit 0 0 chunks = np) (hchunks : (M - 1) / 3 < 32 * chunks)
+    (hpop : popcLoopK lit 0 0 chunks = np) (hchunks : (M - 1) / 3 < 64 * chunks)
     (hhp : hpLoopK lit M w e (powLoopK M w 3 1 (powLoopK M w 2 1 0 e) e) 1 fuel = hpSt)
     (hfuelup : M < (3 * fuel + 4) * (3 * fuel + 4)) (hfueldn : 3 * fuel + 2 ≤ M)
     (hMw : M < 2 ^ w) (hM64 : M < 2 ^ 64) (hMe : M < 2 ^ e)

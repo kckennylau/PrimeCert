@@ -1,0 +1,42 @@
+name: Time the run at the counterexample
+
+on:
+  push:
+    branches:
+      - 'ci/polya-stride*'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  polya:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+      - uses: leanprover/lean-action@v1
+        with:
+          build-args: "Polya"
+          test: false
+          lint: false
+      - name: Time the run
+        run: |
+          for round in 1 2; do
+            start=$(date +%s%N)
+            lake env lean -Dtrace.profiler=true -Dtrace.profiler.threshold=1 \
+              PrimeCertTest/PolyaFull.lean > out.$round.txt 2>&1 || true
+            end=$(date +%s%N)
+            wall=$(( (end - start) / 1000000 ))
+            kernel=$(grep '\[Kernel\]' out.$round.txt \
+              | grep -oE '[0-9]+(\.[0-9]+)?m?s$' \
+              | awk '{ if (index($0, "ms") > 0) { sub("ms", "", $0); s += $0 / 1000 } \
+                       else { sub("s", "", $0); s += $0 } } END { printf "%.3f", s }')
+            echo "ROUND $round wall_ms=$wall kernel_s=$kernel"
+            grep -c '\[Kernel\]' out.$round.txt | sed 's/^/kernel_lines=/'
+            grep -E 'L\(906150257\)|error' out.$round.txt | head -5
+          done
