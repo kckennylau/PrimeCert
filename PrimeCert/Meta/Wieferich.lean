@@ -23,10 +23,10 @@ open Lean Elab Command Meta PrimeCert
 meta def mkEqTrue (b : Expr) : Expr :=
   mkApp3 (mkConst ``Eq [Level.succ Level.zero]) (mkConst ``Bool) b (mkConst ``Bool.true)
 
-/-- The `Bool` `forallB wieferichAt start len step`, with `start` an arbitrary expression. -/
+/-- The `Bool` `forallB wieferichAtK start len step`, with `start` an arbitrary expression. -/
 meta def mkFold (startE : Expr) (len step : Nat) : Expr :=
   mkAppN (mkConst ``PrimeCert.forallB)
-    #[mkConst ``wieferichAt, startE, mkRawNatLit len, mkRawNatLit step]
+    #[mkConst ``wieferichAtK, startE, mkRawNatLit len, mkRawNatLit step]
 
 /-- The sieve index of `n`, as an expression, in the raw `Nat` operations the kernel reduces. -/
 meta def mkIndex (nE : Expr) : Expr :=

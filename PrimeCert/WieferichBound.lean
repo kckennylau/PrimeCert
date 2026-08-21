@@ -70,10 +70,10 @@ public theorem testBit_of_prime {p : ℕ} (hp : p.Prime) (hb : p < 1000000)
 
 /-- At a prime whose check holds, the Wieferich condition fails. -/
 public theorem not_wieferich_of_check {p : ℕ} (hp : p.Prime) (hb : p < 1000000)
-    (hc : p % 6 = 1 ∨ p % 6 = 5) (h : wieferichAt (index p)) : ¬ Wieferich p := by
+    (hc : p % 6 = 1 ∨ p % 6 = 5) (h : wieferichAtK (index p)) : ¬ Wieferich p := by
   have hbit := testBit_of_prime hp hb hc
   have hnum : valueK (index p) = p := by rw [valueK_eq_value]; exact value_index hc
-  rw [wieferichAt, hnum] at h
+  rw [wieferichAtK, hnum] at h
   simp only [hbit, Bool.not'_eq_not, Bool.or'_eq_or, Bool.not_true, Bool.false_or,
     Bool.not_eq_true'] at h
   exact (wieferichK_eq_false_iff p hp.ne_one).mp h
@@ -81,17 +81,17 @@ public theorem not_wieferich_of_check {p : ℕ} (hp : p.Prime) (hb : p < 1000000
 /-- Read the check at one member of a class off that class's fold. -/
 public theorem check_of_class {r m k len : ℕ} (hr : r % 6 = 1 ∨ r % 6 = 5) (hm : m % 6 = 0)
     (h1 : 1 ≤ r) (hk : k < len)
-    (hfold : forallB wieferichAt (index r) len (m / 3)) :
-    wieferichAt (index (r + m * k)) := by
+    (hfold : forallB wieferichAtK (index r) len (m / 3)) :
+    wieferichAtK (index (r + m * k)) := by
   rw [index_add hr hm h1]
-  have := (forallB_iff wieferichAt (index r) len (m / 3)).mp hfold k hk
+  have := (forallB_iff wieferichAtK (index r) len (m / 3)).mp hfold k hk
   simpa [Nat.mul_comm, Nat.add_comm] using this
 
 /-- A prime whose class's generated theorem covers its position fails the Wieferich condition. -/
 public theorem not_wieferich_of_fold {p m len : ℕ} (hp : p.Prime) (hb : p < 1000000)
     (hm : m % 6 = 0) (hc : p % 6 = 1 ∨ p % 6 = 5) (h1 : 1 ≤ p % m)
     (hr : p % m % 6 = 1 ∨ p % m % 6 = 5) (hk : p / m < len)
-    (hfold : forallB wieferichAt (index (p % m)) len (m / 3)) : ¬ Wieferich p := by
+    (hfold : forallB wieferichAtK (index (p % m)) len (m / 3)) : ¬ Wieferich p := by
   refine not_wieferich_of_check hp hb hc ?_
   have := check_of_class (k := p / m) hr hm h1 hk hfold
   rwa [Nat.mod_add_div] at this
@@ -100,11 +100,11 @@ public theorem not_wieferich_of_fold {p m len : ℕ} (hp : p.Prime) (hb : p < 10
 with the step given as `s`. -/
 public theorem check_of_offset {r m s j k len : ℕ} (hr : r % 6 = 1 ∨ r % 6 = 5) (hm : m % 6 = 0)
     (h1 : 1 ≤ r) (hs : m / 3 = s) (hj : j ≤ k) (hk : k - j < len)
-    (hfold : forallB wieferichAt (index r + s * j) len s) :
-    wieferichAt (index (r + m * k)) := by
+    (hfold : forallB wieferichAtK (index r + s * j) len s) :
+    wieferichAtK (index (r + m * k)) := by
   subst hs
   rw [index_add hr hm h1]
-  have := (forallB_iff wieferichAt (index r + m / 3 * j) len (m / 3)).mp hfold (k - j) hk
+  have := (forallB_iff wieferichAtK (index r + m / 3 * j) len (m / 3)).mp hfold (k - j) hk
   have hle : j * (m / 3) ≤ k * (m / 3) := Nat.mul_le_mul_right _ hj
   have he : (k - j) * (m / 3) + (index r + m / 3 * j) = index r + m / 3 * k := by
     rw [Nat.sub_mul, Nat.mul_comm (m / 3) j, Nat.mul_comm (m / 3) k]

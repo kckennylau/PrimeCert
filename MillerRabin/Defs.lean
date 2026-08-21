@@ -19,7 +19,7 @@ public import PrimeCert.PowMod
 A Wieferich prime satisfies `2^(p-1) ≡ 1 [MOD p²]`. As of 2025 the only known ones are 1093
 and 3511.
 
-This file holds the condition, its `Bool` form, and `wieferichAt`, which reads the condition at
+This file holds the condition, its `Bool` form, and `wieferichAtK`, which reads the condition at
 one position of the cached sieve. The range results built on it live in `WieferichBound`.
 -/
 
@@ -49,5 +49,5 @@ public theorem _root_.pow_eq_one_of_dvd {M : Type*} [Monoid M] {x : M} {m n : �
 
 /-- The Wieferich check at one sieve index: true when the sieve bit at `t` is clear, or when the
 number at `t` fails `2 ^ (n - 1) ≡ 1 [MOD n ^ 2]`. -/
-@[expose] public noncomputable def wieferichAt (t : ℕ) : Bool :=
+@[expose] public noncomputable def wieferichAtK (t : ℕ) : Bool :=
   (testBitK sieveBits_1000000 t).not'.or' (wieferichK (valueK t)).not'
