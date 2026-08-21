@@ -6,7 +6,6 @@ Authors: Bhavik Mehta
 module
 
 public import Mathlib.Algebra.BigOperators.Intervals
-public import Mathlib.Algebra.Ring.Int.Defs
 
 /-!
 # Sums over the intervals where `v / k` is constant
