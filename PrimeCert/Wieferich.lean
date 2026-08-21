@@ -31,15 +31,15 @@ def Mirimanoff (p : ℕ) : Prop :=
   3 ^ (p - 1) ≡ 1 [MOD p^2]
 
 noncomputable def wieferichK (p : ℕ) : Bool :=
-  powModK 2 p.pred (p.pow 2) |>.beq 1
+  powModK 2 (p.sub 1) (p.pow 2) |>.beq 1
 
 noncomputable def mirimanoffK (p : ℕ) : Bool :=
-  powModK 3 p.pred (p.pow 2) |>.beq 1
+  powModK 3 (p.sub 1) (p.pow 2) |>.beq 1
 
 @[simp] theorem wieferichK_eq_true_iff (p : ℕ) (hp : p ≠ 1) : wieferichK p ↔ Wieferich p := by
   have hp2 : p ^ 2 ≠ 1 := by rwa [ne_eq, sq, mul_eq_one, and_self]
   rw [Wieferich, wieferichK, Nat.beq_eq, Nat.ModEq, Nat.one_mod_eq_one.mpr hp2,
-    powModK_eq, Nat.pow_eq, Nat.pred_eq_sub_one]
+    powModK_eq, Nat.pow_eq, Nat.sub_eq]
 
 @[simp] theorem wieferichK_eq_false_iff (p : ℕ) (hp : p ≠ 1) :
     wieferichK p = false ↔ ¬Wieferich p := by
@@ -48,7 +48,7 @@ noncomputable def mirimanoffK (p : ℕ) : Bool :=
 @[simp] theorem mirimanoffK_eq_true_iff (p : ℕ) (hp : p ≠ 1) : mirimanoffK p ↔ Mirimanoff p := by
   have hp2 : p ^ 2 ≠ 1 := by rwa [ne_eq, sq, mul_eq_one, and_self]
   rw [Mirimanoff, mirimanoffK, Nat.beq_eq, Nat.ModEq, Nat.one_mod_eq_one.mpr hp2,
-    powModK_eq, Nat.pow_eq, Nat.pred_eq_sub_one]
+    powModK_eq, Nat.pow_eq, Nat.sub_eq]
 
 @[simp] theorem mirimanoffK_eq_false_iff (p : ℕ) (hp : p ≠ 1) :
     mirimanoffK p = false ↔ ¬Mirimanoff p := by
