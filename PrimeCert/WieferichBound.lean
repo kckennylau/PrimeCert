@@ -49,12 +49,12 @@ public theorem forall_mem_cons_of {α : Type*} {p : α → Prop} {a : α} {l : L
   List.rec false (fun a _ ih ↦ (n.beq a).or' ih)
 
 /-- One step of the walk: `n` matches the head, or lies in the tail. -/
-public theorem memB_cons (n a : ℕ) (l : List ℕ) :
+@[simp, grind =] public theorem memB_cons (n a : ℕ) (l : List ℕ) :
     memB n (a :: l) = (n.beq a).or' (memB n l) :=
   rfl
 
 /-- The `Bool` form decides membership. -/
-public theorem memB_iff {n : ℕ} {l : List ℕ} : memB n l ↔ n ∈ l := by
+@[grind =] public theorem memB_iff {n : ℕ} {l : List ℕ} : memB n l ↔ n ∈ l := by
   induction l with
   | nil => simp [memB]
   | cons a t ih => simp [memB_cons, Bool.or'_eq_or, ih]

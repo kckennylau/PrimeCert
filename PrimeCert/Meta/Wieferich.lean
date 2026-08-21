@@ -56,7 +56,7 @@ numbers of that class below `n`. -/
 syntax (name := wieferichCheck) "wieferich_check " num num : command
 
 @[command_elab wieferichCheck]
-public meta def elabWieferichCheck : CommandElab := fun stx => do
+public meta def elabWieferichCheck : CommandElab := fun stx ↦ do
   match stx with
   | `(wieferich_check $mStx:num $nStx:num) => do
     let m := mStx.getNat
@@ -69,7 +69,7 @@ public meta def elabWieferichCheck : CommandElab := fun stx => do
       let mut acc : List Nat := []
       for r in [1:m] do
         if Nat.gcd r m == 1 && (r % 6 == 1 || r % 6 == 5)
-            && exceptions.all (fun e => e % m != r) then
+            && exceptions.all (fun e ↦ e % m != r) then
           acc := r :: acc
       let residues := acc.reverse
       -- One theorem per class, each its own kernel check.
@@ -93,7 +93,7 @@ public meta def elabWieferichCheck : CommandElab := fun stx => do
         { name := listName, levelParams := [],
           type := mkApp (mkConst ``List [Level.zero]) Nat.mkType,
           value := mkNatList residues, hints := .regular 0, safety := .safe }
-      let motive ← withLocalDeclD `r Nat.mkType fun r =>
+      let motive ← withLocalDeclD `r Nat.mkType fun r ↦
         mkLambdaFVars #[r] (mkClaim r len step)
       let mut proof := mkApp2 (mkConst ``List.forall_mem_nil [Level.zero]) Nat.mkType motive
       let mut tail : List Nat := []
@@ -103,7 +103,7 @@ public meta def elabWieferichCheck : CommandElab := fun stx => do
           #[Nat.mkType, motive, mkRawNatLit r, mkNatList tail, mkConst name, proof]
         tail := r :: tail
       let allName := `PrimeCert.Wieferich ++ Name.mkSimple s!"all_classes_{m}"
-      let allType ← withLocalDeclD `r Nat.mkType fun r => do
+      let allType ← withLocalDeclD `r Nat.mkType fun r ↦ do
         let mem := mkAppN (mkConst ``Membership.mem [Level.zero, Level.zero])
           #[Nat.mkType, mkApp (mkConst ``List [Level.zero]) Nat.mkType,
             mkAppN (mkConst ``List.instMembership [Level.zero]) #[Nat.mkType],
