@@ -3,7 +3,7 @@ name: Time the run at the counterexample
 on:
   push:
     branches:
-      - 'ci/polya-stride*'
+      - 'ci/polya-stride-ab'
   workflow_dispatch:
 
 concurrency:
@@ -19,25 +19,29 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: leanprover/lean-action@v1
         with:
           build-args: "Polya"
           test: false
           lint: false
-      - name: Time the run
+      - name: Alternate the two strides in one job
         run: |
-          for round in 1 2; do
-            start=$(date +%s%N)
-            lake env lean -Dtrace.profiler=true -Dtrace.profiler.threshold=1 \
-              PrimeCertTest/PolyaFull.lean > out.$round.txt 2>&1 || true
-            end=$(date +%s%N)
-            wall=$(( (end - start) / 1000000 ))
-            echo "SAMPLE round $round"
-            grep '\[Kernel\]' out.$round.txt | head -3 | cat -A | cut -c1-160
-            kernel=$(grep '\[Kernel\]' out.$round.txt \
-              | sed -E 's/.*\[Kernel\] \[([0-9]+\.[0-9]+)\].*/\1/' \
-              | awk '/^[0-9]/ { s += $1 } END { printf "%.3f", s }')
-            echo "ROUND $round wall_ms=$wall kernel_s=$kernel"
-            grep -c '\[Kernel\]' out.$round.txt | sed 's/^/kernel_lines=/'
-            grep -E 'L\(906150257\)' out.$round.txt | head -2
+          for round in 1 2 3; do
+            for arm in 32 64; do
+              git checkout origin/ci/polya-stride$arm -- PrimeCert Polya
+              lake build Polya > build.log 2>&1 || { tail -5 build.log; exit 1; }
+              start=$(date +%s%N)
+              lake env lean -Dtrace.profiler=true -Dtrace.profiler.threshold=1 \
+                PrimeCertTest/PolyaFull.lean > out.txt 2>&1 || true
+              end=$(date +%s%N)
+              wall=$(( (end - start) / 1000000 ))
+              kernel=$(grep '\[Kernel\]' out.txt \
+                | sed -E 's/.*\[Kernel\] \[([0-9]+\.[0-9]+)\].*/\1/' \
+                | awk '/^[0-9]/ { s += $1 } END { printf "%.3f", s }')
+              lines=$(grep -c '\[Kernel\]' out.txt || true)
+              value=$(grep -o 'L(906150257) = [-0-9]*' out.txt | head -1)
+              echo "ARM $arm ROUND $round wall_ms=$wall kernel_s=$kernel lines=$lines $value"
+            done
           done
