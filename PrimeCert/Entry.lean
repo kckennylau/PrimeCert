@@ -79,7 +79,7 @@ public theorem entryK_lor_shiftLeft_of_zero {t val w i : ℕ} (ht : entryK t w i
 /-- Shifting a table down by whole entries renumbers them. -/
 public theorem entryK_shiftRight (qs w n j : ℕ) :
     entryK (qs / 2 ^ (w * n)) w j = entryK qs w (n + j) := by
-  rw [entryK_eq_div_mod, entryK_eq_div_mod, Nat.div_div_eq_div_mul, ← Nat.pow_add, Nat.mul_add]
+  grind [entryK_eq_div_mod, Nat.div_div_eq_div_mul, Nat.pow_add, Nat.mul_add]
 
 /-- A table built one entry per step from an empty table at `start`: the entries it covers read back
 the values written, and the entries outside stay clear. -/
