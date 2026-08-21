@@ -80,7 +80,7 @@ public def stageB (k v : ℕ) : ℕ :=
 /-- Counts within 8-bit groups. -/
 public def stageC (k v : ℕ) : ℕ := (stageB k v + (stageB k v >>> 4)) &&& rep 15 k
 
-theorem rep_succ (b k : ℕ) : rep b (k + 1) = b + 256 * rep b k := rfl
+@[simp, grind =] theorem rep_succ (b k : ℕ) : rep b (k + 1) = b + 256 * rep b k := rfl
 
 @[simp] theorem rep_zero (b : ℕ) : rep b 0 = 0 := rfl
 
