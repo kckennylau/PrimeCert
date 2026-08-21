@@ -14,28 +14,20 @@ public import PrimeCert.SieveBase
 meta import PrimeCert.Meta.QuickRfl
 public import PrimeCert.PowMod
 
-/-! # Wieferich and Mirimanoff primes
+/-! # Wieferich primes
 
-A Wieferich prime satisfies `2^(p-1) ≡ 1 [MOD p²]`; a Mirimanoff prime satisfies
-`3^(p-1) ≡ 1 [MOD p²]`. As of 2025, the only known Wieferich primes are 1093 and 3511;
-the only known Mirimanoff primes are 11 and 1006003.
+A Wieferich prime satisfies `2^(p-1) ≡ 1 [MOD p²]`. As of 2025 the only known ones are 1093
+and 3511.
 
-This file holds the two conditions, their `Bool` forms, and `wieferichAt`, which reads the
-condition at one position of the cached sieve. The range results built on it live in
-`WieferichBound`.
+This file holds the condition, its `Bool` form, and `wieferichAt`, which reads the condition at
+one position of the cached sieve. The range results built on it live in `WieferichBound`.
 -/
 
 @[expose] public def Wieferich (p : ℕ) : Prop :=
   2 ^ (p - 1) ≡ 1 [MOD p^2]
 
-def Mirimanoff (p : ℕ) : Prop :=
-  3 ^ (p - 1) ≡ 1 [MOD p^2]
-
 @[expose] public noncomputable def wieferichK (p : ℕ) : Bool :=
   powModK 2 (p.sub 1) (p.pow 2) |>.beq 1
-
-noncomputable def mirimanoffK (p : ℕ) : Bool :=
-  powModK 3 (p.sub 1) (p.pow 2) |>.beq 1
 
 @[simp] theorem wieferichK_eq_true_iff (p : ℕ) (hp : p ≠ 1) : wieferichK p ↔ Wieferich p := by
   have hp2 : p ^ 2 ≠ 1 := by rwa [ne_eq, sq, mul_eq_one, and_self]
@@ -45,15 +37,6 @@ noncomputable def mirimanoffK (p : ℕ) : Bool :=
 @[simp] public theorem wieferichK_eq_false_iff (p : ℕ) (hp : p ≠ 1) :
     wieferichK p = false ↔ ¬Wieferich p := by
   rw [← Bool.not_eq_true, wieferichK_eq_true_iff p hp]
-
-@[simp] theorem mirimanoffK_eq_true_iff (p : ℕ) (hp : p ≠ 1) : mirimanoffK p ↔ Mirimanoff p := by
-  have hp2 : p ^ 2 ≠ 1 := by rwa [ne_eq, sq, mul_eq_one, and_self]
-  rw [Mirimanoff, mirimanoffK, Nat.beq_eq, Nat.ModEq, Nat.one_mod_eq_one.mpr hp2,
-    powModK_eq, Nat.pow_eq, Nat.sub_eq]
-
-@[simp] theorem mirimanoffK_eq_false_iff (p : ℕ) (hp : p ≠ 1) :
-    mirimanoffK p = false ↔ ¬Mirimanoff p := by
-  rw [← Bool.not_eq_true, mirimanoffK_eq_true_iff p hp]
 
 open PrimeCert PrimeCert.Sieve
 

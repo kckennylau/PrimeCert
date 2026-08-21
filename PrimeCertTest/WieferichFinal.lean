@@ -96,17 +96,11 @@ public theorem not_wieferich {p : ℕ} (hp : p.Prime) (hb : p < 1000000)
         class_2310_1201_above_3511
       rwa [← hm, Nat.mod_add_div] at this
 
-/-- A prime below 1000000 fails at least one of the two conditions, apart from 1093 and 3511. -/
-public theorem wieferich_mirimanoff {p : ℕ} (hp : p.Prime) (p_bound : p < 1000000)
-    (h1 : p ≠ 1093) (h2 : p ≠ 3511) :
-    ¬(2 ^ (p - 1) ≡ 1 [MOD p^2]) ∨ ¬(3 ^ (p - 1) ≡ 1 [MOD p^2]) :=
-  Or.inl (not_wieferich hp p_bound h1 h2)
-
-/-- A number below `10 ^ 12` passing the Fermat test to bases 2 and 3 is squarefree, provided
-neither `1093 ^ 2` nor `3511 ^ 2` divides it. -/
+/-- A number below `10 ^ 12` passing the Fermat test to base 2 is squarefree, provided neither
+`1093 ^ 2` nor `3511 ^ 2` divides it. -/
 public theorem miller_rabin_squarefree {n : ℕ} (hn₀ : n ≠ 0) (hn : n < 1000000000000)
     (hd₁ : ¬ (1093 ^ 2 ∣ n)) (hd₂ : ¬ (3511 ^ 2 ∣ n))
-    (h₂ : 2 ^ (n - 1) ≡ 1 [MOD n]) (h₃ : 3 ^ (n - 1) ≡ 1 [MOD n]) : Squarefree n := by
+    (h₂ : 2 ^ (n - 1) ≡ 1 [MOD n]) : Squarefree n := by
   rw [Nat.squarefree_iff_prime_squarefree]
   intro p hp hpn
   rw [← sq] at hpn
@@ -136,7 +130,6 @@ public theorem miller_rabin_squarefree {n : ℕ} (hn₀ : n ≠ 0) (hn : n < 100
     rw [Nat.gcd_mul_right_right_of_gcd_eq_one h₅] at ha₂
     replace ha₂ := pow_eq_one_of_dvd ha₂ (Nat.gcd_dvd_right _ _)
     simpa [a'] using congr(($ha₂ : ZMod (p ^ 2)))
-  have := wieferich_mirimanoff hp h₁ he₁ he₂
-  tauto
+  exact not_wieferich hp h₁ he₁ he₂ (h₄ 2 h₂)
 
 end PrimeCert.Wieferich
