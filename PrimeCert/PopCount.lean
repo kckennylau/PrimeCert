@@ -24,7 +24,7 @@ the byte counts at any width (`stageC_mul_rep`), giving `popc64K v = bitSum v 64
 
 namespace PrimeCert
 
-/-- Set bits of `v` below position `n`. -/
+/-- The number of bits of `v` that are set below position `n`. -/
 @[expose] public def bitSum (v n : ℕ) : ℕ := ∑ i ∈ Finset.range n, (v >>> i) % 2
 
 /-! ## Splitting bitwise operations at a bit boundary -/
@@ -307,34 +307,16 @@ theorem stageC_byte (v : ℕ) : stageC 1 (v % 256) = bitSum v 8 := by
   rw [← bitSum_mod v 8, (by norm_num : (2 : ℕ) ^ 8 = 256),
     (byte_pipeline (Nat.mod_lt _ (by lia))).2.2.2.2]
 
-/-- `f` reads a `k + 1` byte value as its low byte plus `w` times the rest. `isBytewise` is the
-weight-256 case, packing bytes back into a word; weight 1 adds them instead. -/
-def IsFold (w : ℕ) (f : ℕ → ℕ → ℕ) : Prop :=
-  ∀ v k, f v (k + 1) = f (v % 256) 1 + w * f (v / 256) k
-
-/-- A fold is determined by its weight and its action on one byte. -/
-theorem IsFold.unique {w : ℕ} {f g : ℕ → ℕ → ℕ} (hf : IsFold w f) (hg : IsFold w g)
-    (h0 : ∀ v, f v 0 = g v 0) (h1 : ∀ v < 256, f v 1 = g v 1) (v k : ℕ) : f v k = g v k := by
-  induction k generalizing v with
-  | zero => exact h0 v
-  | succ k ih => rw [hf v k, hg v k, ih, h1 _ (Nat.mod_lt _ (by lia))]
-
-theorem isFold_byteSum_stageC : IsFold 1 fun v k ↦ byteSum (stageC k v) k := by
-  intro v k
-  have hb : stageC 1 (v % 256) ≤ 8 := (byte_pipeline (Nat.mod_lt _ (by lia))).2.2.2.1
-  rw [stageC_succ, byteSum_succ, byteSum_succ]
-  grind
-
-theorem isFold_bitSum : IsFold 1 fun v k ↦ bitSum v (8 * k) := by
-  intro v k
-  rw [(by ring : 8 * (k + 1) = 8 + 8 * k), bitSum_byte_split, mul_one,
-    (by norm_num : 8 * 1 = 8), ← bitSum_mod v 8, (by norm_num : (2 : ℕ) ^ 8 = 256)]
-
 /-- The bytes of the last stage sum to the count of the word. -/
-theorem byteSum_stageC (k v : ℕ) : byteSum (stageC k v) k = bitSum v (8 * k) :=
-  isFold_byteSum_stageC.unique isFold_bitSum (by simp [bitSum]) (fun v hv ↦ by
-    simpa [byteSum_succ, Nat.mod_eq_of_lt ((byte_pipeline hv).2.2.2.1.trans_lt (by norm_num))]
-      using (byte_pipeline hv).2.2.2.2) v k
+theorem byteSum_stageC (k v : ℕ) : byteSum (stageC k v) k = bitSum v (8 * k) := by
+  induction k generalizing v with
+  | zero => simp [bitSum]
+  | succ k ih =>
+    have hb : stageC 1 (v % 256) ≤ 8 := (byte_pipeline (Nat.mod_lt _ (by lia))).2.2.2.1
+    have hm : (stageC 1 (v % 256) + 256 * stageC k (v / 256)) % 256 = stageC 1 (v % 256) := by lia
+    have hd : (stageC 1 (v % 256) + 256 * stageC k (v / 256)) / 256 = stageC k (v / 256) := by lia
+    rw [byteSum_succ, stageC_succ, hm, hd, ih, (by ring : 8 * (k + 1) = 8 + 8 * k),
+      bitSum_byte_split, stageC_byte]
 
 /-- The pipeline over `k + 1` bytes counts the set bits of those bytes. -/
 theorem stageC_mul_rep {k : ℕ} (hk : k < 31) (v : ℕ) :
