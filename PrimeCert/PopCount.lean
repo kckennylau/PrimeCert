@@ -27,10 +27,6 @@ namespace PrimeCert
 /-- Set bits of `v` below position `n`. -/
 @[expose] public def bitSum (v n : ℕ) : ℕ := ∑ i ∈ Finset.range n, (v >>> i) % 2
 
-/-- Set bits of a byte. -/
-public def pop8 (e : ℕ) : ℕ :=
-  e % 2 + e / 2 % 2 + e / 4 % 2 + e / 8 % 2 + e / 16 % 2 + e / 32 % 2 + e / 64 % 2 + e / 128 % 2
-
 /-! ## Splitting bitwise operations at a bit boundary -/
 
 /-- A bitwise and splits at any bit boundary. -/
@@ -193,13 +189,6 @@ theorem land_shiftRight_rep_succ' {m s : ℕ} (hs : s ≤ 8) (hm : m < 2 ^ (8 - 
   grw [Nat.shiftLeft_eq, hm, ← Nat.pow_add]
   grind
 
-theorem stageA_succ (k v : ℕ) :
-    stageA (k + 1) v = stageA 1 (v % 256) + 256 * stageA k (v / 256) := by
-  have hle1 : (v % 256) >>> 1 &&& 85 ≤ v % 256 := and_shiftRight_le _ _ _
-  have hle2 : (v / 256) >>> 1 &&& rep 85 k ≤ v / 256 := and_shiftRight_le _ _ _
-  simp only [stageA, rep_one]
-  grind [land_shiftRight_rep_succ]
-
 theorem isBytewise_stageA : isBytewise fun v k ↦ stageA k v :=
   isBytewise_id.sub (land_shiftRight_rep_succ' (by simp) (by simp)) (by grind [and_shiftRight_le])
 
@@ -207,16 +196,6 @@ theorem isBytewise_stageB : isBytewise fun v k ↦ stageB k v := by
   apply isBytewise.add
   · refine isBytewise.land isBytewise_stageA isBytewise_rep (by grind [byte_pipeline]) (by simp)
   · refine isBytewise.shiftRight_land_rep isBytewise_stageA (by grind [byte_pipeline]) (by simp)
-
-theorem stageB_succ (k v : ℕ) :
-    stageB (k + 1) v = stageB 1 (v % 256) + 256 * stageB k (v / 256) := by
-  have hAlt : stageA 1 (v % 256) < 256 := (byte_pipeline (Nat.mod_lt _ (by lia))).1
-  have h3 : (stageA 1 (v % 256) + 256 * stageA k (v / 256)) % 256 = stageA 1 (v % 256) := by lia
-  have h4 : (stageA 1 (v % 256) + 256 * stageA k (v / 256)) / 256 = stageA k (v / 256) := by lia
-  simp only [stageB, rep_one]
-  rw [stageA_succ k v, land_rep_succ (by norm_num), land_shiftRight_rep_succ (by lia) (by norm_num),
-    h3, h4]
-  grind
 
 theorem stageB_mod_16 (k v : ℕ) : stageB k v % 16 ≤ 4 := by
   cases k with
@@ -239,11 +218,22 @@ theorem stageC_byte_split {a b k : ℕ} (ha : a ≤ 68) (hb : b % 16 ≤ 4) :
     land_15, land_15]
   grind
 
+/-- Adding a value to itself shifted right by 4 and masking to 4-bit groups splits at the byte
+boundary, given the bounds the previous stage supplies. -/
+theorem isBytewise.add_shiftRight_land_15 {f : ℕ → ℕ → ℕ} (hf : isBytewise f)
+    (hbyte : ∀ v < 256, f v 1 ≤ 68) (hmod : ∀ v k, f v k % 16 ≤ 4) :
+    isBytewise fun v k ↦ (f v k + f v k >>> 4) &&& rep 15 k := by
+  intro v k
+  simp only [hf v k]
+  simpa using stageC_byte_split (hbyte _ (Nat.mod_lt _ (by lia))) (hmod _ _)
+
+theorem isBytewise_stageC : isBytewise fun v k ↦ stageC k v :=
+  isBytewise_stageB.add_shiftRight_land_15 (fun _ hv ↦ (byte_pipeline hv).2.1)
+    fun v k ↦ stageB_mod_16 k v
+
 theorem stageC_succ (k v : ℕ) :
-    stageC (k + 1) v = stageC 1 (v % 256) + 256 * stageC k (v / 256) := by
-  rw [stageC, stageB_succ, stageC_byte_split (byte_pipeline (Nat.mod_lt _ (by lia))).2.1
-    (stageB_mod_16 k (v / 256))]
-  simp only [stageC, rep_one]
+    stageC (k + 1) v = stageC 1 (v % 256) + 256 * stageC k (v / 256) :=
+  isBytewise_stageC.eq
 
 /-! ## The word count from the byte counts -/
 
