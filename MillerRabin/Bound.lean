@@ -8,6 +8,7 @@ module
 
 public import MillerRabin.Defs
 public import PrimeCert.SieveBase
+public import PrimeCert.SieveCorrect
 public import PrimeCert.ForallB
 
 /-! # The Wieferich condition along a residue class of the cached sieve
@@ -24,11 +25,6 @@ open PrimeCert PrimeCert.Sieve
 number at `t` fails `2 ^ (n - 1) ≡ 1 [MOD n ^ 2]`. -/
 @[expose] public noncomputable def wieferichAtK (t : ℕ) : Bool :=
   (testBitK sieveBits_1000000 t).not'.or' (wieferichK (valueK t)).not'
-
-/-- The sieve position of a number coprime to 6 names that number back. -/
-public theorem value_index {n : ℕ} (h : n % 6 = 1 ∨ n % 6 = 5) : value (index n) = n := by
-  unfold index
-  rcases h with h | h <;> grind [value]
 
 /-- Along the class of `r`, successive members sit at positions in steps of `m / 3`. -/
 public theorem index_add {r m k : ℕ} (hr : r % 6 = 1 ∨ r % 6 = 5) (hm : m % 6 = 0)
