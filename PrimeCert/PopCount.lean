@@ -35,12 +35,12 @@ public def pop8 (e : ℕ) : ℕ :=
 
 /-- A bitwise and splits at any bit boundary. -/
 theorem land_split (x m t : ℕ) :
-    x &&& m = ((x % 2 ^ t) &&& (m % 2 ^ t)) + 2 ^ t * ((x / 2 ^ t) &&& (m / 2 ^ t)) := by
-  grind [Nat.and_mod_two_pow, Nat.and_div_two_pow, Nat.div_add_mod]
+    x &&& m = (x % 2 ^ t &&& m % 2 ^ t) + 2 ^ t * (x / 2 ^ t &&& m / 2 ^ t) := by
+  rw [← Nat.and_mod_two_pow, ← Nat.and_div_two_pow, Nat.mod_add_div]
 
 /-- The byte-wide split, the form the stages use. -/
 theorem land_split_byte (x m : ℕ) :
-    x &&& m = ((x % 256) &&& (m % 256)) + 256 * ((x / 256) &&& (m / 256)) :=
+    x &&& m = (x % 256 &&& m % 256) + 256 * (x / 256 &&& m / 256) :=
   land_split x m 8
 
 /-- Masking a shifted value stays below the value shifted. -/
@@ -74,13 +74,16 @@ def stageC (k v : ℕ) : ℕ := (stageB k v + (stageB k v >>> 4)) &&& rep 15 k
 
 @[simp, grind =] theorem rep_succ (b k : ℕ) : rep b (k + 1) = b + 256 * rep b k := rfl
 
-@[simp] theorem rep_zero (b : ℕ) : rep b 0 = 0 := rfl
+@[simp, grind =] theorem rep_zero (b : ℕ) : rep b 0 = 0 := rfl
 
-@[simp] theorem rep_one (b : ℕ) : rep b 1 = b := rfl
+@[simp, grind =] theorem rep_one (b : ℕ) : rep b 1 = b := rfl
 
 theorem rep_mod_byte {b k : ℕ} (hb : b < 256) : rep b (k + 1) % 256 = b := by grind
 
 theorem rep_div_byte {b k : ℕ} (hb : b < 256) : rep b (k + 1) / 256 = rep b k := by grind
+
+lemma rep_mul_two_pow (b s k : ℕ) : rep b k <<< s = rep (b <<< s) k := by
+  induction k with grind [Nat.shiftLeft_eq]
 
 @[simp] theorem stageB_zero (v : ℕ) : stageB 0 v = 0 := by simp [stageB]
 @[simp] theorem stageC_zero (v : ℕ) : stageC 0 v = 0 := by simp [stageC]
@@ -92,9 +95,55 @@ theorem byte_pipeline {e : ℕ} (he : e < 256) :
 
 /-! ## Peeling one byte -/
 
+def isBytewise (f : ℕ → ℕ → ℕ) : Prop :=
+  ∀ v k, f v (k + 1) = f (v % 256) 1 + 256 * f (v / 256) k
+
+lemma isBytewise.eq {f : ℕ → ℕ → ℕ} (hf : isBytewise f) {v k : ℕ} :
+    f v (k + 1) = f (v % 256) 1 + 256 * f (v / 256) k :=
+  hf v k
+
+lemma isBytewise_id : isBytewise fun v _ ↦ v := by
+  grind [isBytewise, Nat.mod_add_div]
+
+lemma isBytewise.add {f g : ℕ → ℕ → ℕ} (hf : isBytewise f) (hg : isBytewise g) :
+    isBytewise fun v k ↦ f v k + g v k := by
+  grind [isBytewise]
+
+lemma isBytewise.sub {f g : ℕ → ℕ → ℕ} (hf : isBytewise f) (hg : isBytewise g)
+    (hfg : ∀ v k, g v k ≤ f v k) :
+    isBytewise fun v k ↦ f v k - g v k := by
+  grind [isBytewise]
+
+lemma land_split' {a b a' b' : ℕ} (ha : a < 256) (ha' : a' < 256) :
+    (a + 256 * b) &&& (a' + 256 * b') = (a &&& a') + 256 * (b &&& b') := by
+  rw [land_split_byte]
+  simp [Nat.add_mul_div_left]
+  grind
+
+theorem isBytewise.land {f g : ℕ → ℕ → ℕ} (hf : isBytewise f) (hg : isBytewise g)
+    (hf' : ∀ v < 256, f v 1 < 256) (hg' : ∀ v < 256, g v 1 < 256) :
+    isBytewise fun v k ↦ f v k &&& g v k := by
+  intro v k
+  have hv : v % 256 < 256 := Nat.mod_lt _ (by norm_num)
+  simp only [hf v k, hg v k]
+  rw [land_split' (by grind) (by grind)]
+
+lemma isBytewise.of_shiftLeft {s : ℕ} {f : ℕ → ℕ → ℕ}
+    (h : isBytewise fun v k ↦ f v k <<< s) : isBytewise f := by
+  intro v k
+  apply Nat.eq_of_mul_eq_mul_right (Nat.two_pow_pos s)
+  grind [isBytewise, Nat.shiftLeft_eq]
+
+theorem isBytewise_rep {m : ℕ} : isBytewise fun _ k ↦ rep m k := by
+  intro v k
+  simp
+
+theorem isBytewise_land {m : ℕ} (hm : m < 256) : isBytewise fun v k ↦ v &&& rep m k := by
+  apply isBytewise.land isBytewise_id (fun v k ↦ by simp) (by simp) (by simp [hm])
+
 /-- A repeated-byte mask splits at the byte boundary. -/
 theorem land_rep_succ {v m k : ℕ} (hm : m < 256) :
-    v &&& rep m (k + 1) = ((v % 256) &&& m) + 256 * ((v / 256) &&& rep m k) := by
+    v &&& rep m (k + 1) = (v % 256 &&& m) + 256 * (v / 256 &&& rep m k) := by
   grind [land_split_byte, rep_mod_byte, rep_div_byte]
 
 theorem shiftRight_div_byte (v s : ℕ) : (v >>> s) / 256 = (v / 256) >>> s := by
@@ -102,7 +151,7 @@ theorem shiftRight_div_byte (v s : ℕ) : (v >>> s) / 256 = (v / 256) >>> s := b
 
 /-- A mask that stops below `2 ^ (8 - s)` reads the same byte before and after the shift. -/
 theorem land_shiftRight_byte {v m s : ℕ} (hs : s ≤ 8) (hm : m < 2 ^ (8 - s)) :
-    ((v >>> s) % 256) &&& m = ((v % 256) >>> s) &&& m := by
+    v >>> s % 256 &&& m = (v % 256) >>> s &&& m := by
   have h8 : (256 : ℕ) = 2 ^ 8 := rfl
   rw [h8]
   refine Nat.eq_of_testBit_eq fun i ↦ ?_
@@ -117,19 +166,47 @@ theorem land_shiftRight_byte {v m s : ℕ} (hs : s ≤ 8) (hm : m < 2 ^ (8 - s))
 
 /-- A masked shift splits at the byte boundary. -/
 theorem land_shiftRight_rep_succ {v m k s : ℕ} (hs : s ≤ 8) (hm : m < 2 ^ (8 - s)) :
-    (v >>> s) &&& rep m (k + 1)
-      = (((v % 256) >>> s) &&& m) + 256 * (((v / 256) >>> s) &&& rep m k) := by
+    v >>> s &&& rep m (k + 1) = ((v % 256) >>> s &&& m) + 256 * ((v / 256) >>> s &&& rep m k) := by
   have hm256 : m < 256 := by
-    have hpow : (2 : ℕ) ^ (8 - s) ≤ 2 ^ 8 := Nat.pow_le_pow_right (by lia) (by lia)
+    have hpow : 2 ^ (8 - s) ≤ 2 ^ 8 := Nat.pow_le_pow_right (by lia) (by lia)
     lia
   rw [land_rep_succ hm256, land_shiftRight_byte hs hm, shiftRight_div_byte]
 
+lemma shiftLeft_land_shiftRight (v w s : ℕ) :
+    ((v >>> s) &&& w) <<< s = v &&& (w <<< s) := by
+  refine Nat.eq_of_testBit_eq fun j => ?_
+  rcases Nat.lt_or_ge j s with h | h
+  · simp [Nat.testBit_shiftLeft, Nat.not_le.mpr h]
+  · simp [Nat.testBit_shiftLeft, Nat.testBit_shiftRight, h, Nat.add_sub_cancel' h]
+
+theorem isBytewise.shiftRight_land_rep {f : ℕ → ℕ → ℕ} (hf : isBytewise f)
+    (hf' : ∀ v < 256, f v 1 < 256) {m s : ℕ} (hms : m <<< s < 256) :
+    isBytewise fun v k ↦ f v k >>> s &&& rep m k := by
+  apply isBytewise.of_shiftLeft (s := s)
+  simp_rw [shiftLeft_land_shiftRight, rep_mul_two_pow]
+  refine isBytewise.land hf isBytewise_rep hf' ?_
+  simp [hms]
+
+theorem land_shiftRight_rep_succ' {m s : ℕ} (hs : s ≤ 8) (hm : m < 2 ^ (8 - s)) :
+    isBytewise fun v k ↦ v >>> s &&& rep m k := by
+  apply isBytewise.shiftRight_land_rep isBytewise_id (by simp)
+  grw [Nat.shiftLeft_eq, hm, ← Nat.pow_add]
+  grind
+
 theorem stageA_succ (k v : ℕ) :
     stageA (k + 1) v = stageA 1 (v % 256) + 256 * stageA k (v / 256) := by
-  have hle1 : ((v % 256) >>> 1) &&& 85 ≤ v % 256 := and_shiftRight_le _ _ _
-  have hle2 : ((v / 256) >>> 1) &&& rep 85 k ≤ v / 256 := and_shiftRight_le _ _ _
+  have hle1 : (v % 256) >>> 1 &&& 85 ≤ v % 256 := and_shiftRight_le _ _ _
+  have hle2 : (v / 256) >>> 1 &&& rep 85 k ≤ v / 256 := and_shiftRight_le _ _ _
   simp only [stageA, rep_one]
   grind [land_shiftRight_rep_succ]
+
+theorem isBytewise_stageA : isBytewise fun v k ↦ stageA k v :=
+  isBytewise_id.sub (land_shiftRight_rep_succ' (by simp) (by simp)) (by grind [and_shiftRight_le])
+
+theorem isBytewise_stageB : isBytewise fun v k ↦ stageB k v := by
+  apply isBytewise.add
+  · refine isBytewise.land isBytewise_stageA isBytewise_rep (by grind [byte_pipeline]) (by simp)
+  · refine isBytewise.shiftRight_land_rep isBytewise_stageA (by grind [byte_pipeline]) (by simp)
 
 theorem stageB_succ (k v : ℕ) :
     stageB (k + 1) v = stageB 1 (v % 256) + 256 * stageB k (v / 256) := by
@@ -137,17 +214,16 @@ theorem stageB_succ (k v : ℕ) :
   have h3 : (stageA 1 (v % 256) + 256 * stageA k (v / 256)) % 256 = stageA 1 (v % 256) := by lia
   have h4 : (stageA 1 (v % 256) + 256 * stageA k (v / 256)) / 256 = stageA k (v / 256) := by lia
   simp only [stageB, rep_one]
-  rw [stageA_succ k v, land_rep_succ (by norm_num),
-    land_shiftRight_rep_succ (by lia) (by norm_num), h3, h4]
+  rw [stageA_succ k v, land_rep_succ (by norm_num), land_shiftRight_rep_succ (by lia) (by norm_num),
+    h3, h4]
   grind
 
 theorem stageB_mod_16 (k v : ℕ) : stageB k v % 16 ≤ 4 := by
   cases k with
   | zero => simp
   | succ k =>
-    rw [stageB_succ]
-    have h := (byte_pipeline (e := v % 256) (Nat.mod_lt _ (by lia))).2.2.1
-    lia
+    rw [isBytewise_stageB.eq]
+    grind [byte_pipeline (e := v % 256) (Nat.mod_lt _ (by lia))]
 
 /-- The last stage of a two-byte value splits into the stages of its bytes. -/
 theorem stageC_byte_split {a b k : ℕ} (ha : a ≤ 68) (hb : b % 16 ≤ 4) :
@@ -177,7 +253,7 @@ theorem shiftRight_mod_two (x i : ℕ) : (x >>> i) % 2 = if x.testBit i then 1 e
 /-- The count as the size of the set of set positions. -/
 public theorem bitSum_eq_card (v n : ℕ) :
     bitSum v n = {i ∈ Finset.range n | v.testBit i}.card := by
-  grind [bitSum, Finset.card_filter, shiftRight_mod_two]
+  grind [bitSum, Finset.card_filter, Nat.shiftRight_eq_div_pow]
 
 /-- A count over `s` positions reads only the value modulo `2 ^ s`. -/
 public theorem bitSum_mod (v s : ℕ) : bitSum (v % 2 ^ s) s = bitSum v s := by
@@ -244,7 +320,7 @@ theorem mul_rep_split (k v : ℕ) :
     ∃ L T, L ≤ byteSum v (k + 1) * rep 1 k ∧
       v * rep 1 (k + 1) = L + 256 ^ k * (byteSum v (k + 1) + 256 * T) := by
   induction k generalizing v with
-  | zero => exact ⟨0, v / 256, by simp, by grind [byteSum_succ, byteSum_zero, rep_one]⟩
+  | zero => exact ⟨0, v / 256, by simp, by grind [byteSum_succ, byteSum_zero]⟩
   | succ k ih =>
     obtain ⟨L, T, hL, hLT⟩ := ih (v / 256)
     have h1 : 256 * rep 1 k ≤ rep 1 (k + 1) := by grind
@@ -291,13 +367,13 @@ theorem stageC_mul_rep {k : ℕ} (hk : k < 31) (v : ℕ) :
     stageC (k + 1) v * rep 1 (k + 1) / 256 ^ k % 256 = bitSum v (8 * (k + 1)) := by
   grind [byteSum_mul_rep, byteSum_stageC, bitSum_le]
 
-theorem rep_85_eight : rep 85 8 = 6148914691236517205 := rfl
+theorem rep_85_eight : rep 85 8 = 0x5555555555555555 := rfl
 
-theorem rep_51_eight : rep 51 8 = 3689348814741910323 := rfl
+theorem rep_51_eight : rep 51 8 = 0x3333333333333333 := rfl
 
-theorem rep_15_eight : rep 15 8 = 1085102592571150095 := rfl
+theorem rep_15_eight : rep 15 8 = 0x0f0f0f0f0f0f0f0f := rfl
 
-theorem rep_one_eight : rep 1 8 = 72340172838076673 := rfl
+theorem rep_one_eight : rep 1 8 = 0x0101010101010101 := rfl
 
 /-- `popc64K` counts the set bits of a 64-bit word. -/
 public theorem popc64K_eq_bitSum (v : ℕ) : popc64K v = bitSum v 64 := by
