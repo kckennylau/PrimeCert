@@ -70,7 +70,8 @@ theorem value_startB {p : ℕ} (hp : p % 6 = 1 ∨ p % 6 = 5) : value (index (p 
 @[grind .] theorem five_le_value {k : ℕ} (hk : k ≠ 0) : 5 ≤ value k := by grind [value]
 
 /-- The index inverts `value` on the numbers coprime to 6. -/
-@[grind .] theorem value_index {q : ℕ} (hq : q % 6 = 1 ∨ q % 6 = 5) : value (index q) = q := by
+@[grind .] public theorem value_index {q : ℕ} (hq : q % 6 = 1 ∨ q % 6 = 5) :
+    value (index q) = q := by
   grind [value, index]
 
 /-- Every index is the index of its own number. -/
