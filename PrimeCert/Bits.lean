@@ -28,11 +28,11 @@ namespace PrimeCert
 Executable copies of the definitions above, run by a command to compute the literals it emits. The
 kernel check on each emitted equation holds a copy to its kernel definition. -/
 
-/-- The number of set bits of `v`, for `v < 2 ^ 32`. -/
-public def popc32 (v : Nat) : Nat :=
-  let a := v - ((v >>> 1) &&& 0x55555555)
-  let b := (a &&& 0x33333333) + ((a >>> 2) &&& 0x33333333)
-  let c := (b + (b >>> 4)) &&& 0x0f0f0f0f
-  ((c * 0x01010101) >>> 24) &&& 0xff
+/-- The number of set bits of `v`, for `v < 2 ^ 64`. -/
+public def popc64 (v : Nat) : Nat :=
+  let a := v - ((v >>> 1) &&& 0x5555555555555555)
+  let b := (a &&& 0x3333333333333333) + ((a >>> 2) &&& 0x3333333333333333)
+  let c := (b + (b >>> 4)) &&& 0x0f0f0f0f0f0f0f0f
+  ((c * 0x0101010101010101) >>> 56) &&& 0xff
 
 end PrimeCert
