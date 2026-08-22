@@ -22,14 +22,14 @@ open Sieve (IsSieve value index value_index)
 
 /-- The blockwise count is the count of set positions. -/
 public theorem popcLoopK_eq_bitSum (b acc fuel : ℕ) :
-    popcLoopK b acc 0 fuel = acc + bitSum b (32 * fuel) := by
+    popcLoopK b acc 0 fuel = acc + bitSum b (64 * fuel) := by
   induction fuel with
   | zero => simp [popcLoopK, bitSum]
   | succ f ih =>
     rw [popcLoopK_succ]
     simp only [Nat.add_eq, Nat.mul_eq, Nat.sub_eq, Nat.land_eq, Nat.shiftRight_eq',
       Nat.shiftLeft_eq', Nat.zero_add]
-    rw [Nat.mul_comm f 32, popc32K_chunk, ih, Nat.mul_succ, bitSum_add, Nat.add_assoc]
+    rw [Nat.mul_comm f 64, popc64K_chunk, ih, Nat.mul_succ, bitSum_add, Nat.add_assoc]
 
 /-- The number at an index rises with the index. -/
 theorem value_le_value {t t' : ℕ} (h : t ≤ t') : value t ≤ value t' := by grind [value]
@@ -54,14 +54,14 @@ theorem entryK_le {qs w lit cnt M : ℕ} (h : bitCheckLoopK qs w lit 1 0 cnt % 2
 inject into them and the counts agree. -/
 theorem exists_entry_of_testBit {qs w lit cnt chunks : ℕ}
     (h : bitCheckLoopK qs w lit 1 0 cnt % 2 = 1) (hpop : popcLoopK lit 0 0 chunks = cnt)
-    (hlt : ∀ i, i < cnt → index (entryK qs w i) < 32 * chunks)
-    {t : ℕ} (ht : lit.testBit t) (htlt : t < 32 * chunks) :
+    (hlt : ∀ i, i < cnt → index (entryK qs w i) < 64 * chunks)
+    {t : ℕ} (ht : lit.testBit t) (htlt : t < 64 * chunks) :
     ∃ i < cnt, index (entryK qs w i) = t := by
   obtain ⟨htests, hmono, -⟩ := bitCheckLoopK_spec cnt h
-  have hcard : ({i ∈ Finset.range (32 * chunks) | lit.testBit i}).card = cnt := by
-    rw [← bitSum_eq_card, ← Nat.zero_add (bitSum lit (32 * chunks)), ← popcLoopK_eq_bitSum, hpop]
+  have hcard : ({i ∈ Finset.range (64 * chunks) | lit.testBit i}).card = cnt := by
+    rw [← bitSum_eq_card, ← Nat.zero_add (bitSum lit (64 * chunks)), ← popcLoopK_eq_bitSum, hpop]
   have hsub : (Finset.range cnt).image (fun i ↦ index (entryK qs w i))
-      ⊆ {i ∈ Finset.range (32 * chunks) | lit.testBit i} := by
+      ⊆ {i ∈ Finset.range (64 * chunks) | lit.testBit i} := by
     intro x hx
     simp only [Finset.mem_image, Finset.mem_range] at hx
     obtain ⟨i, hi, rfl⟩ := hx
@@ -87,7 +87,7 @@ cutoff, every such prime is an entry, and the entries are distinct. -/
 public theorem primeBlock_spec {qs w lit M cnt chunks : ℕ} (hsieve : IsSieve M lit)
     (h : bitCheckLoopK qs w lit 1 0 cnt % 2 = 1)
     (htop : 0 < cnt → value (bitCheckLoopK qs w lit 1 0 cnt / 2) ≤ M)
-    (hpop : popcLoopK lit 0 0 chunks = cnt) (hchunks : (M - 1) / 3 < 32 * chunks) :
+    (hpop : popcLoopK lit 0 0 chunks = cnt) (hchunks : (M - 1) / 3 < 64 * chunks) :
     (∀ i < cnt, (entryK qs w i).Prime ∧ 5 ≤ entryK qs w i ∧ entryK qs w i ≤ M) ∧
       (∀ p, p.Prime → 5 ≤ p → p ≤ M → ∃ i < cnt, entryK qs w i = p) ∧
         (∀ i j, i < cnt → j < cnt → entryK qs w i = entryK qs w j → i = j) := by
@@ -98,7 +98,7 @@ public theorem primeBlock_spec {qs w lit M cnt chunks : ℕ} (hsieve : IsSieve M
     obtain ⟨hmod, hpos, -⟩ := htests i hi
     simp only [index] at hpos
     lia
-  have hidx : ∀ i, i < cnt → index (entryK qs w i) < 32 * chunks := by
+  have hidx : ∀ i, i < cnt → index (entryK qs w i) < 64 * chunks := by
     intro i hi
     have hvalue : value (index (entryK qs w i)) ≤ M := by
       rw [value_index_entryK h hi]; exact hbound i hi
@@ -111,7 +111,7 @@ public theorem primeBlock_spec {qs w lit M cnt chunks : ℕ} (hsieve : IsSieve M
   have hvalue : value (index p) = p := value_index hmod
   have hidxpos : index p ≠ 0 := by simp only [index]; lia
   have hbit : lit.testBit (index p) := (hsieve _ hidxpos (by rwa [hvalue])).2 (by rwa [hvalue])
-  have hltp : index p < 32 * chunks := by simp only [index]; lia
+  have hltp : index p < 64 * chunks := by simp only [index]; lia
   obtain ⟨i, hi, hti⟩ := exists_entry_of_testBit h hpop hidx hbit hltp
   exact ⟨i, hi, by rw [← value_index_entryK h hi, hti, hvalue]⟩
 
