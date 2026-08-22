@@ -14,13 +14,14 @@ natively to compute the literals it emits.
 
 namespace PrimeCert
 
-/-- The number of set bits of `v`, for `v < 2 ^ 32` (`popc32K_eq_bitSum` in
+/-- The number of set bits of `v`, for `v < 2 ^ 64` (`popc64K_eq_bitSum` in
 `PrimeCert.PopCount`). -/
-@[expose] public def popc32K (v : Nat) : Nat :=
-  let a := v.sub ((v.shiftRight (nat_lit 1)).land (nat_lit 0x55555555))
-  let b := (a.land (nat_lit 0x33333333)).add ((a.shiftRight (nat_lit 2)).land (nat_lit 0x33333333))
-  let c := (b.add (b.shiftRight (nat_lit 4))).land (nat_lit 0x0f0f0f0f)
-  ((c.mul (nat_lit 0x01010101)).shiftRight (nat_lit 24)).land (nat_lit 0xff)
+@[expose] public def popc64K (v : Nat) : Nat :=
+  let a := v.sub ((v.shiftRight (nat_lit 1)).land (nat_lit 0x5555555555555555))
+  let b := (a.land (nat_lit 0x3333333333333333)).add
+    ((a.shiftRight (nat_lit 2)).land (nat_lit 0x3333333333333333))
+  let c := (b.add (b.shiftRight (nat_lit 4))).land (nat_lit 0x0f0f0f0f0f0f0f0f)
+  ((c.mul (nat_lit 0x0101010101010101)).shiftRight (nat_lit 56)).land (nat_lit 0xff)
 
 /-! ### Compiled twins
 
