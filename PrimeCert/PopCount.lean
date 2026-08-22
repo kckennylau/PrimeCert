@@ -33,18 +33,10 @@ public def pop8 (e : ℕ) : ℕ :=
 
 /-! ## Splitting bitwise operations at a bit boundary -/
 
-theorem land_mod_two_pow (x m t : ℕ) : (x &&& m) % 2 ^ t = (x % 2 ^ t) &&& (m % 2 ^ t) := by
-  refine Nat.eq_of_testBit_eq fun i ↦ ?_
-  grind
-
-theorem land_div_two_pow (x m t : ℕ) : (x &&& m) / 2 ^ t = (x / 2 ^ t) &&& (m / 2 ^ t) := by
-  refine Nat.eq_of_testBit_eq fun i ↦ ?_
-  grind [Nat.testBit_div_two_pow]
-
 /-- A bitwise and splits at any bit boundary. -/
 theorem land_split (x m t : ℕ) :
     x &&& m = ((x % 2 ^ t) &&& (m % 2 ^ t)) + 2 ^ t * ((x / 2 ^ t) &&& (m / 2 ^ t)) := by
-  grind [land_mod_two_pow, land_div_two_pow, Nat.div_add_mod]
+  grind [Nat.and_mod_two_pow, Nat.and_div_two_pow, Nat.div_add_mod]
 
 /-- The byte-wide split, the form the stages use. -/
 theorem land_split_byte (x m : ℕ) :
@@ -53,7 +45,7 @@ theorem land_split_byte (x m : ℕ) :
 
 /-- Masking a shifted value stays below the value shifted. -/
 theorem and_shiftRight_le (x m s : ℕ) : (x >>> s) &&& m ≤ x :=
-  le_trans Nat.and_le_left (by rw [Nat.shiftRight_eq_div_pow]; exact Nat.div_le_self _ _)
+  Nat.and_le_left.trans (Nat.shiftRight_le _ _)
 
 theorem land_15 (x : ℕ) : x &&& 15 = x % 16 := Nat.and_two_pow_sub_one_eq_mod x 4
 
@@ -69,15 +61,16 @@ public def rep (b : ℕ) : ℕ → ℕ
   | 0 => 0
   | k + 1 => b + 256 * rep b k
 
-/-- Counts within 2-bit groups. -/
-public def stageA (k v : ℕ) : ℕ := v - ((v >>> 1) &&& rep 85 k)
+/-- Counts within 2-bit groups of a `k`-byte value. -/
+def stageA (k v : ℕ) : ℕ := v - (v >>> 1 &&& rep 85 k)
 
-/-- Counts within 4-bit groups. -/
-public def stageB (k v : ℕ) : ℕ :=
-  (stageA k v &&& rep 51 k) + ((stageA k v >>> 2) &&& rep 51 k)
+/-- Counts within 4-bit groups of a `k`-byte value. -/
+def stageB (k v : ℕ) : ℕ := (stageA k v &&& rep 51 k) + (stageA k v >>> 2 &&& rep 51 k)
 
 /-- Counts within 8-bit groups. -/
-public def stageC (k v : ℕ) : ℕ := (stageB k v + (stageB k v >>> 4)) &&& rep 15 k
+def stageC (k v : ℕ) : ℕ := (stageB k v + (stageB k v >>> 4)) &&& rep 15 k
+
+@[simp] lemma popc64K_eq' {v : ℕ} : popc64K v = (stageC 8 v * rep 1 8) >>> 56 &&& 255 := rfl
 
 @[simp, grind =] theorem rep_succ (b k : ℕ) : rep b (k + 1) = b + 256 * rep b k := rfl
 
@@ -90,15 +83,12 @@ theorem rep_mod_byte {b k : ℕ} (hb : b < 256) : rep b (k + 1) % 256 = b := by 
 theorem rep_div_byte {b k : ℕ} (hb : b < 256) : rep b (k + 1) / 256 = rep b k := by grind
 
 @[simp] theorem stageB_zero (v : ℕ) : stageB 0 v = 0 := by simp [stageB]
-
 @[simp] theorem stageC_zero (v : ℕ) : stageC 0 v = 0 := by simp [stageC]
 
-set_option maxRecDepth 100000 in
-/-- The byte case, by finite check: the stages stay inside the byte and the last holds its set-bit
-count. -/
-theorem byte_pipeline : ∀ e < 256,
+/-- On a byte the stages stay inside the byte, and the last one holds its set-bit count. -/
+theorem byte_pipeline {e : ℕ} (he : e < 256) :
     stageA 1 e < 256 ∧ stageB 1 e ≤ 68 ∧ stageB 1 e % 16 ≤ 4 ∧ stageC 1 e ≤ 8 ∧
-      stageC 1 e = pop8 e := by decide +revert
+      stageC 1 e = bitSum e 8 := by decide +kernel +revert
 
 /-! ## Peeling one byte -/
 
@@ -143,7 +133,7 @@ theorem stageA_succ (k v : ℕ) :
 
 theorem stageB_succ (k v : ℕ) :
     stageB (k + 1) v = stageB 1 (v % 256) + 256 * stageB k (v / 256) := by
-  have hAlt : stageA 1 (v % 256) < 256 := (byte_pipeline _ (Nat.mod_lt _ (by lia))).1
+  have hAlt : stageA 1 (v % 256) < 256 := (byte_pipeline (Nat.mod_lt _ (by lia))).1
   have h3 : (stageA 1 (v % 256) + 256 * stageA k (v / 256)) % 256 = stageA 1 (v % 256) := by lia
   have h4 : (stageA 1 (v % 256) + 256 * stageA k (v / 256)) / 256 = stageA k (v / 256) := by lia
   simp only [stageB, rep_one]
@@ -156,7 +146,7 @@ theorem stageB_mod_16 (k v : ℕ) : stageB k v % 16 ≤ 4 := by
   | zero => simp
   | succ k =>
     rw [stageB_succ]
-    have h := (byte_pipeline (v % 256) (Nat.mod_lt _ (by lia))).2.2.1
+    have h := (byte_pipeline (e := v % 256) (Nat.mod_lt _ (by lia))).2.2.1
     lia
 
 /-- The last stage of a two-byte value splits into the stages of its bytes. -/
@@ -175,7 +165,7 @@ theorem stageC_byte_split {a b k : ℕ} (ha : a ≤ 68) (hb : b % 16 ≤ 4) :
 
 theorem stageC_succ (k v : ℕ) :
     stageC (k + 1) v = stageC 1 (v % 256) + 256 * stageC k (v / 256) := by
-  rw [stageC, stageB_succ, stageC_byte_split (byte_pipeline _ (Nat.mod_lt _ (by lia))).2.1
+  rw [stageC, stageB_succ, stageC_byte_split (byte_pipeline (Nat.mod_lt _ (by lia))).2.1
     (stageB_mod_16 k (v / 256))]
   simp only [stageC, rep_one]
 
@@ -186,7 +176,7 @@ theorem shiftRight_mod_two (x i : ℕ) : (x >>> i) % 2 = if x.testBit i then 1 e
 
 /-- The count as the size of the set of set positions. -/
 public theorem bitSum_eq_card (v n : ℕ) :
-    bitSum v n = ({i ∈ Finset.range n | v.testBit i}).card := by
+    bitSum v n = {i ∈ Finset.range n | v.testBit i}.card := by
   grind [bitSum, Finset.card_filter, shiftRight_mod_two]
 
 /-- A count over `s` positions reads only the value modulo `2 ^ s`. -/
@@ -220,9 +210,6 @@ public theorem bitSum_le_of_lt {v m : ℕ} (hv : v < 2 ^ m) (n : ℕ) : bitSum v
   · rw [bitSum_of_lt hv h]
     exact bitSum_le v m
   · exact le_trans (bitSum_le v n) h
-
-theorem bitSum_byte (e : ℕ) : bitSum e 8 = pop8 e := by
-  simp [bitSum, pop8, Finset.sum_range_succ, Nat.shiftRight_eq_div_pow]
 
 /-- Splitting a count at a byte boundary. -/
 theorem bitSum_byte_split (v n : ℕ) : bitSum v (8 + n) = bitSum v 8 + bitSum (v / 256) n :=
@@ -285,22 +272,22 @@ theorem byteSum_mul_rep {k v : ℕ} (h : byteSum v (k + 1) < 256) :
 
 /-- The last stage of a byte holds the count of that byte. -/
 theorem stageC_byte (v : ℕ) : stageC 1 (v % 256) = bitSum v 8 := by
-  rw [← bitSum_mod v 8, (by norm_num : (2 : ℕ) ^ 8 = 256), bitSum_byte,
-    (byte_pipeline _ (Nat.mod_lt _ (by lia))).2.2.2.2]
+  rw [← bitSum_mod v 8, (by norm_num : (2 : ℕ) ^ 8 = 256),
+    (byte_pipeline (Nat.mod_lt _ (by lia))).2.2.2.2]
 
 /-- The bytes of the last stage sum to the count of the word. -/
 theorem byteSum_stageC (k v : ℕ) : byteSum (stageC k v) k = bitSum v (8 * k) := by
   induction k generalizing v with
   | zero => simp [bitSum]
   | succ k ih =>
-    have hb : stageC 1 (v % 256) ≤ 8 := (byte_pipeline _ (Nat.mod_lt _ (by lia))).2.2.2.1
+    have hb : stageC 1 (v % 256) ≤ 8 := (byte_pipeline (Nat.mod_lt _ (by lia))).2.2.2.1
     have hm : (stageC 1 (v % 256) + 256 * stageC k (v / 256)) % 256 = stageC 1 (v % 256) := by lia
     have hd : (stageC 1 (v % 256) + 256 * stageC k (v / 256)) / 256 = stageC k (v / 256) := by lia
     rw [byteSum_succ, stageC_succ, hm, hd, ih, (by ring : 8 * (k + 1) = 8 + 8 * k),
       bitSum_byte_split, stageC_byte]
 
 /-- The pipeline over `k + 1` bytes counts the set bits of those bytes. -/
-public theorem stageC_mul_rep {k : ℕ} (hk : k < 31) (v : ℕ) :
+theorem stageC_mul_rep {k : ℕ} (hk : k < 31) (v : ℕ) :
     stageC (k + 1) v * rep 1 (k + 1) / 256 ^ k % 256 = bitSum v (8 * (k + 1)) := by
   grind [byteSum_mul_rep, byteSum_stageC, bitSum_le]
 
