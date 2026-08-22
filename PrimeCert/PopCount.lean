@@ -142,32 +142,6 @@ theorem land_rep_succ {v m k : ℕ} (hm : m < 256) :
     v &&& rep m (k + 1) = (v % 256 &&& m) + 256 * (v / 256 &&& rep m k) := by
   grind [land_split_byte, rep_mod_byte, rep_div_byte]
 
-theorem shiftRight_div_byte (v s : ℕ) : (v >>> s) / 256 = (v / 256) >>> s := by
-  grind [Nat.shiftRight_eq_div_pow, Nat.div_div_eq_div_mul]
-
-/-- A mask that stops below `2 ^ (8 - s)` reads the same byte before and after the shift. -/
-theorem land_shiftRight_byte {v m s : ℕ} (hs : s ≤ 8) (hm : m < 2 ^ (8 - s)) :
-    v >>> s % 256 &&& m = (v % 256) >>> s &&& m := by
-  have h8 : (256 : ℕ) = 2 ^ 8 := rfl
-  rw [h8]
-  refine Nat.eq_of_testBit_eq fun i ↦ ?_
-  rcases Nat.lt_or_ge i (8 - s) with h | h
-  · have hi8 : i < 8 := by lia
-    have hsi8 : s + i < 8 := by lia
-    simp only [Nat.testBit_and, Nat.testBit_mod_two_pow, Nat.testBit_shiftRight, hi8, hsi8,
-      decide_true, Bool.true_and]
-  · have hmi : m.testBit i = false :=
-      Nat.testBit_lt_two_pow (lt_of_lt_of_le hm (Nat.pow_le_pow_right (by lia) h))
-    simp [Nat.testBit_and, hmi]
-
-/-- A masked shift splits at the byte boundary. -/
-theorem land_shiftRight_rep_succ {v m k s : ℕ} (hs : s ≤ 8) (hm : m < 2 ^ (8 - s)) :
-    v >>> s &&& rep m (k + 1) = ((v % 256) >>> s &&& m) + 256 * ((v / 256) >>> s &&& rep m k) := by
-  have hm256 : m < 256 := by
-    have hpow : 2 ^ (8 - s) ≤ 2 ^ 8 := Nat.pow_le_pow_right (by lia) (by lia)
-    lia
-  rw [land_rep_succ hm256, land_shiftRight_byte hs hm, shiftRight_div_byte]
-
 lemma shiftLeft_land_shiftRight (v w s : ℕ) :
     ((v >>> s) &&& w) <<< s = v &&& (w <<< s) := by
   refine Nat.eq_of_testBit_eq fun j => ?_
@@ -208,15 +182,7 @@ theorem stageB_mod_16 (k v : ℕ) : stageB k v % 16 ≤ 4 := by
 theorem stageC_byte_split {a b k : ℕ} (ha : a ≤ 68) (hb : b % 16 ≤ 4) :
     (a + 256 * b + ((a + 256 * b) >>> 4)) &&& rep 15 (k + 1)
       = ((a + a >>> 4) &&& 15) + 256 * ((b + b >>> 4) &&& rep 15 k) := by
-  simp only [Nat.shiftRight_eq_div_pow, Nat.reducePow]
-  rw [(by lia : a + 256 * b + (a + 256 * b) / 16
-      = a + a / 16 + 16 * (b % 16) + 256 * (b + b / 16)),
-    land_rep_succ (by lia : (15:ℕ) < 256),
-    (by lia : (a + a / 16 + 16 * (b % 16) + 256 * (b + b / 16)) % 256
-      = a + a / 16 + 16 * (b % 16)),
-    (by lia : (a + a / 16 + 16 * (b % 16) + 256 * (b + b / 16)) / 256 = b + b / 16),
-    land_15, land_15]
-  grind
+  grind [land_rep_succ, land_15, Nat.shiftRight_eq_div_pow]
 
 /-- Adding a value to itself shifted right by 4 and masking to 4-bit groups splits at the byte
 boundary, given the bounds the previous stage supplies. -/
@@ -341,16 +307,34 @@ theorem stageC_byte (v : ℕ) : stageC 1 (v % 256) = bitSum v 8 := by
   rw [← bitSum_mod v 8, (by norm_num : (2 : ℕ) ^ 8 = 256),
     (byte_pipeline (Nat.mod_lt _ (by lia))).2.2.2.2]
 
-/-- The bytes of the last stage sum to the count of the word. -/
-theorem byteSum_stageC (k v : ℕ) : byteSum (stageC k v) k = bitSum v (8 * k) := by
+/-- `f` reads a `k + 1` byte value as its low byte plus `w` times the rest. `isBytewise` is the
+weight-256 case, packing bytes back into a word; weight 1 adds them instead. -/
+def IsFold (w : ℕ) (f : ℕ → ℕ → ℕ) : Prop :=
+  ∀ v k, f v (k + 1) = f (v % 256) 1 + w * f (v / 256) k
+
+/-- A fold is determined by its weight and its action on one byte. -/
+theorem IsFold.unique {w : ℕ} {f g : ℕ → ℕ → ℕ} (hf : IsFold w f) (hg : IsFold w g)
+    (h0 : ∀ v, f v 0 = g v 0) (h1 : ∀ v < 256, f v 1 = g v 1) (v k : ℕ) : f v k = g v k := by
   induction k generalizing v with
-  | zero => simp [bitSum]
-  | succ k ih =>
-    have hb : stageC 1 (v % 256) ≤ 8 := (byte_pipeline (Nat.mod_lt _ (by lia))).2.2.2.1
-    have hm : (stageC 1 (v % 256) + 256 * stageC k (v / 256)) % 256 = stageC 1 (v % 256) := by lia
-    have hd : (stageC 1 (v % 256) + 256 * stageC k (v / 256)) / 256 = stageC k (v / 256) := by lia
-    rw [byteSum_succ, stageC_succ, hm, hd, ih, (by ring : 8 * (k + 1) = 8 + 8 * k),
-      bitSum_byte_split, stageC_byte]
+  | zero => exact h0 v
+  | succ k ih => rw [hf v k, hg v k, ih, h1 _ (Nat.mod_lt _ (by lia))]
+
+theorem isFold_byteSum_stageC : IsFold 1 fun v k ↦ byteSum (stageC k v) k := by
+  intro v k
+  have hb : stageC 1 (v % 256) ≤ 8 := (byte_pipeline (Nat.mod_lt _ (by lia))).2.2.2.1
+  rw [stageC_succ, byteSum_succ, byteSum_succ]
+  grind
+
+theorem isFold_bitSum : IsFold 1 fun v k ↦ bitSum v (8 * k) := by
+  intro v k
+  rw [(by ring : 8 * (k + 1) = 8 + 8 * k), bitSum_byte_split, mul_one,
+    (by norm_num : 8 * 1 = 8), ← bitSum_mod v 8, (by norm_num : (2 : ℕ) ^ 8 = 256)]
+
+/-- The bytes of the last stage sum to the count of the word. -/
+theorem byteSum_stageC (k v : ℕ) : byteSum (stageC k v) k = bitSum v (8 * k) :=
+  isFold_byteSum_stageC.unique isFold_bitSum (by simp [bitSum]) (fun v hv ↦ by
+    simpa [byteSum_succ, Nat.mod_eq_of_lt ((byte_pipeline hv).2.2.2.1.trans_lt (by norm_num))]
+      using (byte_pipeline hv).2.2.2.2) v k
 
 /-- The pipeline over `k + 1` bytes counts the set bits of those bytes. -/
 theorem stageC_mul_rep {k : ℕ} (hk : k < 31) (v : ℕ) :
