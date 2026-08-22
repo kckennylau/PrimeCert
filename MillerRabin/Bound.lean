@@ -54,11 +54,8 @@ public theorem testBit_of_prime {p : ℕ} (hp : p.Prime) (hb : p < 1000000)
 public theorem not_wieferich_of_check {p : ℕ} (hp : p.Prime) (hb : p < 1000000)
     (hc : p % 6 = 1 ∨ p % 6 = 5) (h : wieferichAtK (index p)) : ¬ Wieferich p := by
   have hbit := testBit_of_prime hp hb hc
-  have hnum : valueK (index p) = p := by rw [valueK_eq_value]; exact value_index hc
-  rw [wieferichAtK, hnum, testBitK_eq_testBit] at h
-  simp only [hbit, Bool.not'_eq_not, Bool.or'_eq_or, Bool.not_true, Bool.false_or,
-    Bool.not_eq_true'] at h
-  exact (wieferichK_eq_false_iff p hp.ne_one).mp h
+  have hnum : value (index p) = p := value_index hc
+  grind [wieferichAtK, Bool.not'_eq_not, Bool.or'_eq_or, wieferichK_eq_false_iff, hp.ne_one]
 
 /-- Read the check at one member of a class off that class's scan. -/
 public theorem check_of_class {r m k len : ℕ} (hr : r % 6 = 1 ∨ r % 6 = 5) (hm : m % 6 = 0)
