@@ -7,24 +7,24 @@ Authors: Bhavik Mehta
 module
 
 public import MillerRabin.Defs
-public import PrimeCert.SieveBase
 public import PrimeCert.SieveCorrect
 public import PrimeCert.ForallB
 
-/-! # The Wieferich condition along a residue class of the cached sieve
+/-! # The Wieferich condition along a residue class of a sieve
 
-`wieferichAtK` reads the condition at one sieve position. `not_wieferich_of_fold` turns a scan of
-one residue class into the statement that a prime of that class fails the condition.
+`wieferichAtK lit` reads the condition at one position of the sieve `lit`. `not_wieferich_of_fold`
+turns a scan of one residue class into the statement that a prime of that class fails the
+condition.
 -/
 
 namespace MillerRabin
 
 open PrimeCert PrimeCert.Sieve
 
-/-- The Wieferich check at one sieve position: true when the bit at `t` is clear, or when the
-number at `t` fails `2 ^ (n - 1) ≡ 1 [MOD n ^ 2]`. -/
-@[expose] public noncomputable def wieferichAtK (t : ℕ) : Bool :=
-  (testBitK sieveBits_1000000 t).not'.or' (wieferichK (valueK t)).not'
+/-- The Wieferich check at position `t` of the sieve `lit`: true when the bit at `t` is clear, or
+when the number at `t` fails `2 ^ (n - 1) ≡ 1 [MOD n ^ 2]`. -/
+@[expose] public noncomputable def wieferichAtK (lit t : ℕ) : Bool :=
+  (testBitK lit t).not'.or' (wieferichK (valueK t)).not'
 
 /-- Along the class of `r`, successive members sit at positions in steps of `m / 3`. -/
 public theorem index_add {r m k : ℕ} (hr : r % 6 = 1 ∨ r % 6 = 5) (hm : m % 6 = 0)
@@ -42,48 +42,49 @@ public theorem index_add {r m k : ℕ} (hr : r % 6 = 1 ∨ r % 6 = 5) (hm : m % 
   · obtain ⟨i, rfl⟩ : ∃ i, r = 6 * i + 5 := ⟨r / 6, by lia⟩
     lia
 
-/-- A prime below the cached range sets its own sieve bit. -/
-public theorem testBit_of_prime {p : ℕ} (hp : p.Prime) (hb : p < 1000000)
-    (hc : p % 6 = 1 ∨ p % 6 = 5) : sieveBits_1000000.testBit (index p) := by
+/-- A prime within the range of a sieve sets its own bit. -/
+public theorem testBit_of_prime {n lit p : ℕ} (hs : IsSieve n lit) (hp : p.Prime) (hb : p ≤ n)
+    (hc : p % 6 = 1 ∨ p % 6 = 5) : lit.testBit (index p) := by
   have h2 := hp.two_le
   have hnum : value (index p) = p := value_index hc
-  have := isSieve_1000000 (index p) (by unfold index; lia) (by grind)
+  have := hs (index p) (by unfold index; lia) (by grind)
   grind
 
 /-- At a prime whose check holds, the Wieferich condition fails. -/
-public theorem not_wieferich_of_check {p : ℕ} (hp : p.Prime) (hb : p < 1000000)
-    (hc : p % 6 = 1 ∨ p % 6 = 5) (h : wieferichAtK (index p)) : ¬ Wieferich p := by
-  have hbit := testBit_of_prime hp hb hc
+public theorem not_wieferich_of_check {n lit p : ℕ} (hs : IsSieve n lit) (hp : p.Prime)
+    (hb : p ≤ n) (hc : p % 6 = 1 ∨ p % 6 = 5) (h : wieferichAtK lit (index p)) :
+    ¬ Wieferich p := by
+  have hbit := testBit_of_prime hs hp hb hc
   have hnum : value (index p) = p := value_index hc
   grind [wieferichAtK, Bool.not'_eq_not, Bool.or'_eq_or, wieferichK_eq_false_iff, hp.ne_one]
 
 /-- Read the check at one member of a class off that class's scan. -/
-public theorem check_of_class {r m k len : ℕ} (hr : r % 6 = 1 ∨ r % 6 = 5) (hm : m % 6 = 0)
+public theorem check_of_class {lit r m k len : ℕ} (hr : r % 6 = 1 ∨ r % 6 = 5) (hm : m % 6 = 0)
     (h1 : 1 ≤ r) (hk : k < len)
-    (hfold : forallB wieferichAtK (index r) len (m / 3)) :
-    wieferichAtK (index (r + m * k)) := by
+    (hfold : forallB (wieferichAtK lit) (index r) len (m / 3)) :
+    wieferichAtK lit (index (r + m * k)) := by
   rw [index_add hr hm h1]
-  have := (forallB_iff wieferichAtK (index r) len (m / 3)).mp hfold k hk
+  have := (forallB_iff (wieferichAtK lit) (index r) len (m / 3)).mp hfold k hk
   simpa [Nat.mul_comm, Nat.add_comm] using this
 
 /-- A prime whose class is covered by a scan fails the Wieferich condition. -/
-public theorem not_wieferich_of_fold {p m len : ℕ} (hp : p.Prime) (hb : p < 1000000)
-    (hm : m % 6 = 0) (hc : p % 6 = 1 ∨ p % 6 = 5) (h1 : 1 ≤ p % m)
+public theorem not_wieferich_of_fold {n lit p m len : ℕ} (hs : IsSieve n lit) (hp : p.Prime)
+    (hb : p ≤ n) (hm : m % 6 = 0) (hc : p % 6 = 1 ∨ p % 6 = 5) (h1 : 1 ≤ p % m)
     (hr : p % m % 6 = 1 ∨ p % m % 6 = 5) (hk : p / m < len)
-    (hfold : forallB wieferichAtK (index (p % m)) len (m / 3)) : ¬ Wieferich p := by
-  refine not_wieferich_of_check hp hb hc ?_
+    (hfold : forallB (wieferichAtK lit) (index (p % m)) len (m / 3)) : ¬ Wieferich p := by
+  refine not_wieferich_of_check hs hp hb hc ?_
   have := check_of_class (k := p / m) hr hm h1 hk hfold
   rwa [Nat.mod_add_div] at this
 
 /-- Read the check at one member of a class from a scan starting at position `j` of that class,
 with the step given as `s`. -/
-public theorem check_of_offset {r m s j k len : ℕ} (hr : r % 6 = 1 ∨ r % 6 = 5) (hm : m % 6 = 0)
-    (h1 : 1 ≤ r) (hs : m / 3 = s) (hj : j ≤ k) (hk : k - j < len)
-    (hfold : forallB wieferichAtK (index r + s * j) len s) :
-    wieferichAtK (index (r + m * k)) := by
+public theorem check_of_offset {lit r m s j k len : ℕ} (hr : r % 6 = 1 ∨ r % 6 = 5)
+    (hm : m % 6 = 0) (h1 : 1 ≤ r) (hs : m / 3 = s) (hj : j ≤ k) (hk : k - j < len)
+    (hfold : forallB (wieferichAtK lit) (index r + s * j) len s) :
+    wieferichAtK lit (index (r + m * k)) := by
   subst hs
   rw [index_add hr hm h1]
-  have := (forallB_iff wieferichAtK (index r + m / 3 * j) len (m / 3)).mp hfold (k - j) hk
+  have := (forallB_iff (wieferichAtK lit) (index r + m / 3 * j) len (m / 3)).mp hfold (k - j) hk
   have hle : j * (m / 3) ≤ k * (m / 3) := Nat.mul_le_mul_right _ hj
   have he : (k - j) * (m / 3) + (index r + m / 3 * j) = index r + m / 3 * k := by
     rw [Nat.sub_mul, Nat.mul_comm (m / 3) j, Nat.mul_comm (m / 3) k]
