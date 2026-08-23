@@ -26,7 +26,7 @@ when the number at `t` fails `2 ^ (n - 1) ≡ 1 [MOD n ^ 2]`. -/
 @[expose] public noncomputable def wieferichAtK (s t : ℕ) : Bool :=
   (testBitK s t).not'.or' (wieferichK (valueK t)).not'
 
-/-- Along the class of `r`, successive members sit at positions in steps of `m / 3`. -/
+/-- Along the class of `r`, successive members sit at positions in ds of `m / 3`. -/
 public theorem index_add {r m k : ℕ} (hr : r % 6 = 1 ∨ r % 6 = 5) (hm : m % 6 = 0)
     (h1 : 1 ≤ r) : index (r + m * k) = index r + (m / 3) * k := by
   obtain ⟨j, rfl⟩ : ∃ j, m = 6 * j := ⟨m / 6, by lia⟩
@@ -77,10 +77,10 @@ public theorem not_wieferich_of_fold {n s p m len : ℕ} (hs : IsSieve n s) (hp 
   rwa [Nat.mod_add_div] at this
 
 /-- Read the check at one member of a class from a scan starting at position `j` of that class,
-with the step given as `s`. -/
-public theorem check_of_offset {s r m step j k len : ℕ} (hr : r % 6 = 1 ∨ r % 6 = 5)
-    (hm : m % 6 = 0) (h1 : 1 ≤ r) (hs : m / 3 = step) (hj : j ≤ k) (hk : k - j < len)
-    (hfold : forallB (wieferichAtK s) (index r + step * j) len step) :
+whose successive members sit `d` sieve positions apart. -/
+public theorem check_of_offset {s r m d j k len : ℕ} (hr : r % 6 = 1 ∨ r % 6 = 5)
+    (hm : m % 6 = 0) (h1 : 1 ≤ r) (hs : m / 3 = d) (hj : j ≤ k) (hk : k - j < len)
+    (hfold : forallB (wieferichAtK s) (index r + d * j) len d) :
     wieferichAtK s (index (r + m * k)) := by
   subst hs
   rw [index_add hr hm h1]
