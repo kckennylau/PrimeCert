@@ -30,14 +30,14 @@ namespace PrimeCert
 /-! ## Splitting bitwise operations at a bit boundary -/
 
 /-- A bitwise and splits at any bit boundary. -/
-theorem land_split (x m t : ℕ) :
-    x &&& m = (x % 2 ^ t &&& m % 2 ^ t) + 2 ^ t * (x / 2 ^ t &&& m / 2 ^ t) := by
+theorem land_split (v m s : ℕ) :
+    v &&& m = (v % 2 ^ s &&& m % 2 ^ s) + 2 ^ s * (v / 2 ^ s &&& m / 2 ^ s) := by
   rw [← Nat.and_mod_two_pow, ← Nat.and_div_two_pow, Nat.mod_add_div]
 
 /-- The byte-wide split, the form the stages use. -/
-theorem land_split_byte (x m : ℕ) :
-    x &&& m = (x % 256 &&& m % 256) + 256 * (x / 256 &&& m / 256) :=
-  land_split x m 8
+theorem land_split_byte (v m : ℕ) :
+    v &&& m = (v % 256 &&& m % 256) + 256 * (v / 256 &&& m / 256) :=
+  land_split v m 8
 
 /-- Two values split at the byte boundary combine byte by byte under a bitwise and. -/
 lemma land_split' {a b a' b' : ℕ} (ha : a < 256) (ha' : a' < 256) :
@@ -46,13 +46,13 @@ lemma land_split' {a b a' b' : ℕ} (ha : a < 256) (ha' : a' < 256) :
   grind
 
 /-- Masking a value shifted down, then shifting back up, masks with the mask shifted up. -/
-lemma shiftLeft_land_shiftRight (v w s : ℕ) :
-    ((v >>> s) &&& w) <<< s = v &&& (w <<< s) :=
+lemma shiftLeft_land_shiftRight (v m s : ℕ) :
+    ((v >>> s) &&& m) <<< s = v &&& (m <<< s) :=
   Nat.eq_of_testBit_eq fun j ↦ by grind
 
-theorem land_15 (x : ℕ) : x &&& 15 = x % 16 := Nat.and_two_pow_sub_one_eq_mod x 4
+theorem land_15 (v : ℕ) : v &&& 15 = v % 16 := Nat.and_two_pow_sub_one_eq_mod v 4
 
-theorem land_255 (x : ℕ) : x &&& 255 = x % 256 := Nat.and_two_pow_sub_one_eq_mod x 8
+theorem land_255 (v : ℕ) : v &&& 255 = v % 256 := Nat.and_two_pow_sub_one_eq_mod v 8
 
 /-! ## The three stages
 
@@ -89,8 +89,7 @@ lemma rep_mul_two_pow (b s k : ℕ) : rep b k <<< s = rep (b <<< s) k := by
   induction k with grind [Nat.shiftLeft_eq]
 
 /-- The top byte of a repeated-byte constant. -/
-theorem rep_succ_top {b k : ℕ} : rep b (k + 1) = rep b k + 256 ^ k * b := by
-  induction k with grind
+theorem rep_succ_top {b k : ℕ} : rep b (k + 1) = rep b k + 256 ^ k * b := by induction k with grind
 
 /-- `rep 1 k` fills `k` bytes with ones. -/
 theorem rep_one_mul (k : ℕ) : 255 * rep 1 k + 1 = 256 ^ k := by induction k with grind [pow_succ]
@@ -108,27 +107,29 @@ theorem byte_pipeline {e : ℕ} (he : e < 256) :
 def isBytewise (f : ℕ → ℕ → ℕ) : Prop :=
   ∀ v k, f v (k + 1) = f (v % 256) 1 + 256 * f (v / 256) k
 
-lemma isBytewise.eq {f : ℕ → ℕ → ℕ} (hf : isBytewise f) {v k : ℕ} :
+section Bytewise
+variable {f g : ℕ → ℕ → ℕ}
+
+lemma isBytewise.eq (hf : isBytewise f) {v k : ℕ} :
     f v (k + 1) = f (v % 256) 1 + 256 * f (v / 256) k :=
   hf v k
 
 lemma isBytewise_id : isBytewise fun v _ ↦ v := by grind [isBytewise, Nat.mod_add_div]
 
-lemma isBytewise.add {f g : ℕ → ℕ → ℕ} (hf : isBytewise f) (hg : isBytewise g) :
+lemma isBytewise.add (hf : isBytewise f) (hg : isBytewise g) :
     isBytewise fun v k ↦ f v k + g v k := by grind [isBytewise]
 
-lemma isBytewise.sub {f g : ℕ → ℕ → ℕ} (hf : isBytewise f) (hg : isBytewise g)
-    (hfg : ∀ v k, g v k ≤ f v k) :
+lemma isBytewise.sub (hf : isBytewise f) (hg : isBytewise g) (hfg : ∀ v k, g v k ≤ f v k) :
     isBytewise fun v k ↦ f v k - g v k := by grind [isBytewise]
 
-theorem isBytewise.land {f g : ℕ → ℕ → ℕ} (hf : isBytewise f) (hg : isBytewise g)
+theorem isBytewise.land (hf : isBytewise f) (hg : isBytewise g)
     (hf' : ∀ v < 256, f v 1 < 256) (hg' : ∀ v < 256, g v 1 < 256) :
     isBytewise fun v k ↦ f v k &&& g v k := fun v k ↦ by
   simp only [hf v k, hg v k]
   rw [land_split' (hf' _ (Nat.mod_lt _ (by lia))) (hg' _ (Nat.mod_lt _ (by lia)))]
 
-lemma isBytewise.of_shiftLeft {s : ℕ} {f : ℕ → ℕ → ℕ}
-    (h : isBytewise fun v k ↦ f v k <<< s) : isBytewise f := fun v k ↦
+lemma isBytewise.of_shiftLeft {s : ℕ} (h : isBytewise fun v k ↦ f v k <<< s) : isBytewise f :=
+  fun v k ↦
   Nat.eq_of_mul_eq_mul_right (Nat.two_pow_pos s) (by grind [isBytewise, Nat.shiftLeft_eq])
 
 theorem isBytewise_rep {m : ℕ} : isBytewise fun _ k ↦ rep m k := fun v k ↦ by simp
@@ -138,7 +139,7 @@ theorem land_rep_succ {v m k : ℕ} (hm : m < 256) :
     v &&& rep m (k + 1) = (v % 256 &&& m) + 256 * (v / 256 &&& rep m k) := by
   grind [land_split_byte, rep_mod_byte, rep_div_byte]
 
-theorem isBytewise.shiftRight_land_rep {f : ℕ → ℕ → ℕ} (hf : isBytewise f)
+theorem isBytewise.shiftRight_land_rep (hf : isBytewise f)
     (hf' : ∀ v < 256, f v 1 < 256) {m s : ℕ} (hms : m <<< s < 256) :
     isBytewise fun v k ↦ f v k >>> s &&& rep m k := by
   apply isBytewise.of_shiftLeft (s := s)
@@ -171,7 +172,7 @@ theorem stageC_byte_split {a b k : ℕ} (ha : a ≤ 68) (hb : b % 16 ≤ 4) :
 
 /-- Adding a value to itself shifted right by 4 and masking to 4-bit groups splits at the byte
 boundary, given the bounds the previous stage supplies. -/
-theorem isBytewise.add_shiftRight_land_15 {f : ℕ → ℕ → ℕ} (hf : isBytewise f)
+theorem isBytewise.add_shiftRight_land_15 (hf : isBytewise f)
     (hbyte : ∀ v < 256, f v 1 ≤ 68) (hmod : ∀ v k, f v k % 16 ≤ 4) :
     isBytewise fun v k ↦ (f v k + f v k >>> 4) &&& rep 15 k := fun v k ↦ by
   simpa [hf v k] using stageC_byte_split (hbyte _ (Nat.mod_lt _ (by lia))) (hmod _ _)
@@ -184,9 +185,11 @@ theorem stageC_succ (k v : ℕ) :
     stageC (k + 1) v = stageC 1 (v % 256) + 256 * stageC k (v / 256) :=
   isBytewise_stageC.eq
 
+end Bytewise
+
 /-! ## The word count from the byte counts -/
 
-theorem shiftRight_mod_two (x i : ℕ) : (x >>> i) % 2 = if x.testBit i then 1 else 0 := by
+theorem shiftRight_mod_two (v s : ℕ) : (v >>> s) % 2 = if v.testBit s then 1 else 0 := by
   grind [Nat.shiftRight_eq_div_pow]
 
 /-- The count as the size of the set of set positions. -/
@@ -207,8 +210,8 @@ public theorem bitSum_add (v s t : ℕ) : bitSum v (s + t) = bitSum v s + bitSum
 @[simp] public theorem bitSum_zero_left (n : ℕ) : bitSum 0 n = 0 := by simp [bitSum]
 
 /-- Positions above the top set bit contribute nothing. -/
-public theorem bitSum_of_lt {y m n : ℕ} (hy : y < 2 ^ m) (hmn : m ≤ n) :
-    bitSum y n = bitSum y m := by
+public theorem bitSum_of_lt {v m n : ℕ} (hv : v < 2 ^ m) (hmn : m ≤ n) :
+    bitSum v n = bitSum v m := by
   grind [bitSum_add, Nat.div_eq_of_lt, bitSum_zero_left, Nat.exists_eq_add_of_le]
 
 /-- Each position contributes at most one. -/
