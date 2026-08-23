@@ -24,13 +24,13 @@ Wieferich and Mirimanoff. `miller_rabin_squarefree` applies it to prove that a n
 36 million passing the Fermat test to bases 2 and 3 is squarefree.
 -/
 
-def Wieferich (p : ℕ) : Prop :=
+@[expose] public def Wieferich (p : ℕ) : Prop :=
   2 ^ (p - 1) ≡ 1 [MOD p^2]
 
 def Mirimanoff (p : ℕ) : Prop :=
   3 ^ (p - 1) ≡ 1 [MOD p^2]
 
-noncomputable def wieferichK (p : ℕ) : Bool :=
+@[expose] public noncomputable def wieferichK (p : ℕ) : Bool :=
   powModK 2 (p.sub 1) (p.pow 2) |>.beq 1
 
 noncomputable def mirimanoffK (p : ℕ) : Bool :=
@@ -41,7 +41,7 @@ noncomputable def mirimanoffK (p : ℕ) : Bool :=
   rw [Wieferich, wieferichK, Nat.beq_eq, Nat.ModEq, Nat.one_mod_eq_one.mpr hp2,
     powModK_eq, Nat.pow_eq, Nat.sub_eq]
 
-@[simp] theorem wieferichK_eq_false_iff (p : ℕ) (hp : p ≠ 1) :
+@[simp] public theorem wieferichK_eq_false_iff (p : ℕ) (hp : p ≠ 1) :
     wieferichK p = false ↔ ¬Wieferich p := by
   rw [← Bool.not_eq_true, wieferichK_eq_true_iff p hp]
 
