@@ -39,6 +39,17 @@ theorem land_split_byte (x m : ℕ) :
     x &&& m = (x % 256 &&& m % 256) + 256 * (x / 256 &&& m / 256) :=
   land_split x m 8
 
+/-- Two values split at the byte boundary combine byte by byte under a bitwise and. -/
+lemma land_split' {a b a' b' : ℕ} (ha : a < 256) (ha' : a' < 256) :
+    (a + 256 * b) &&& (a' + 256 * b') = (a &&& a') + 256 * (b &&& b') := by
+  rw [land_split_byte]
+  grind
+
+/-- Masking a value shifted down, then shifting back up, masks with the mask shifted up. -/
+lemma shiftLeft_land_shiftRight (v w s : ℕ) :
+    ((v >>> s) &&& w) <<< s = v &&& (w <<< s) :=
+  Nat.eq_of_testBit_eq fun j ↦ by grind
+
 theorem land_15 (x : ℕ) : x &&& 15 = x % 16 := Nat.and_two_pow_sub_one_eq_mod x 4
 
 theorem land_255 (x : ℕ) : x &&& 255 = x % 256 := Nat.and_two_pow_sub_one_eq_mod x 8
@@ -77,6 +88,13 @@ theorem rep_div_byte {b k : ℕ} (hb : b < 256) : rep b (k + 1) / 256 = rep b k 
 lemma rep_mul_two_pow (b s k : ℕ) : rep b k <<< s = rep (b <<< s) k := by
   induction k with grind [Nat.shiftLeft_eq]
 
+/-- The top byte of a repeated-byte constant. -/
+theorem rep_succ_top {b k : ℕ} : rep b (k + 1) = rep b k + 256 ^ k * b := by
+  induction k with grind
+
+/-- `rep 1 k` fills `k` bytes with ones. -/
+theorem rep_one_mul (k : ℕ) : 255 * rep 1 k + 1 = 256 ^ k := by induction k with grind [pow_succ]
+
 @[simp] theorem stageB_zero (v : ℕ) : stageB 0 v = 0 := by simp [stageB]
 @[simp] theorem stageC_zero (v : ℕ) : stageC 0 v = 0 := by simp [stageC]
 
@@ -103,11 +121,6 @@ lemma isBytewise.sub {f g : ℕ → ℕ → ℕ} (hf : isBytewise f) (hg : isByt
     (hfg : ∀ v k, g v k ≤ f v k) :
     isBytewise fun v k ↦ f v k - g v k := by grind [isBytewise]
 
-lemma land_split' {a b a' b' : ℕ} (ha : a < 256) (ha' : a' < 256) :
-    (a + 256 * b) &&& (a' + 256 * b') = (a &&& a') + 256 * (b &&& b') := by
-  rw [land_split_byte]
-  grind
-
 theorem isBytewise.land {f g : ℕ → ℕ → ℕ} (hf : isBytewise f) (hg : isBytewise g)
     (hf' : ∀ v < 256, f v 1 < 256) (hg' : ∀ v < 256, g v 1 < 256) :
     isBytewise fun v k ↦ f v k &&& g v k := fun v k ↦ by
@@ -124,10 +137,6 @@ theorem isBytewise_rep {m : ℕ} : isBytewise fun _ k ↦ rep m k := fun v k ↦
 theorem land_rep_succ {v m k : ℕ} (hm : m < 256) :
     v &&& rep m (k + 1) = (v % 256 &&& m) + 256 * (v / 256 &&& rep m k) := by
   grind [land_split_byte, rep_mod_byte, rep_div_byte]
-
-lemma shiftLeft_land_shiftRight (v w s : ℕ) :
-    ((v >>> s) &&& w) <<< s = v &&& (w <<< s) :=
-  Nat.eq_of_testBit_eq fun j ↦ by grind
 
 theorem isBytewise.shiftRight_land_rep {f : ℕ → ℕ → ℕ} (hf : isBytewise f)
     (hf' : ∀ v < 256, f v 1 < 256) {m s : ℕ} (hms : m <<< s < 256) :
@@ -223,13 +232,6 @@ public def byteSum : ℕ → ℕ → ℕ
 @[simp] theorem byteSum_zero (v : ℕ) : byteSum v 0 = 0 := rfl
 
 theorem byteSum_succ (v k : ℕ) : byteSum v (k + 1) = v % 256 + byteSum (v / 256) k := rfl
-
-/-- The top byte of a repeated-byte constant. -/
-theorem rep_succ_top {b k : ℕ} : rep b (k + 1) = rep b k + 256 ^ k * b := by
-  induction k with grind
-
-/-- `rep 1 k` fills `k` bytes with ones. -/
-theorem rep_one_mul (k : ℕ) : 255 * rep 1 k + 1 = 256 ^ k := by induction k with grind [pow_succ]
 
 /-- Multiplying by `rep 1 (k + 1)` places the sum of the low `k + 1` bytes in byte `k`, over a low
 part bounded by that sum. -/
