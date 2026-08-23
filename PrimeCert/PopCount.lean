@@ -225,7 +225,8 @@ public def byteSum : ℕ → ℕ → ℕ
 theorem byteSum_succ (v k : ℕ) : byteSum v (k + 1) = v % 256 + byteSum (v / 256) k := rfl
 
 /-- The top byte of a repeated-byte constant. -/
-theorem rep_succ_top (b k : ℕ) : rep b (k + 1) = rep b k + 256 ^ k * b := by induction k with grind
+theorem rep_succ_top {b k : ℕ} : rep b (k + 1) = rep b k + 256 ^ k * b := by
+  induction k with grind
 
 /-- `rep 1 k` fills `k` bytes with ones. -/
 theorem rep_one_mul (k : ℕ) : 255 * rep 1 k + 1 = 256 ^ k := by induction k with grind [pow_succ]
