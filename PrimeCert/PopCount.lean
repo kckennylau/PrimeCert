@@ -266,8 +266,7 @@ theorem byteSum_mul_rep {k v : ℕ} (h : byteSum v (k + 1) < 256) :
 
 /-- The last stage of a byte holds the count of that byte. -/
 theorem stageC_byte {v : ℕ} : stageC 1 (v % 256) = bitSum v 8 :=
-  (byte_pipeline (Nat.mod_lt _ (by lia))).2.2.2.2.trans
-    (by simpa using bitSum_mod (v := v) (s := 8))
+  (byte_pipeline (Nat.mod_lt _ (by lia))).2.2.2.2.trans (by simpa using bitSum_mod (s := 8))
 
 /-- The bytes of the last stage sum to the count of the word. -/
 theorem byteSum_stageC {k v : ℕ} : byteSum (stageC k v) k = bitSum v (8 * k) := by
@@ -275,7 +274,7 @@ theorem byteSum_stageC {k v : ℕ} : byteSum (stageC k v) k = bitSum v (8 * k) :
   | zero => simp [bitSum]
   | succ k ih =>
     have hb : stageC 1 (v % 256) ≤ 8 := (byte_pipeline (Nat.mod_lt _ (by lia))).2.2.2.1
-    grind [byteSum_succ, stageC_succ, bitSum_add (v := v) (s := 8) (t := 8 * k), stageC_byte]
+    grind [byteSum_succ, stageC_succ, bitSum_add (s := 8), stageC_byte]
 
 /-- The pipeline over `k + 1` bytes counts the set bits of those bytes. -/
 theorem stageC_mul_rep {k : ℕ} (hk : k < 31) (v : ℕ) :
