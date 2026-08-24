@@ -65,15 +65,15 @@ public def rep (b : ℕ) : ℕ → ℕ
   | k + 1 => b + 256 * rep b k
 
 /-- Counts within 2-bit groups of a `k`-byte value. -/
-def stageA (k v : ℕ) : ℕ := v - (v >>> 1 &&& rep 85 k)
+def stageA (v k : ℕ) : ℕ := v - (v >>> 1 &&& rep 85 k)
 
 /-- Counts within 4-bit groups of a `k`-byte value. -/
-def stageB (k v : ℕ) : ℕ := (stageA k v &&& rep 51 k) + (stageA k v >>> 2 &&& rep 51 k)
+def stageB (v k : ℕ) : ℕ := (stageA v k &&& rep 51 k) + (stageA v k >>> 2 &&& rep 51 k)
 
 /-- Counts within 8-bit groups. -/
-def stageC (k v : ℕ) : ℕ := (stageB k v + (stageB k v >>> 4)) &&& rep 15 k
+def stageC (v k : ℕ) : ℕ := (stageB v k + (stageB v k >>> 4)) &&& rep 15 k
 
-@[simp] lemma popc64K_eq' {v : ℕ} : popc64K v = (stageC 8 v * rep 1 8) >>> 56 &&& 255 := rfl
+@[simp] lemma popc64K_eq' {v : ℕ} : popc64K v = (stageC v 8 * rep 1 8) >>> 56 &&& 255 := rfl
 
 @[simp, grind =] theorem rep_succ {b k : ℕ} : rep b (k + 1) = b + 256 * rep b k := rfl
 
@@ -94,73 +94,73 @@ theorem rep_succ_top {b k : ℕ} : rep b (k + 1) = rep b k + 256 ^ k * b := by i
 /-- `rep 1 k` fills `k` bytes with ones. -/
 theorem rep_one_mul {k : ℕ} : 255 * rep 1 k + 1 = 256 ^ k := by induction k with grind [pow_succ]
 
-@[simp] theorem stageB_zero {v : ℕ} : stageB 0 v = 0 := by simp [stageB]
-@[simp] theorem stageC_zero {v : ℕ} : stageC 0 v = 0 := by simp [stageC]
+@[simp] theorem stageB_zero {v : ℕ} : stageB v 0 = 0 := by simp [stageB]
+@[simp] theorem stageC_zero {v : ℕ} : stageC v 0 = 0 := by simp [stageC]
 
 /-- On a byte the stages stay inside the byte, and the last one holds its set-bit count. -/
 theorem byte_pipeline {e : ℕ} (he : e < 256) :
-    stageA 1 e < 256 ∧ stageB 1 e ≤ 68 ∧ stageB 1 e % 16 ≤ 4 ∧ stageC 1 e ≤ 8 ∧
-      stageC 1 e = bitSum e 8 := by decide +kernel +revert
+    stageA e 1 < 256 ∧ stageB e 1 ≤ 68 ∧ stageB e 1 % 16 ≤ 4 ∧ stageC e 1 ≤ 8 ∧
+      stageC e 1 = bitSum e 8 := by decide +kernel +revert
 
 /-! ## Peeling one byte -/
 
-def isBytewise (f : ℕ → ℕ → ℕ) : Prop :=
+def IsBytewise (f : ℕ → ℕ → ℕ) : Prop :=
   ∀ v k, f v (k + 1) = f (v % 256) 1 + 256 * f (v / 256) k
 
 section Bytewise
 variable {f g : ℕ → ℕ → ℕ}
 
-lemma isBytewise.eq (hf : isBytewise f) {v k : ℕ} :
+lemma IsBytewise.eq (hf : IsBytewise f) {v k : ℕ} :
     f v (k + 1) = f (v % 256) 1 + 256 * f (v / 256) k :=
   hf v k
 
-lemma isBytewise_id : isBytewise fun v _ ↦ v := by grind [isBytewise, Nat.mod_add_div]
+lemma isBytewise_id : IsBytewise fun v _ ↦ v := by grind [IsBytewise, Nat.mod_add_div]
 
-lemma isBytewise.add (hf : isBytewise f) (hg : isBytewise g) :
-    isBytewise fun v k ↦ f v k + g v k := by grind [isBytewise]
+lemma IsBytewise.add (hf : IsBytewise f) (hg : IsBytewise g) :
+    IsBytewise fun v k ↦ f v k + g v k := by grind [IsBytewise]
 
-lemma isBytewise.sub (hf : isBytewise f) (hg : isBytewise g) (hfg : ∀ v k, g v k ≤ f v k) :
-    isBytewise fun v k ↦ f v k - g v k := by grind [isBytewise]
+lemma IsBytewise.sub (hf : IsBytewise f) (hg : IsBytewise g) (hfg : ∀ v k, g v k ≤ f v k) :
+    IsBytewise fun v k ↦ f v k - g v k := by grind [IsBytewise]
 
-theorem isBytewise.land (hf : isBytewise f) (hg : isBytewise g)
+theorem IsBytewise.land (hf : IsBytewise f) (hg : IsBytewise g)
     (hf' : ∀ v < 256, f v 1 < 256) (hg' : ∀ v < 256, g v 1 < 256) :
-    isBytewise fun v k ↦ f v k &&& g v k := fun v k ↦ by
+    IsBytewise fun v k ↦ f v k &&& g v k := fun v k ↦ by
   simp only [hf v k, hg v k]
   rw [land_split' (hf' _ (Nat.mod_lt _ (by lia))) (hg' _ (Nat.mod_lt _ (by lia)))]
 
-lemma isBytewise.of_shiftLeft {s : ℕ} (h : isBytewise fun v k ↦ f v k <<< s) : isBytewise f :=
+lemma IsBytewise.of_shiftLeft {s : ℕ} (h : IsBytewise fun v k ↦ f v k <<< s) : IsBytewise f :=
   fun v k ↦
-  Nat.eq_of_mul_eq_mul_right (Nat.two_pow_pos s) (by grind [isBytewise, Nat.shiftLeft_eq])
+  Nat.eq_of_mul_eq_mul_right (Nat.two_pow_pos s) (by grind [IsBytewise, Nat.shiftLeft_eq])
 
-theorem isBytewise_rep {m : ℕ} : isBytewise fun _ k ↦ rep m k := fun v k ↦ by simp
+theorem isBytewise_rep {m : ℕ} : IsBytewise fun _ k ↦ rep m k := fun v k ↦ by simp
 
 /-- A repeated-byte mask splits at the byte boundary. -/
 theorem land_rep_succ {v m k : ℕ} (hm : m < 256) :
     v &&& rep m (k + 1) = (v % 256 &&& m) + 256 * (v / 256 &&& rep m k) := by
   grind [land_split_byte, rep_mod_byte, rep_div_byte]
 
-theorem isBytewise.shiftRight_land_rep (hf : isBytewise f)
+theorem IsBytewise.shiftRight_land_rep (hf : IsBytewise f)
     (hf' : ∀ v < 256, f v 1 < 256) {m s : ℕ} (hms : m <<< s < 256) :
-    isBytewise fun v k ↦ f v k >>> s &&& rep m k := by
-  apply isBytewise.of_shiftLeft (s := s)
+    IsBytewise fun v k ↦ f v k >>> s &&& rep m k := by
+  apply IsBytewise.of_shiftLeft (s := s)
   simp_rw [shiftLeft_land_shiftRight, rep_mul_two_pow]
-  exact isBytewise.land hf isBytewise_rep hf' (by simp [hms])
+  exact IsBytewise.land hf isBytewise_rep hf' (by simp [hms])
 
 theorem land_shiftRight_rep_succ' {m s : ℕ} (hs : s ≤ 8) (hm : m < 2 ^ (8 - s)) :
-    isBytewise fun v k ↦ v >>> s &&& rep m k := by
-  refine isBytewise.shiftRight_land_rep isBytewise_id (by simp) ?_
+    IsBytewise fun v k ↦ v >>> s &&& rep m k := by
+  refine IsBytewise.shiftRight_land_rep isBytewise_id (by simp) ?_
   grw [Nat.shiftLeft_eq, hm, ← Nat.pow_add]
   grind
 
-theorem isBytewise_stageA : isBytewise fun v k ↦ stageA k v :=
+theorem isBytewise_stageA : IsBytewise stageA :=
   isBytewise_id.sub (land_shiftRight_rep_succ' (by simp) (by simp))
     (by grind [Nat.and_le_left, Nat.shiftRight_le])
 
-theorem isBytewise_stageB : isBytewise fun v k ↦ stageB k v :=
-  (isBytewise.land isBytewise_stageA isBytewise_rep (by grind [byte_pipeline]) (by simp)).add
-    (isBytewise.shiftRight_land_rep isBytewise_stageA (by grind [byte_pipeline]) (by simp))
+theorem isBytewise_stageB : IsBytewise stageB :=
+  (IsBytewise.land isBytewise_stageA isBytewise_rep (by grind [byte_pipeline]) (by simp)).add
+    (IsBytewise.shiftRight_land_rep isBytewise_stageA (by grind [byte_pipeline]) (by simp))
 
-theorem stageB_mod_16 (k v : ℕ) : stageB k v % 16 ≤ 4 := by
+theorem stageB_mod_16 (v k : ℕ) : stageB v k % 16 ≤ 4 := by
   cases k with grind
     [stageB_zero, isBytewise_stageB.eq, byte_pipeline (e := v % 256) (Nat.mod_lt _ (by lia))]
 
@@ -172,17 +172,16 @@ theorem stageC_byte_split {a b k : ℕ} (ha : a ≤ 68) (hb : b % 16 ≤ 4) :
 
 /-- Adding a value to itself shifted right by 4 and masking to 4-bit groups splits at the byte
 boundary, given the bounds the previous stage supplies. -/
-theorem isBytewise.add_shiftRight_land_15 (hf : isBytewise f)
+theorem IsBytewise.add_shiftRight_land_15 (hf : IsBytewise f)
     (hbyte : ∀ v < 256, f v 1 ≤ 68) (hmod : ∀ v k, f v k % 16 ≤ 4) :
-    isBytewise fun v k ↦ (f v k + f v k >>> 4) &&& rep 15 k := fun v k ↦ by
+    IsBytewise fun v k ↦ (f v k + f v k >>> 4) &&& rep 15 k := fun v k ↦ by
   simpa [hf v k] using stageC_byte_split (hbyte _ (Nat.mod_lt _ (by lia))) (hmod _ _)
 
-theorem isBytewise_stageC : isBytewise fun v k ↦ stageC k v :=
-  isBytewise_stageB.add_shiftRight_land_15 (fun _ hv ↦ (byte_pipeline hv).2.1)
-    fun v k ↦ stageB_mod_16 k v
+theorem isBytewise_stageC : IsBytewise stageC :=
+  isBytewise_stageB.add_shiftRight_land_15 (fun _ hv ↦ (byte_pipeline hv).2.1) stageB_mod_16
 
-theorem stageC_succ {k v : ℕ} :
-    stageC (k + 1) v = stageC 1 (v % 256) + 256 * stageC k (v / 256) :=
+theorem stageC_succ {v k : ℕ} :
+    stageC v (k + 1) = stageC (v % 256) 1 + 256 * stageC (v / 256) k :=
   isBytewise_stageC.eq
 
 end Bytewise
@@ -265,20 +264,20 @@ theorem byteSum_mul_rep {k v : ℕ} (h : byteSum v (k + 1) < 256) :
   lia
 
 /-- The last stage of a byte holds the count of that byte. -/
-theorem stageC_byte {v : ℕ} : stageC 1 (v % 256) = bitSum v 8 :=
+theorem stageC_byte {v : ℕ} : stageC (v % 256) 1 = bitSum v 8 :=
   (byte_pipeline (Nat.mod_lt _ (by lia))).2.2.2.2.trans (by simpa using bitSum_mod (s := 8))
 
 /-- The bytes of the last stage sum to the count of the word. -/
-theorem byteSum_stageC {k v : ℕ} : byteSum (stageC k v) k = bitSum v (8 * k) := by
+theorem byteSum_stageC {v k : ℕ} : byteSum (stageC v k) k = bitSum v (8 * k) := by
   induction k generalizing v with
   | zero => simp [bitSum]
   | succ k ih =>
-    have hb : stageC 1 (v % 256) ≤ 8 := (byte_pipeline (Nat.mod_lt _ (by lia))).2.2.2.1
+    have hb : stageC (v % 256) 1 ≤ 8 := (byte_pipeline (Nat.mod_lt _ (by lia))).2.2.2.1
     grind [byteSum_succ, stageC_succ, bitSum_add (s := 8), stageC_byte]
 
 /-- The pipeline over `k + 1` bytes counts the set bits of those bytes. -/
 theorem stageC_mul_rep {k : ℕ} (hk : k < 31) (v : ℕ) :
-    stageC (k + 1) v * rep 1 (k + 1) / 256 ^ k % 256 = bitSum v (8 * (k + 1)) := by
+    stageC v (k + 1) * rep 1 (k + 1) / 256 ^ k % 256 = bitSum v (8 * (k + 1)) := by
   grind [byteSum_mul_rep, byteSum_stageC, bitSum_le]
 
 /-- `popc64K` counts the set bits of a 64-bit word. -/
