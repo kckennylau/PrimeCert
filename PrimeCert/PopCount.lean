@@ -10,7 +10,6 @@ public import Mathlib.Algebra.BigOperators.Intervals
 
 import Mathlib.Data.Nat.Bitwise
 import Mathlib.Tactic.NormNum
-import Mathlib.Tactic.Ring
 
 /-!
 # The set-bit count of a word
@@ -60,7 +59,7 @@ theorem land_255 {v : ℕ} : v &&& 255 = v % 256 := Nat.and_two_pow_sub_one_eq_m
 `rep 51 8` and `rep 15 8`, and its multiplier is `rep 1 8`. -/
 
 /-- The `k`-byte constant repeating the byte `b`. -/
-public def rep (b : ℕ) : ℕ → ℕ
+def rep (b : ℕ) : ℕ → ℕ
   | 0 => 0
   | k + 1 => b + 256 * rep b k
 
@@ -73,7 +72,9 @@ def stageB (v k : ℕ) : ℕ := (stageA v k &&& rep 51 k) + (stageA v k >>> 2 &&
 /-- Counts within 8-bit groups. -/
 def stageC (v k : ℕ) : ℕ := (stageB v k + (stageB v k >>> 4)) &&& rep 15 k
 
-@[simp] lemma popc64K_eq' {v : ℕ} : popc64K v = (stageC v 8 * rep 1 8) >>> 56 &&& 255 := rfl
+/-- The shape of `popc64K`: the three stages, then the multiplication reading byte 7. -/
+@[simp] lemma popc64K_eq_stageC {v : ℕ} :
+    popc64K v = (stageC v 8 * rep 1 8) >>> 56 &&& 255 := rfl
 
 @[simp, grind =] theorem rep_succ {b k : ℕ} : rep b (k + 1) = b + 256 * rep b k := rfl
 
@@ -87,6 +88,11 @@ theorem rep_div_byte {b k : ℕ} (hb : b < 256) : rep b (k + 1) / 256 = rep b k 
 
 lemma rep_mul_two_pow {b s k : ℕ} : rep b k <<< s = rep (b <<< s) k := by
   induction k with grind [Nat.shiftLeft_eq]
+
+/-- A repeated-byte mask splits at the byte boundary. -/
+theorem land_rep_succ {v m k : ℕ} (hm : m < 256) :
+    v &&& rep m (k + 1) = (v % 256 &&& m) + 256 * (v / 256 &&& rep m k) := by
+  grind [land_split_byte, rep_mod_byte, rep_div_byte]
 
 /-- The top byte of a repeated-byte constant. -/
 theorem rep_succ_top {b k : ℕ} : rep b (k + 1) = rep b k + 256 ^ k * b := by induction k with grind
@@ -104,6 +110,8 @@ theorem byte_pipeline {e : ℕ} (he : e < 256) :
 
 /-! ## Peeling one byte -/
 
+/-- `f v k`, read at `k + 1` bytes, is the value on the low byte of `v` plus 256 times the value on
+the rest of `v`. -/
 def IsBytewise (f : ℕ → ℕ → ℕ) : Prop :=
   ∀ v k, f v (k + 1) = f (v % 256) 1 + 256 * f (v / 256) k
 
@@ -134,11 +142,6 @@ lemma IsBytewise.of_shiftLeft {s : ℕ} (h : IsBytewise fun v k ↦ f v k <<< s)
 
 theorem isBytewise_rep {m : ℕ} : IsBytewise fun _ k ↦ rep m k := fun v k ↦ by simp
 
-/-- A repeated-byte mask splits at the byte boundary. -/
-theorem land_rep_succ {v m k : ℕ} (hm : m < 256) :
-    v &&& rep m (k + 1) = (v % 256 &&& m) + 256 * (v / 256 &&& rep m k) := by
-  grind [land_split_byte, rep_mod_byte, rep_div_byte]
-
 theorem IsBytewise.shiftRight_land_rep (hf : IsBytewise f)
     (hf' : ∀ v < 256, f v 1 < 256) {m s : ℕ} (hms : m <<< s < 256) :
     IsBytewise fun v k ↦ f v k >>> s &&& rep m k := by
@@ -146,14 +149,15 @@ theorem IsBytewise.shiftRight_land_rep (hf : IsBytewise f)
   simp_rw [shiftLeft_land_shiftRight, rep_mul_two_pow]
   exact IsBytewise.land hf isBytewise_rep hf' (by simp [hms])
 
-theorem land_shiftRight_rep_succ' {m s : ℕ} (hs : s ≤ 8) (hm : m < 2 ^ (8 - s)) :
+/-- Shifting a value down and masking with a repeated byte acts byte by byte. -/
+theorem isBytewise_shiftRight_land_rep {m s : ℕ} (hs : s ≤ 8) (hm : m < 2 ^ (8 - s)) :
     IsBytewise fun v k ↦ v >>> s &&& rep m k := by
   refine IsBytewise.shiftRight_land_rep isBytewise_id (by simp) ?_
   grw [Nat.shiftLeft_eq, hm, ← Nat.pow_add]
   grind
 
 theorem isBytewise_stageA : IsBytewise stageA :=
-  isBytewise_id.sub (land_shiftRight_rep_succ' (by simp) (by simp))
+  isBytewise_id.sub (isBytewise_shiftRight_land_rep (by simp) (by simp))
     (by grind [Nat.and_le_left, Nat.shiftRight_le])
 
 theorem isBytewise_stageB : IsBytewise stageB :=
@@ -217,17 +221,10 @@ public theorem bitSum_of_lt {v m n : ℕ} (hv : v < 2 ^ m) (hmn : m ≤ n) :
 public theorem bitSum_le (v n : ℕ) : bitSum v n ≤ n := by
   grind [bitSum_eq_card, Finset.card_filter_le, Finset.card_range]
 
-/-- A count over any range is bounded by the width of the value. -/
-public theorem bitSum_le_of_lt {v m : ℕ} (hv : v < 2 ^ m) (n : ℕ) : bitSum v n ≤ m := by
-  rcases Nat.le_total m n with h | h
-  · rw [bitSum_of_lt hv h]
-    exact bitSum_le v m
-  · exact le_trans (bitSum_le v n) h
-
 /-! ## The merge -/
 
 /-- Sum of the low `k` bytes of `v`. -/
-public def byteSum : ℕ → ℕ → ℕ
+def byteSum : ℕ → ℕ → ℕ
   | _, 0 => 0
   | v, k + 1 => v % 256 + byteSum (v / 256) k
 
@@ -276,13 +273,14 @@ theorem byteSum_stageC {v k : ℕ} : byteSum (stageC v k) k = bitSum v (8 * k) :
     grind [byteSum_succ, stageC_succ, bitSum_add (s := 8), stageC_byte]
 
 /-- The pipeline over `k + 1` bytes counts the set bits of those bytes. -/
-theorem stageC_mul_rep {k : ℕ} (hk : k < 31) (v : ℕ) :
+theorem stageC_mul_rep {v k : ℕ} (hk : k < 31) :
     stageC v (k + 1) * rep 1 (k + 1) / 256 ^ k % 256 = bitSum v (8 * (k + 1)) := by
   grind [byteSum_mul_rep, byteSum_stageC, bitSum_le]
 
 /-- `popc64K` counts the set bits of a 64-bit word. -/
 public theorem popc64K_eq_bitSum {v : ℕ} : popc64K v = bitSum v 64 := by
-  rw [popc64K_eq', Nat.shiftRight_eq_div_pow, land_255, (by norm_num : (2 : ℕ) ^ 56 = 256 ^ 7)]
-  simpa using stageC_mul_rep (k := 7) (by norm_num) v
+  rw [popc64K_eq_stageC, Nat.shiftRight_eq_div_pow, land_255,
+    (by norm_num : (2 : ℕ) ^ 56 = 256 ^ 7)]
+  simpa using stageC_mul_rep (k := 7) (by norm_num)
 
 end PrimeCert
