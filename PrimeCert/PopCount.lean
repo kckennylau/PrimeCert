@@ -16,10 +16,10 @@ import Mathlib.Tactic.Ring
 # The set-bit count of a word
 
 `popc64K` sums bit counts within groups of 2, 4 and 8 bits and then adds the bytes through one
-multiplication. Each of the three stages acts byte by byte (`stageA_succ`, `stageB_succ`,
-`stageC_succ`), the byte case is a finite check (`byte_pipeline`), and the multiplication collects
-the byte counts at any width (`stageC_mul_rep`), giving `popc64K v = bitSum v 64`
-(`popc64K_eq_bitSum`).
+multiplication. Each of the three stages acts byte by byte (`isBytewise_stageA`,
+`isBytewise_stageB`, `isBytewise_stageC`), the byte case is a finite check (`byte_pipeline`), and
+the multiplication collects the byte counts at any width (`stageC_mul_rep`), giving
+`popc64K v = bitSum v 64` (`popc64K_eq_bitSum`).
 -/
 
 namespace PrimeCert
