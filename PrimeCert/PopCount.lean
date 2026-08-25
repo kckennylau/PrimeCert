@@ -9,6 +9,7 @@ public import PrimeCert.Bits
 public import Mathlib.Algebra.BigOperators.Intervals
 
 import Mathlib.Data.Nat.Bitwise
+import Mathlib.Data.Nat.Digits.Defs
 import Mathlib.Tactic.NormNum
 
 /-!
@@ -98,11 +99,18 @@ theorem land_rep_succ (hm : m < 256) :
 /-- The top byte of a repeated-byte constant. -/
 theorem rep_succ_top : rep b (k + 1) = rep b k + 256 ^ k * b := by induction k with grind
 
+/-- A repeated-byte constant fits in its `k` bytes. -/
+theorem rep_lt (hb : b < 256) : rep b k < 256 ^ k := by induction k with grind [pow_succ]
+
 /-- `rep 1 k` fills `k` bytes with ones. -/
 theorem rep_one_mul : 255 * rep 1 k + 1 = 256 ^ k := by induction k with grind [pow_succ]
 
 @[simp] theorem stageB_zero : stageB v 0 = 0 := by simp [stageB]
 @[simp] theorem stageC_zero : stageC v 0 = 0 := by simp [stageC]
+
+/-- The last stage fits in its `k` bytes. -/
+theorem stageC_lt : stageC v k < 256 ^ k :=
+  lt_of_le_of_lt (Nat.and_le_right) (rep_lt (by norm_num))
 
 /-- On a byte the stages stay inside the byte, and the last one holds its set-bit count. -/
 theorem byte_pipeline (hv : v < 256) :
@@ -223,39 +231,40 @@ public theorem bitSum_le (v n : ℕ) : bitSum v n ≤ n := by
 
 /-! ## The merge -/
 
-/-- Sum of the low `k` bytes of `v`. -/
-def byteSum : ℕ → ℕ → ℕ
-  | _, 0 => 0
-  | v, k + 1 => v % 256 + byteSum (v / 256) k
+/-- The base-256 digits of `v` are its low byte followed by the digits of the rest. -/
+theorem sum_digits_split :
+    (Nat.digits 256 v).sum = v % 256 + (Nat.digits 256 (v / 256)).sum := by
+  rcases Nat.eq_zero_or_pos v with rfl | hv
+  · simp
+  · grind [Nat.digits_def']
 
-@[simp] theorem byteSum_zero : byteSum v 0 = 0 := rfl
-
-theorem byteSum_succ : byteSum v (k + 1) = v % 256 + byteSum (v / 256) k := rfl
-
-/-- Multiplying by `rep 1 (k + 1)` places the sum of the low `k + 1` bytes in byte `k`, over a low
-part bounded by that sum. -/
-theorem mul_rep_split (v k : ℕ) :
-    ∃ L T, L ≤ byteSum v (k + 1) * rep 1 k ∧
-      v * rep 1 (k + 1) = L + 256 ^ k * (byteSum v (k + 1) + 256 * T) := by
+/-- Multiplying by `rep 1 (k + 1)` places the digit sum in byte `k`, over a low part bounded by
+that sum. -/
+theorem mul_rep_split (hv : v < 256 ^ (k + 1)) :
+    ∃ L T, L ≤ (Nat.digits 256 v).sum * rep 1 k ∧
+      v * rep 1 (k + 1) = L + 256 ^ k * ((Nat.digits 256 v).sum + 256 * T) := by
   induction k generalizing v with
-  | zero => exact ⟨0, v / 256, by simp, by grind [byteSum_succ, byteSum_zero]⟩
+  | zero =>
+    have hv' : v < 256 := by simpa using hv
+    exact ⟨0, 0, by simp,
+      by simp [sum_digits_split, Nat.div_eq_of_lt hv', Nat.mod_eq_of_lt hv']⟩
   | succ k ih =>
-    obtain ⟨L, T, hL, hLT⟩ := ih (v / 256)
+    obtain ⟨L, T, hL, hLT⟩ := ih (v := v / 256) (by grind [Nat.div_lt_iff_lt_mul, pow_succ])
     have h1 : 256 * rep 1 k ≤ rep 1 (k + 1) := by grind
     have hw : v = v % 256 + 256 * (v / 256) := by lia
     refine ⟨v % 256 * rep 1 (k + 1) + 256 * L, T + v / 256, ?_, ?_⟩
-    · have h2 : 256 * L ≤ byteSum (v / 256) (k + 1) * rep 1 (k + 1) := by
+    · have h2 : 256 * L ≤ (Nat.digits 256 (v / 256)).sum * rep 1 (k + 1) := by
         grind [Nat.mul_le_mul_left 256 hL,
-          Nat.mul_le_mul_left (byteSum (v / 256) (k + 1)) h1]
-      rw [byteSum_succ, add_mul]
+          Nat.mul_le_mul_left (Nat.digits 256 (v / 256)).sum h1]
+      rw [sum_digits_split, add_mul]
       lia
-    · grind [byteSum_succ, rep_succ_top]
+    · grind [sum_digits_split, rep_succ_top]
 
-/-- The multiplication by `rep 1 (k + 1)` reads the sum of the low `k + 1` bytes off byte `k`. -/
-theorem byteSum_mul_rep (h : byteSum v (k + 1) < 256) :
-    v * rep 1 (k + 1) / 256 ^ k % 256 = byteSum v (k + 1) := by
-  obtain ⟨L, T, hL, hLT⟩ := mul_rep_split v k
-  have h255 : byteSum v (k + 1) * rep 1 k ≤ 255 * rep 1 k := Nat.mul_le_mul_right _ (by lia)
+/-- The multiplication by `rep 1 (k + 1)` reads the digit sum off byte `k`. -/
+theorem sum_digits_mul_rep (hv : v < 256 ^ (k + 1)) (h : (Nat.digits 256 v).sum < 256) :
+    v * rep 1 (k + 1) / 256 ^ k % 256 = (Nat.digits 256 v).sum := by
+  obtain ⟨L, T, hL, hLT⟩ := mul_rep_split hv
+  have h255 : (Nat.digits 256 v).sum * rep 1 k ≤ 255 * rep 1 k := Nat.mul_le_mul_right _ (by lia)
   have hlt : L < 256 ^ k := by grind [rep_one_mul]
   rw [hLT, Nat.add_mul_div_left _ _ (by positivity), Nat.div_eq_of_lt hlt]
   lia
@@ -264,18 +273,20 @@ theorem byteSum_mul_rep (h : byteSum v (k + 1) < 256) :
 theorem stageC_byte : stageC (v % 256) 1 = bitSum v 8 :=
   (byte_pipeline (Nat.mod_lt _ (by lia))).2.2.2.2.trans (by simpa using bitSum_mod (s := 8))
 
-/-- The bytes of the last stage sum to the count of the word. -/
-theorem byteSum_stageC : byteSum (stageC v k) k = bitSum v (8 * k) := by
+/-- The digits of the last stage sum to the count of the word. -/
+theorem sum_digits_stageC : (Nat.digits 256 (stageC v k)).sum = bitSum v (8 * k) := by
   induction k generalizing v with
   | zero => simp [bitSum]
   | succ k ih =>
     have hb : stageC (v % 256) 1 ≤ 8 := (byte_pipeline (Nat.mod_lt _ (by lia))).2.2.2.1
-    grind [byteSum_succ, stageC_succ, bitSum_add (s := 8), stageC_byte]
+    have hmod : stageC v (k + 1) % 256 = stageC (v % 256) 1 := by rw [stageC_succ]; grind
+    have hdiv : stageC v (k + 1) / 256 = stageC (v / 256) k := by rw [stageC_succ]; grind
+    grind [sum_digits_split, bitSum_add (s := 8), stageC_byte]
 
 /-- The pipeline over `k + 1` bytes counts the set bits of those bytes. -/
 theorem stageC_mul_rep (hk : k < 31) :
     stageC v (k + 1) * rep 1 (k + 1) / 256 ^ k % 256 = bitSum v (8 * (k + 1)) := by
-  grind [byteSum_mul_rep, byteSum_stageC, bitSum_le]
+  rw [sum_digits_mul_rep stageC_lt (by grind [sum_digits_stageC, bitSum_le]), sum_digits_stageC]
 
 /-- `popc64K` counts the set bits of a 64-bit word. -/
 public theorem popc64K_eq_bitSum : popc64K v = bitSum v 64 := by
