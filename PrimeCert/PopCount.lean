@@ -110,7 +110,7 @@ theorem rep_one_mul : 255 * rep 1 k + 1 = 256 ^ k := by induction k with grind [
 
 /-- The last stage fits in its `k` bytes. -/
 theorem stageC_lt : stageC v k < 256 ^ k :=
-  lt_of_le_of_lt (Nat.and_le_right) (rep_lt (by norm_num))
+  Nat.and_le_right.trans_lt (rep_lt (by norm_num))
 
 /-- On a byte the stages stay inside the byte, and the last one holds its set-bit count. -/
 theorem byte_pipeline (hv : v < 256) :
